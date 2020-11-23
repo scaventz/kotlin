@@ -19,6 +19,7 @@ package org.jetbrains.kotlin.container
 import com.intellij.util.containers.ContainerUtil
 import java.lang.reflect.*
 import java.util.*
+import javax.inject.Inject
 
 private object ClassTraversalCache {
     private val cache =
@@ -64,10 +65,8 @@ private fun traverseClass(c: Class<*>): ClassInfo {
 private fun getSetterInfos(c: Class<*>): List<SetterInfo> {
     val setterInfos = ArrayList<SetterInfo>()
     for (method in c.methods) {
-        for (annotation in method.declaredAnnotations) {
-            if (annotation.annotationClass.java.name.endsWith(".Inject")) {
-                setterInfos.add(SetterInfo(method, method.genericParameterTypes.toList()))
-            }
+        if (method.getAnnotation(Inject::class.java) != null) {
+            setterInfos.add(SetterInfo(method, method.genericParameterTypes.toList()))
         }
     }
     return setterInfos
@@ -77,10 +76,7 @@ private fun getConstructorInfo(c: Class<*>): ConstructorInfo? {
     if (Modifier.isAbstract(c.modifiers) || c.isPrimitive)
         return null
 
-    val publicConstructors = c.constructors.filter { Modifier.isPublic(it.modifiers) && !it.isSynthetic }
-    if (publicConstructors.size != 1) return null
-
-    val constructor = publicConstructors.single()
+    val constructor = c.constructors.singleOrNull {!it.isSynthetic } ?: return null
     val parameterTypes =
             if (c.declaringClass != null && !Modifier.isStatic(c.modifiers))
                 listOf(c.declaringClass, *constructor.genericParameterTypes)
