@@ -589,7 +589,6 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
 
     ): KotlinCompilationImpl? {
         val compilationClass = gradleCompilation.javaClass
-        val classloader = compilationClass.classLoader
         val getKotlinSourceSets = compilationClass.getMethodOrNull("getKotlinSourceSets") ?: return null
 
         @Suppress("UNCHECKED_CAST")
@@ -597,8 +596,8 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
         val kotlinSourceSets = kotlinGradleSourceSets.mapNotNull { sourceSetMap[it.name] }
         val compileKotlinTask = getCompileKotlinTaskName(project, gradleCompilation) ?: return null
         val output = buildCompilationOutput(gradleCompilation, compileKotlinTask) ?: return null
-        val compilationCachedArgsInfo = buildCachedArgsInfo(compileKotlinTask, compilerArgumentsMapper, classloader)
-            ?: buildCachedArgsInfoUnsafe(compileKotlinTask, compilerArgumentsMapper, classloader)
+        val compilationCachedArgsInfo = buildCachedArgsInfo(compileKotlinTask, compilerArgumentsMapper)
+            ?: buildCachedArgsInfoUnsafe(compileKotlinTask, compilerArgumentsMapper)
             ?: return null
         val dependencies =
             buildCompilationDependencies(gradleCompilation, classifier, sourceSetMap, dependencyResolver, project, dependencyMapper)
@@ -772,11 +771,10 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
 
     private fun buildCachedArgsInfoUnsafe(
         compileKotlinTask: Task,
-        compilerArgumentsMapper: ICompilerArgumentsMapper,
-        classLoader: ClassLoader
+        compilerArgumentsMapper: ICompilerArgumentsMapper
     ): CachedArgsInfo? {
         val compilationArguments = buildCompilationArgumentsUnsafe(compileKotlinTask) ?: return null
-        val converter = RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper, classLoader)
+        val converter = RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper)
         val dependencyClasspath = buildDependencyClasspath(compileKotlinTask)
         return CachedArgsInfoImpl(
             converter.convert(compilationArguments.currentArguments.toList()),
@@ -796,11 +794,10 @@ class KotlinMPPGradleModelBuilder : ModelBuilderService {
 
     private fun buildCachedArgsInfo(
         compileKotlinTask: Task,
-        compilerArgumentsMapper: ICompilerArgumentsMapper,
-        classLoader: ClassLoader
+        compilerArgumentsMapper: ICompilerArgumentsMapper
     ): CachedArgsInfo? {
         val compileTaskClass = compileKotlinTask.javaClass
-        val converter = RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper, classLoader)
+        val converter = RawToCachedCompilerArgumentsBucketConverter(compilerArgumentsMapper)
         val currentCachedArgumentsBucket = compileTaskClass.getMethodOrNull("getSerializedCompilerArguments")
             ?.let { safelyGetArguments(compileKotlinTask, it) }
             ?.let { converter.convert(it) } ?: return null

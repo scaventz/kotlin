@@ -33,8 +33,7 @@ data class ArgumentAnnotationInfo(
 )
 
 fun ArgumentAnnotationInfo.isSuitableValue(value: String): Boolean =
-    if (isAdvanced) value.startsWith(this.value) || value.startsWith(shortName) || value.startsWith(deprecatedName)
-    else value == this.value || value == shortName || value == deprecatedName
+    (if (isAdvanced) value.substringBefore("=") else value).let { it == this.value || it == shortName || it == deprecatedName}
 
 data class DividedPropertiesWithArgumentAnnotationInfo(
     val flagPropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo>,

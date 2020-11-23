@@ -12,8 +12,10 @@ interface CompilerArgumentsBucketConverter<From, To> {
     fun convert(from: From): To
 }
 
-class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
+class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
+    override val classLoader: ClassLoader? = mapper.javaClass.classLoader
+
     override fun convert(from: CachedCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
         val flattenSingleArguments = from.singleArguments.entries.associate { (k, v) ->
             mapper.getArgument(k) to mapper.getArgument(v)
@@ -33,11 +35,14 @@ class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
     }
 }
 
-class FlatToRawCompilerArgumentsBucketConverter(override val classLoader: ClassLoader? = null) :
+class FlatToRawCompilerArgumentsBucketConverter(override val classLoader: ClassLoader) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
+
+    private val dividedPropertiesWithArgumentAnnotationInfo by lazy {
+        DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
+    }
+
     override fun convert(from: FlatCompilerArgumentsBucket): RawCompilerArgumentsBucket = mutableListOf<String>().apply {
-        val dividedPropertiesWithArgumentAnnotationInfo =
-            DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
 
         val singleArgumentAnnotationInfos = dividedPropertiesWithArgumentAnnotationInfo.singlePropertiesToArgumentAnnotation.values
         from.singleArguments.entries.forEach { (k, v) ->
@@ -50,8 +55,9 @@ class FlatToRawCompilerArgumentsBucketConverter(override val classLoader: ClassL
             }
         }
 
+        val multipleArgumentAnnotationInfos = dividedPropertiesWithArgumentAnnotationInfo.multiplePropertiesToArgumentAnnotation.values
         from.multipleArguments.entries.forEach { (k, v) ->
-            val argument = singleArgumentAnnotationInfos.first { it.isSuitableValue(k) }
+            val argument = multipleArgumentAnnotationInfos.first { it.isSuitableValue(k) }
             val value = v.joinToString(argument.delimiter)
             if (argument.isAdvanced) {
                 this@apply.add("$k=$value")
@@ -74,9 +80,11 @@ class FlatToRawCompilerArgumentsBucketConverter(override val classLoader: ClassL
     }
 }
 
-class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
+class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
-    private val cachedToFlatCompilerArgumentsBucketConverter by lazy { CachedToFlatCompilerArgumentsBucketConverter(mapper, classLoader) }
+    override val classLoader: ClassLoader = mapper.javaClass.classLoader
+
+    private val cachedToFlatCompilerArgumentsBucketConverter by lazy { CachedToFlatCompilerArgumentsBucketConverter(mapper) }
     private val flatToRawCompilerArgumentsBucketConverter by lazy { FlatToRawCompilerArgumentsBucketConverter(classLoader) }
     override fun convert(from: CachedCompilerArgumentsBucket): RawCompilerArgumentsBucket =
         cachedToFlatCompilerArgumentsBucketConverter.convert(from).let {
@@ -84,11 +92,13 @@ class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArguments
         }
 }
 
-class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassLoader? = null) :
+class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassLoader) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
+    private val dividedPropertiesWithArgumentAnnotationInfo by lazy {
+        DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
+    }
+
     override fun convert(from: RawCompilerArgumentsBucket): FlatCompilerArgumentsBucket {
-        val dividedPropertiesWithArgumentAnnotationInfo =
-            DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
 
         val singlePropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.singlePropertiesToArgumentAnnotation
         val multiplePropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.multiplePropertiesToArgumentAnnotation
@@ -102,7 +112,6 @@ class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassL
         fun ArgumentAnnotationInfo.processArgumentWithInfo(): Pair<String, String>? = if (isAdvanced) {
             val found = from.find { isSuitableValue(it) }
             val separate = found?.split('=')?.toTypedArray()
-            check(2 == separate?.size) { "Bad \"${value}\" compiler argument value: $found " }
             separate?.let { it[0] to it[1] }
         } else from.indexOfFirst { isSuitableValue(it) }.takeIf { it != -1 }?.let { from[it] to from[it + 1] }
 
@@ -111,7 +120,8 @@ class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassL
         val flattenMultipleArguments = multiplePropertiesToArgumentAnnotation.values.mapNotNull { info ->
             info.processArgumentWithInfo()?.let { it.first to it.second.split(info.delimiter) }
         }
-        val flatFlagArguments = flagPropertiesToArgumentAnnotation.values.mapNotNull { info -> from.find { info.isSuitableValue(it) } }
+        val flatFlagArguments =
+            flagPropertiesToArgumentAnnotation.values.mapNotNull { info -> from.find { info.isSuitableValue(it) } }.distinct()
 
         return FlatCompilerArgumentsBucket(classpathParts).apply {
             singleArguments.putAll(flattenSingleArguments)
@@ -121,8 +131,9 @@ class RawToFlatCompilerArgumentsBucketConverter(override val classLoader: ClassL
     }
 }
 
-class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
+class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
+    override val classLoader: ClassLoader = mapper.javaClass.classLoader
     override fun convert(from: FlatCompilerArgumentsBucket): CachedCompilerArgumentsBucket {
         val cachedSingleArguments = from.singleArguments.entries.associate {
             mapper.cacheArgument(it.key) to mapper.cacheArgument(it.value)
@@ -143,10 +154,11 @@ class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
     }
 }
 
-class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper, override val classLoader: ClassLoader? = null) :
+class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
+    override val classLoader: ClassLoader = mapper.javaClass.classLoader
     private val rawToFlatCompilerArgumentsBucketConverter by lazy { RawToFlatCompilerArgumentsBucketConverter(classLoader) }
-    private val flatToCachedCompilerArgumentsBucketConverter by lazy { FlatToCachedCompilerArgumentsBucketConverter(mapper, classLoader) }
+    private val flatToCachedCompilerArgumentsBucketConverter by lazy { FlatToCachedCompilerArgumentsBucketConverter(mapper) }
     override fun convert(from: RawCompilerArgumentsBucket): CachedCompilerArgumentsBucket =
         rawToFlatCompilerArgumentsBucketConverter.convert(from).let {
             flatToCachedCompilerArgumentsBucketConverter.convert(it)

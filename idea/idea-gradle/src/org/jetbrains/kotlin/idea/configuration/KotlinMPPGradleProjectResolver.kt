@@ -269,35 +269,37 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
             ideModule: DataNode<ModuleData>,
             ideProject: DataNode<ProjectData>
         ) {
+
             val compilations = targets.flatMap { it.compilations }
+            val mppMapper = ideProject.mppProjectCompilerArgumentsMapper ?: return
+            val converter = CachedToRawCompilerArgumentsBucketConverter(mppMapper)
             for (compilation in compilations) {
                 val kotlinSourceSetInfo = ideModule.kotlinSourceSetInfoByCompilation[compilation] ?: continue
                 val cachedArgsInfo = ideModule.cachedCompilerArgumentsByCompilation[compilation] ?: continue
-                val mppMapper = ideProject.mppProjectCompilerArgumentsMapper ?: return
-                with(CachedToRawCompilerArgumentsBucketConverter(mppMapper)) {
-                    kotlinSourceSetInfo.compilerArguments = convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
-                        createCompilerArguments(it, compilation.platform, isMultiplatform = true)
-                    }
 
-                    kotlinSourceSetInfo.defaultCompilerArguments = convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
-                        createCompilerArguments(it, compilation.platform, isMultiplatform = true)
-                    }
-
-                    kotlinSourceSetInfo.dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
-
-
-                    if (compilation.platform == KotlinPlatform.JVM || compilation.platform == KotlinPlatform.ANDROID) {
-                        ideModule.compilationDataByCompilation[compilation]?.targetCompatibility =
-                            cachedArgsInfo.currentCompilerArgumentsBucket.extractGeneralArgument(
-                                K2JVMCompilerArguments::jvmTarget,
-                                mppMapper
-                            )
-                    }
+                kotlinSourceSetInfo.compilerArguments = converter.convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
+                    createCompilerArguments(it, compilation.platform, isMultiplatform = true)
                 }
+
+                kotlinSourceSetInfo.defaultCompilerArguments = converter.convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
+                    createCompilerArguments(it, compilation.platform, isMultiplatform = true)
+                }
+
+                kotlinSourceSetInfo.dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
+
+
+                if (compilation.platform == KotlinPlatform.JVM || compilation.platform == KotlinPlatform.ANDROID) {
+                    ideModule.compilationDataByCompilation[compilation]?.targetCompatibility =
+                        cachedArgsInfo.currentCompilerArgumentsBucket.extractGeneralArgument(
+                            K2JVMCompilerArguments::jvmTarget,
+                            mppMapper
+                        )
+                }
+
             }
         }
 
-        private fun <T : CommonToolArguments> CachedCompilerArgumentsBucket.extractGeneralArgument(
+        fun <T : CommonToolArguments> CachedCompilerArgumentsBucket.extractGeneralArgument(
             property: KProperty1<T, *>,
             mapper: CompilerArgumentsMapper
         ): String? {
