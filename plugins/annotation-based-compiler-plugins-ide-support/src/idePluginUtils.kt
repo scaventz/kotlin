@@ -18,10 +18,10 @@ package org.jetbrains.kotlin.annotation.plugin.ide
 
 import com.intellij.openapi.module.Module
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
+import org.jetbrains.kotlin.config.createDummyCompilerArgumentsBucket
+import org.jetbrains.kotlin.config.extractMultipleArgument
+import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
-import org.jetbrains.kotlin.lexer.KtTokens
-import org.jetbrains.kotlin.psi.KtClass
-import org.jetbrains.kotlin.psi.KtDeclaration
 import java.io.File
 
 fun Module.getSpecialAnnotations(prefix: String): List<String> {
@@ -46,19 +46,19 @@ internal fun modifyCompilerArgumentsForPlugin(
 ) {
     val facetSettings = facet.configuration.settings
 
-    // investigate why copyBean() sometimes throws exceptions
-    val commonArguments = facetSettings.compilerArguments ?: CommonCompilerArguments.DummyImpl().also {
-        facetSettings.compilerArguments = it
+    val compilerArgumentsBucket = facetSettings.compilerArgumentsBucket ?: createDummyCompilerArgumentsBucket().also {
+        facetSettings.compilerArgumentsBucket = it
     }
 
     /** See [CommonCompilerArguments.PLUGIN_OPTION_FORMAT] **/
     val newOptionsForPlugin = setup?.options?.map { "plugin:$compilerPluginId:${it.key}=${it.value}" } ?: emptyList()
 
-    val oldAllPluginOptions =
-        (commonArguments.pluginOptions ?: emptyArray()).filterTo(mutableListOf()) { !it.startsWith("plugin:$compilerPluginId:") }
+    val oldAllPluginOptions = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginOptions)?.second
+        ?: emptyArray()).filterTo(mutableListOf()) { !it.startsWith("plugin:$compilerPluginId:") }
     val newAllPluginOptions = oldAllPluginOptions + newOptionsForPlugin
 
-    val oldPluginClasspaths = (commonArguments.pluginClasspaths ?: emptyArray()).filterTo(mutableListOf()) {
+    val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginClasspaths)?.second
+        ?: emptyArray()).filterTo(mutableListOf()) {
         val lastIndexOfFile = it.lastIndexOfAny(charArrayOf('/', File.separatorChar))
         if (lastIndexOfFile < 0) {
             return@filterTo true
@@ -68,7 +68,7 @@ internal fun modifyCompilerArgumentsForPlugin(
 
     val newPluginClasspaths = oldPluginClasspaths + (setup?.classpath ?: emptyList())
 
-    commonArguments.pluginOptions = newAllPluginOptions.toTypedArray()
-    commonArguments.pluginClasspaths = newPluginClasspaths.toTypedArray()
+    compilerArgumentsBucket.setMultipleArgument(CommonCompilerArguments::pluginOptions, newAllPluginOptions.toTypedArray())
+    compilerArgumentsBucket.setMultipleArgument(CommonCompilerArguments::pluginClasspaths, newPluginClasspaths.toTypedArray())
 
 }

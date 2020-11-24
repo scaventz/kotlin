@@ -16,6 +16,7 @@ dependencies {
     compileOnly(intellijPluginDep("java"))
     compileOnly(intellijPluginDep("gradle"))
     compileOnly(intellijPluginDep("android"))
+    compileOnly(project(":idea:kotlin-gradle-tooling"))
 }
 
 sourceSets {

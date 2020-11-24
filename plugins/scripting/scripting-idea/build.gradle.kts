@@ -12,6 +12,7 @@ dependencies {
     compileOnly(project(":idea:idea-core"))
     compileOnly(intellijDep())
     compileOnly(intellijDep("gradle"))
+    compileOnly(project(":idea:kotlin-gradle-tooling"))
 }
 
 sourceSets {

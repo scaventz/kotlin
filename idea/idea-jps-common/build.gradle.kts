@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     compile(kotlinStdlib())
+    compileOnly(project(":idea:kotlin-gradle-tooling"))
     compileOnly(project(":kotlin-reflect-api"))
     compile(project(":compiler:util"))
     compile(project(":compiler:cli-common"))
@@ -14,6 +15,7 @@ dependencies {
     compile(project(":native:frontend.native"))
     compileOnly(intellijDep())
     compileOnly(jpsStandalone()) { includeJars("jps-model") }
+    compileOnly(project(":kotlin-build-common"))
 }
 
 sourceSets {

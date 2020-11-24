@@ -17,6 +17,7 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
+import org.jetbrains.kotlin.caching.RawToFlatCompilerArgumentsBucketConverter
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
 import org.jetbrains.kotlin.config.*
@@ -57,11 +58,51 @@ private fun getDefaultTargetPlatform(module: Module, rootModel: ModuleRootModel?
     return platformKind.defaultPlatform
 }
 
+private fun KotlinFacetSettings.initializeCompilerArguments(
+    module: Module,
+    rootModel: ModuleRootModel?,
+    commonArguments: CommonCompilerArguments,
+    platform: TargetPlatform? = null, // if null, detect by module dependencies
+) {
+    if (compilerArguments == null) {
+        val targetPlatform = platform ?: getDefaultTargetPlatform(module, rootModel)
+        compilerArguments = createAndPrepareCompilerArguments(targetPlatform, module, commonArguments)
+        this.targetPlatform = targetPlatform
+    }
+
+}
+
+private fun KotlinFacetSettings.initializeCompilerArgumentsBucket(
+    module: Module,
+    rootModel: ModuleRootModel?,
+    commonArguments: CommonCompilerArguments,
+    platform: TargetPlatform? = null, // if null, detect by module dependencies
+) {
+    if (compilerArgumentsBucket == null) {
+        val targetPlatform = platform ?: getDefaultTargetPlatform(module, rootModel)
+        compilerArgumentsBucket = createAndPrepareCompilerArguments(targetPlatform, module, commonArguments).let {
+            val arguments = ArgumentUtils.convertArgumentsToStringList(it)
+            RawToFlatCompilerArgumentsBucketConverter().convert(arguments)
+        }
+        this.targetPlatform = targetPlatform
+    }
+}
+
+private fun createAndPrepareCompilerArguments(
+    targetPlatform: TargetPlatform,
+    module: Module,
+    commonArguments: CommonCompilerArguments
+) = targetPlatform.createArguments {
+    targetPlatform.idePlatformKind.tooling.compilerArgumentsForProject(module.project)?.let { mergeBeans(it, this) }
+    mergeBeans(commonArguments, this)
+}
+
 fun KotlinFacetSettings.initializeIfNeeded(
     module: Module,
     rootModel: ModuleRootModel?,
     platform: TargetPlatform? = null, // if null, detect by module dependencies
-    compilerVersion: String? = null
+    compilerVersion: String? = null,
+    hasCompilerArguments: Boolean = true
 ) {
     val project = module.project
 
@@ -72,16 +113,10 @@ fun KotlinFacetSettings.initializeIfNeeded(
         compilerSettings = KotlinCompilerSettings.getInstance(project).settings
     }
 
-    val commonArguments = KotlinCommonCompilerArgumentsHolder.getInstance(module.project).settings
+    val commonArguments = KotlinCommonCompilerArgumentsHolder.getInstance(project).settings
 
-    if (compilerArguments == null) {
-        val targetPlatform = platform ?: getDefaultTargetPlatform(module, rootModel)
-        compilerArguments = targetPlatform.createArguments {
-            targetPlatform.idePlatformKind.tooling.compilerArgumentsForProject(module.project)?.let { mergeBeans(it, this) }
-            mergeBeans(commonArguments, this)
-        }
-        this.targetPlatform = targetPlatform
-    }
+    if (hasCompilerArguments) initializeCompilerArguments(module, rootModel, commonArguments, platform)
+    else initializeCompilerArgumentsBucket(module, rootModel, commonArguments, platform)
 
     if (shouldInferLanguageLevel) {
         languageLevel = (if (useProjectSettings) LanguageVersion.fromVersionString(commonArguments.languageVersion) else null)
