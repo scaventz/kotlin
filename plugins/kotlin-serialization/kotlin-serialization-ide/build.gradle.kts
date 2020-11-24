@@ -18,6 +18,7 @@ dependencies {
     compileOnly(intellijPluginDep("java"))
     excludeInAndroidStudio(rootProject) { compileOnly(intellijPluginDep("maven")) }
     compileOnly(intellijPluginDep("gradle"))
+    compileOnly(project(":idea:kotlin-gradle-tooling"))
 
     testCompileOnly(intellijDep())
     testRuntimeOnly(intellijDep())

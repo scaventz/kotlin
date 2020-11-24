@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.caching
 
-import org.jetbrains.kotlin.cli.common.arguments.CommonToolArguments
 import org.jetbrains.kotlin.gradle.getMethodOrNull
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -67,7 +66,7 @@ val ClassLoader?.jvmArgumentsClazz: Class<*>?
 val ClassLoader?.isAdvancedMethod: Method?
     get() = argumentAnnotationClazz?.let { getClassSafely(PARSE_ARGUMENTS_CLASS, this)?.getMethodOrNull("isAdvanced", it) }
 
-class DividedPropertiesWithArgumentAnnotationInfoManager(val classLoader: ClassLoader?) {
+class DividedPropertiesWithArgumentAnnotationInfoManager(val classLoader: ClassLoader) {
     val dividedPropertiesWithArgumentAnnotationInfo: DividedPropertiesWithArgumentAnnotationInfo by lazy {
         val allPropertiesToArgumentAnnotation = with(classLoader) {
             listOfNotNull(
