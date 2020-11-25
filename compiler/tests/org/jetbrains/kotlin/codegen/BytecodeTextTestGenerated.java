@@ -961,6 +961,11 @@ public class BytecodeTextTestGenerated extends AbstractBytecodeTextTest {
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/bytecodeText/companion"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM, true);
         }
 
+        @TestMetadata("directAccessToBackingField.kt")
+        public void testDirectAccessToBackingField() throws Exception {
+            runTest("compiler/testData/codegen/bytecodeText/companion/directAccessToBackingField.kt");
+        }
+
         @TestMetadata("floatingPointCompanionAccess.kt")
         public void testFloatingPointCompanionAccess() throws Exception {
             runTest("compiler/testData/codegen/bytecodeText/companion/floatingPointCompanionAccess.kt");
