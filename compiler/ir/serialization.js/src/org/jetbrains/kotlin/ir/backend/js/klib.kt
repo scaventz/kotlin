@@ -52,7 +52,6 @@ import org.jetbrains.kotlin.library.*
 import org.jetbrains.kotlin.library.impl.BuiltInsPlatform
 import org.jetbrains.kotlin.library.impl.buildKotlinLibrary
 import org.jetbrains.kotlin.library.resolver.KotlinLibraryResolveResult
-import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
 import org.jetbrains.kotlin.metadata.ProtoBuf
 import org.jetbrains.kotlin.progress.IncrementalNextRoundException
 import org.jetbrains.kotlin.progress.ProgressIndicatorAndCompilationCanceledStatus
@@ -163,7 +162,7 @@ fun generateKLib(
         serializedIrFiles?.let { ICData(it, errorPolicy.allowErrors) }
     )
 
-    sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
+    sortDependencies(allDependencies.getFullList().map { it.library }, depsDescriptors.descriptors).map {
         irLinker.deserializeOnlyHeaderModule(depsDescriptors.getModuleDescriptor(it), it)
     }
 
@@ -188,7 +187,7 @@ fun generateKLib(
         psi2IrContext.bindingContext,
         files,
         outputKlibPath,
-        allDependencies.getFullList(),
+        allDependencies.getFullList().map { it.library },
         moduleFragment,
         expectDescriptorToSymbol,
         icData,
@@ -238,7 +237,7 @@ fun loadIr(
                 JsIrLinker.JsFePluginContext(moduleDescriptor, bindingContext, symbolTable, typeTranslator, irBuiltIns)
             }
             val irLinker = JsIrLinker(psi2IrContext.moduleDescriptor, emptyLoggingContext, irBuiltIns, symbolTable, functionFactory, feContext, null)
-            val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
+            val deserializedModuleFragments = sortDependencies(allDependencies.getFullList().map { it.library }, depsDescriptors.descriptors).map {
                 irLinker.deserializeIrModuleHeader(depsDescriptors.getModuleDescriptor(it), it)
             }
 
@@ -276,7 +275,7 @@ fun loadIr(
             val irLinker =
                 JsIrLinker(null, emptyLoggingContext, irBuiltIns, symbolTable, functionFactory, null, null)
 
-            val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
+            val deserializedModuleFragments = sortDependencies(allDependencies.getFullList().map { it.library }, depsDescriptors.descriptors).map {
                 val strategy =
                     if (it == mainModule.lib)
                         DeserializationStrategy.ALL
@@ -380,18 +379,13 @@ private class ModulesStructure(
     private val friendDependencies: List<KotlinLibrary>
 ) {
     val moduleDependencies: Map<KotlinLibrary, List<KotlinLibrary>> = run {
-        val result = mutableMapOf<KotlinLibrary, List<KotlinLibrary>>()
-
-        allDependencies.forEach { klib, _ ->
-            val dependencies = allDependencies.filterRoots {
-                it.library == klib
-            }.getFullList(TopologicalLibraryOrder)
-            result.put(klib, dependencies.minus(klib))
-        }
-        result
+        val transitives = allDependencies.getFullList()
+        transitives.associate { klib ->
+            klib.library to klib.resolvedDependencies.map { d -> d.library }
+        }.toMap()
     }
 
-    val builtInsDep = allDependencies.getFullList().find { it.isBuiltIns }
+    val builtInsDep = allDependencies.getFullList().find { it.library.isBuiltIns }?.library
 
     class JsFrontEndResult(val moduleDescriptor: ModuleDescriptor, val bindingContext: BindingContext, val hasErrors: Boolean)
 
@@ -404,7 +398,7 @@ private class ModulesStructure(
                 files,
                 project,
                 compilerConfiguration,
-                allDependencies.getFullList().map { getModuleDescriptor(it) },
+                allDependencies.getFullList().map { getModuleDescriptor(it.library) },
                 friendModuleDescriptors = friendDependencies.map { getModuleDescriptor(it) },
                 thisIsBuiltInsModule = builtInModuleDescriptor == null,
                 customBuiltInsModule = builtInModuleDescriptor

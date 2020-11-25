@@ -130,7 +130,7 @@ fun readLibrariesFromConfiguration(configuration: CompilerConfiguration): List<M
         }
     )
     return resolvedLibraries.getFullList(TopologicalLibraryOrder)
-        .map { descriptorMap.getOrPut(it.libraryName) { getModuleDescriptorByLibrary(it, descriptorMap) } }
+        .map { descriptorMap.getOrPut(it.library.libraryName) { getModuleDescriptorByLibrary(it.library, descriptorMap) } }
 }
 
 fun createCompileResult(code: String) = createCompileResult(LineId(0, 0, 0), code)

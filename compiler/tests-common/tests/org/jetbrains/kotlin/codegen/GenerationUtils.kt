@@ -168,7 +168,7 @@ object GenerationUtils {
         val analysisResult =
             JvmResolveUtil.analyzeAndCheckForErrors(
                 project, files, configuration, packagePartProvider, trace,
-                klibList = resolvedKlibs?.getFullList() ?: emptyList()
+                klibList = resolvedKlibs?.getFullList()?.map { it.library } ?: emptyList()
             )
         analysisResult.throwIfError()
 

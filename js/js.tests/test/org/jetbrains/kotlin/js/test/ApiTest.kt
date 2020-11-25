@@ -79,7 +79,7 @@ class ApiTest : KotlinTestWithEnvironment() {
 
             return loadIr(
                 project,
-                MainModule.Klib(resolvedLibraries.getFullList().single()),
+                MainModule.Klib(resolvedLibraries.getFullList().single().library),
                 AnalyzerWithCompilerReport(configuration),
                 configuration,
                 resolvedLibraries,

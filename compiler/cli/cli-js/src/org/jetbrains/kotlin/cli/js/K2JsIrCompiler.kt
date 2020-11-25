@@ -182,7 +182,7 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
         )
 
         val friendAbsolutePaths = friendLibraries.map { File(it).absolutePath }
-        val friendDependencies = resolvedLibraries.getFullList().filter {
+        val friendDependencies = resolvedLibraries.getFullList().map { it.library }.filter {
             it.libraryFile.absolutePath in friendAbsolutePaths
         }
 
@@ -219,7 +219,7 @@ class K2JsIrCompiler : CLICompiler<K2JSCompilerArguments>() {
                 if (sourcesFiles.isNotEmpty()) {
                     messageCollector.report(ERROR, "Source files are not supported when -Xinclude is present")
                 }
-                val allLibraries = resolvedLibraries.getFullList()
+                val allLibraries = resolvedLibraries.getFullList().map { it.library }
                 val mainLib = allLibraries.find { it.libraryFile.absolutePath == File(includes).absolutePath }!!
                 MainModule.Klib(mainLib)
             } else {
