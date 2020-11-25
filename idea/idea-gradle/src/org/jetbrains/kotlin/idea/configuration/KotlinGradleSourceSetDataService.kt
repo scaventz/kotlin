@@ -327,7 +327,7 @@ private fun configureFacetByCachedCompilerArguments(
 }
 
 fun configureFacetByFlatArgsInfo(kotlinFacet: KotlinFacet, flatArgsInfo: FlatArgsInfo, modelsProvider: IdeModifiableModelsProvider?) {
-    val converter = FlatToRawCompilerArgumentsBucketConverter(flatArgsInfo.javaClass.classLoader)
+    val converter = FlatToRawCompilerArgumentsBucketConverter()
     val currentCompilerArguments = converter.convert(flatArgsInfo.currentCompilerArgumentsBucket)
     val defaultCompilerArguments = converter.convert(flatArgsInfo.defaultCompilerArgumentsBucket)
     val dependencyClasspath = flatArgsInfo.dependencyClasspath.map { PathUtil.toSystemIndependentName(it) }
@@ -359,11 +359,10 @@ private fun getExplicitOutputPath(moduleNode: DataNode<ModuleData>, platformKind
 
 internal fun adjustClasspath(kotlinFacet: KotlinFacet, dependencyClasspath: List<String>) {
     if (dependencyClasspath.isEmpty()) return
-    val arguments = kotlinFacet.configuration.settings.compilerArguments as? K2JVMCompilerArguments ?: return
-    val fullClasspath = arguments.classpath?.split(File.pathSeparator) ?: emptyList()
-    if (fullClasspath.isEmpty()) return
-    val newClasspath = fullClasspath - dependencyClasspath
-    arguments.classpath = if (newClasspath.isNotEmpty()) newClasspath.joinToString(File.pathSeparator) else null
+    val compilerArgumentsBucket = kotlinFacet.configuration.settings.compilerArgumentsBucket
+    val classpaths = compilerArgumentsBucket?.classpathParts?.second ?: return
+    val newClasspath = classpaths - dependencyClasspath
+    compilerArgumentsBucket.setClasspathArgument(newClasspath)
 }
 
 internal fun findKotlinCoroutinesProperty(project: Project): String {

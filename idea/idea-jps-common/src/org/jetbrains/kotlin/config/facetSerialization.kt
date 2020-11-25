@@ -12,7 +12,10 @@ import com.intellij.util.xmlb.XmlSerializer
 import org.jdom.DataConversionException
 import org.jdom.Element
 import org.jdom.Text
+import org.jetbrains.kotlin.caching.FlatCompilerArgumentsBucket
+import org.jetbrains.kotlin.caching.RawToFlatCompilerArgumentsBucketConverter
 import org.jetbrains.kotlin.cli.common.arguments.*
+import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.platform.*
 import org.jetbrains.kotlin.platform.impl.FakeK2NativeCompilerArguments
@@ -44,6 +47,9 @@ fun TargetPlatform.createArguments(init: (CommonCompilerArguments).() -> Unit = 
         else -> error("Unknown platform $this")
     }
 }
+
+private fun CommonCompilerArguments.convertToFlatBucket(): FlatCompilerArgumentsBucket = ArgumentUtils.convertArgumentsToStringList(this)
+    .let { RawToFlatCompilerArgumentsBucketConverter().convert(it) }
 
 private fun readV1Config(element: Element): KotlinFacetSettings {
     return KotlinFacetSettings().apply {
@@ -99,7 +105,7 @@ private fun readV1Config(element: Element): KotlinFacetSettings {
         }
 
         this.compilerSettings = compilerSettings
-        this.compilerArguments = compilerArguments
+        compilerArgumentsBucket = compilerArguments.convertToFlatBucket()
         this.targetPlatform = IdePlatformKind.platformByCompilerArguments(compilerArguments)
     }
 }
@@ -125,7 +131,68 @@ fun Element.getFacetPlatformByConfigurationElement(): TargetPlatform {
     }.orDefault() // finally, fallback to the default platform
 }
 
-private fun readV2AndLaterConfig(element: Element): KotlinFacetSettings {
+private fun readV3Config(element: Element): KotlinFacetSettings {
+    return readV4Config(element).apply {
+        element.getChild("compilerArguments")?.let {
+            val compilerArguments = targetPlatform!!.createArguments {
+                freeArgs = mutableListOf()
+                internalArguments = mutableListOf()
+            }
+            XmlSerializer.deserializeInto(compilerArguments, it)
+            compilerArguments.detectVersionAutoAdvance()
+            compilerArgumentsBucket = compilerArguments.convertToFlatBucket()
+        }
+    }
+}
+
+private fun readElementsList(element: Element, rootElementName: String, elementName: String): List<String>? {
+    element.getChild(rootElementName)?.let {
+        val items = it.getChildren(elementName)
+        return if (items.isNotEmpty()) {
+            items.mapNotNull { (it.content.firstOrNull() as? Text)?.textTrim }
+        } else {
+            listOfNotNull((it.content.firstOrNull() as? Text)?.textTrim)
+        }
+    }
+    return null
+}
+
+private fun readV2Config(element: Element): KotlinFacetSettings {
+    return readV3Config(element).apply {
+        element.getChild("compilerArguments")?.children?.let { args ->
+            val coroutineState = when {
+                args.any { arg -> arg.attributes[0].value == "coroutinesEnable" && arg.attributes[1].booleanValue } -> CommonCompilerArguments.ENABLE
+                args.any { arg -> arg.attributes[0].value == "coroutinesWarn" && arg.attributes[1].booleanValue } -> CommonCompilerArguments.WARN
+                args.any { arg -> arg.attributes[0].value == "coroutinesError" && arg.attributes[1].booleanValue } -> CommonCompilerArguments.ERROR
+                else -> CommonCompilerArguments.DEFAULT
+            }
+            compilerArgumentsBucket!!.setSingleArgument(CommonCompilerArguments::coroutinesState, coroutineState)
+        }
+    }
+}
+
+private fun readCompilerArgumentsBucket(element: Element): FlatCompilerArgumentsBucket? {
+    element.getChild("compilerArgumentsBucket")?.let { bucketElement ->
+        val classpathKey = bucketElement.getAttributeValue("classpathKey")
+        val classpathPartsList = readElementsList(bucketElement, "classpathParts", "classpathPart")
+        val classpathParts = classpathKey?.takeIf { !classpathPartsList.isNullOrEmpty() }?.let { it to classpathPartsList!! }
+        val singleArguments = hashMapOf<String, String>().apply {
+            bucketElement.getChild("singleArguments")?.getChildren("singleArgument")?.map {
+                it.getAttributeValue("singleArgumentKey") to it.getAttributeValue("singleArgumentValue")
+            }?.filter { it.first != null && it.second != null }?.also { putAll(it) }
+        }
+        val multipleArguments = hashMapOf<String, List<String>>().apply {
+
+        }
+        val flagArguments = arrayListOf<String>().apply {
+            readElementsList(bucketElement, "flagArguments", "flagArgument")?.also { addAll(it) }
+        }
+        return FlatCompilerArgumentsBucket(classpathParts, singleArguments, multipleArguments, flagArguments)
+    }
+    return null
+}
+
+private fun readV4Config(element: Element): KotlinFacetSettings {
     return KotlinFacetSettings().apply {
         element.getAttributeValue("useProjectSettings")?.let { useProjectSettings = it.toBoolean() }
         val targetPlatform = element.getFacetPlatformByConfigurationElement()
@@ -161,17 +228,12 @@ private fun readV2AndLaterConfig(element: Element): KotlinFacetSettings {
         externalProjectId = element.getAttributeValue("externalProjectId") ?: ""
         isHmppEnabled = element.getAttribute("isHmppProject")?.booleanValue ?: false
         pureKotlinSourceFolders = element.getAttributeValue("pureKotlinSourceFolders")?.split(";")?.toList() ?: emptyList()
+
+        compilerArgumentsBucket = readCompilerArgumentsBucket(element)
+
         element.getChild("compilerSettings")?.let {
             compilerSettings = CompilerSettings()
             XmlSerializer.deserializeInto(compilerSettings!!, it)
-        }
-        element.getChild("compilerArguments")?.let {
-            compilerArguments = targetPlatform.createArguments {
-                freeArgs = mutableListOf()
-                internalArguments = mutableListOf()
-            }
-            XmlSerializer.deserializeInto(compilerArguments!!, it)
-            compilerArguments!!.detectVersionAutoAdvance()
         }
         productionOutputPath = element.getChild("productionOutputPath")?.let {
             PathUtil.toSystemDependentName((it.content.firstOrNull() as? Text)?.textTrim)
@@ -182,36 +244,8 @@ private fun readV2AndLaterConfig(element: Element): KotlinFacetSettings {
     }
 }
 
-private fun readElementsList(element: Element, rootElementName: String, elementName: String): List<String>? {
-    element.getChild(rootElementName)?.let {
-        val items = it.getChildren(elementName)
-        return if (items.isNotEmpty()) {
-            items.mapNotNull { (it.content.firstOrNull() as? Text)?.textTrim }
-        } else {
-            listOfNotNull((it.content.firstOrNull() as? Text)?.textTrim)
-        }
-    }
-    return null
-}
-
-private fun readV2Config(element: Element): KotlinFacetSettings {
-    return readV2AndLaterConfig(element).apply {
-        element.getChild("compilerArguments")?.children?.let { args ->
-            when {
-                args.any { arg -> arg.attributes[0].value == "coroutinesEnable" && arg.attributes[1].booleanValue } ->
-                    compilerArguments!!.coroutinesState = CommonCompilerArguments.ENABLE
-                args.any { arg -> arg.attributes[0].value == "coroutinesWarn" && arg.attributes[1].booleanValue } ->
-                    compilerArguments!!.coroutinesState = CommonCompilerArguments.WARN
-                args.any { arg -> arg.attributes[0].value == "coroutinesError" && arg.attributes[1].booleanValue } ->
-                    compilerArguments!!.coroutinesState = CommonCompilerArguments.ERROR
-                else -> compilerArguments!!.coroutinesState = CommonCompilerArguments.DEFAULT
-            }
-        }
-    }
-}
-
 private fun readLatestConfig(element: Element): KotlinFacetSettings {
-    return readV2AndLaterConfig(element)
+    return readV4Config(element)
 }
 
 fun deserializeFacetSettings(element: Element): KotlinFacetSettings {
@@ -223,6 +257,7 @@ fun deserializeFacetSettings(element: Element): KotlinFacetSettings {
     return when (version) {
         1 -> readV1Config(element)
         2 -> readV2Config(element)
+        3 -> readV3Config(element)
         KotlinFacetSettings.CURRENT_VERSION -> readLatestConfig(element)
         else -> return KotlinFacetSettings() // Reset facet configuration if versions don't match
     }.apply { this.version = version }
@@ -250,6 +285,40 @@ fun CommonCompilerArguments.convertPathsToSystemIndependent() {
             destination = PathUtil.toSystemIndependentName(destination)
             classpath = PathUtil.toSystemIndependentName(classpath)
         }
+    }
+}
+
+fun FlatCompilerArgumentsBucket.convertPathsToSystemIndependent() {
+    classpathParts = classpathParts?.let { it.first to it.second.map { cp -> PathUtil.toSystemIndependentName(cp) } }
+
+    extractMultipleArgumentValue(CommonCompilerArguments::pluginClasspaths)?.map { PathUtil.toSystemIndependentName(it) }?.also {
+        setMultipleArgument(CommonCompilerArguments::pluginClasspaths, it.toTypedArray())
+    }
+
+    extractSingleArgumentValue(K2JVMCompilerArguments::destination)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2JVMCompilerArguments::destination, it)
+    } ?: extractSingleArgumentValue(K2MetadataCompilerArguments::destination)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2MetadataCompilerArguments::destination, it)
+    }
+
+    extractSingleArgumentValue(K2JVMCompilerArguments::jdkHome)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2JVMCompilerArguments::jdkHome, it)
+    }
+    extractSingleArgumentValue(K2JVMCompilerArguments::kotlinHome)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2JVMCompilerArguments::kotlinHome, it)
+    }
+    extractSingleArgumentValue(K2JVMCompilerArguments::declarationsOutputPath)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2JVMCompilerArguments::declarationsOutputPath, it)
+    }
+    extractMultipleArgumentValue(K2JVMCompilerArguments::friendPaths)?.map { PathUtil.toSystemIndependentName(it) }?.also {
+        setMultipleArgument(K2JVMCompilerArguments::friendPaths, it.toTypedArray())
+    }
+
+    extractSingleArgumentValue(K2JSCompilerArguments::outputFile)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2JSCompilerArguments::outputFile, it)
+    }
+    extractSingleArgumentValue(K2JSCompilerArguments::libraries)?.let { PathUtil.toSystemIndependentName(it) }?.also {
+        setSingleArgument(K2JSCompilerArguments::libraries, it)
     }
 }
 
@@ -337,7 +406,7 @@ private fun KotlinFacetSettings.writeLatestConfig(element: Element) {
         element.addContent(
             Element("externalSystemTestTasks").apply {
                 externalSystemRunTasks.forEach { task ->
-                    when(task) {
+                    when (task) {
                         is ExternalSystemTestRunTask -> {
                             addContent(
                                 Element("externalSystemTestTask").apply { addContent(task.toStringRepresentation()) }
@@ -370,10 +439,11 @@ private fun KotlinFacetSettings.writeLatestConfig(element: Element) {
         it.convertPathsToSystemIndependent()
         buildChildElement(element, "compilerSettings", it, filter)
     }
-    compilerArguments?.let { copyBean(it) }?.let {
+    compilerArgumentsBucket?.also {
         it.convertPathsToSystemIndependent()
-        val compilerArgumentsXml = buildChildElement(element, "compilerArguments", it, filter)
-        compilerArgumentsXml.dropVersionsIfNecessary(it)
+        it.writeCompilerArgumentsBucket(element).apply {
+            dropVersionsIfNecessary(it)
+        }
     }
 }
 
@@ -392,6 +462,39 @@ private fun saveElementsList(element: Element, elementsList: List<String>, rootE
     }
 }
 
+private fun FlatCompilerArgumentsBucket.writeCompilerArgumentsBucket(element: Element): Element {
+    val bucketElement = Element("compilerArgumentsBucket")
+
+    classpathParts?.also { partKv ->
+        bucketElement.setAttribute("classpathKey", partKv.first)
+        saveElementsList(bucketElement, partKv.second, "classpathParts", "classpathPart")
+    }
+    val singleArgumentsElement = Element("singleArguments").also { singleArgsElement ->
+        singleArguments.forEach { (k, v) ->
+            Element("singleArgument").apply {
+                setAttribute("singleArgumentKey", k)
+                setAttribute("singleArgumentValue", v)
+                singleArgsElement.addContent(this)
+            }
+        }
+    }
+    bucketElement.addContent(singleArgumentsElement)
+
+    val multipleArgumentsElement = Element("multipleArguments").also { multipleArgsElement ->
+        multipleArguments.forEach { (k, v) ->
+            Element("multipleArgument").apply {
+                setAttribute("multipleArgumentKey", k)
+                saveElementsList(this, v, "singleArgumentValues", "singleArgumentValue")
+                multipleArgsElement.addContent(this)
+            }
+        }
+    }
+    bucketElement.addContent(multipleArgumentsElement)
+    saveElementsList(bucketElement, flagArguments, "flagArguments", "flagArgument")
+    element.addContent(bucketElement)
+    return bucketElement
+}
+
 fun CommonCompilerArguments.detectVersionAutoAdvance() {
     autoAdvanceLanguageVersion = languageVersion == null
     autoAdvanceApiVersion = apiVersion == null
@@ -404,6 +507,17 @@ fun Element.dropVersionsIfNecessary(settings: CommonCompilerArguments) {
     }
 
     if (settings.autoAdvanceApiVersion) {
+        getOption("apiVersion")?.detach()
+    }
+}
+
+fun Element.dropVersionsIfNecessary(bucket: FlatCompilerArgumentsBucket) {
+    // Do not serialize language/api version if they correspond to the default language version
+    if (bucket.extractFlagArgumentValue(CommonCompilerArguments::autoAdvanceLanguageVersion)) {
+        getOption("languageVersion")?.detach()
+    }
+
+    if (bucket.extractFlagArgumentValue(CommonCompilerArguments::autoAdvanceApiVersion)) {
         getOption("apiVersion")?.detach()
     }
 }
@@ -430,7 +544,10 @@ private fun KotlinFacetSettings.writeV2Config(element: Element) {
 }
 
 fun KotlinFacetSettings.serializeFacetSettings(element: Element) {
-    val versionToWrite = if (version == 2) version else KotlinFacetSettings.CURRENT_VERSION
+    val versionToWrite = when (version) {
+        2 -> version
+        else -> KotlinFacetSettings.CURRENT_VERSION
+    }
     element.setAttribute("version", versionToWrite.toString())
     if (versionToWrite == 2) {
         writeV2Config(element)

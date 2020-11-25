@@ -12,14 +12,14 @@ typealias ClasspathArgumentsType = List<String>
 typealias RawCompilerArgumentsBucket = List<String>
 
 interface CompilerArgumentsBucket<T> : Serializable {
-    val classpathParts: Pair<T, List<T>>?
+    var classpathParts: Pair<T, List<T>>?
     val singleArguments: HashMap<T, T>
     val multipleArguments: HashMap<T, List<T>>
     val flagArguments: ArrayList<T>
 }
 
 class CachedCompilerArgumentsBucket(
-    override val classpathParts: Pair<Int, List<Int>>? = null,
+    override var classpathParts: Pair<Int, List<Int>>? = null,
     override val singleArguments: HashMap<Int, Int> = hashMapOf(),
     override val multipleArguments: HashMap<Int, List<Int>> = hashMapOf(),
     override val flagArguments: ArrayList<Int> = arrayListOf()
@@ -32,7 +32,7 @@ class CachedCompilerArgumentsBucket(
 }
 
 class FlatCompilerArgumentsBucket(
-    override val classpathParts: Pair<String, List<String>>? = null,
+    override var classpathParts: Pair<String, List<String>>? = null,
     override val singleArguments: HashMap<String, String> = hashMapOf(),
     override val multipleArguments: HashMap<String, List<String>> = hashMapOf(),
     override val flagArguments: ArrayList<String> = arrayListOf()
