@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.config.CompilerSettings
 import org.jetbrains.kotlin.config.createArguments
 import org.jetbrains.kotlin.config.splitArgumentString
+import org.jetbrains.kotlin.config.toFlatCompilerArguments
 import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.idea.compiler.configuration.*
 import org.jetbrains.kotlin.idea.core.util.onTextChange
@@ -422,12 +423,12 @@ class KotlinFacetEditorGeneralTab(
                             it.isJs() -> editor.compilerConfigurable.k2jsCompilerArguments
                             else -> null
                         }
-                        compilerArguments = it.createArguments {
+                        compilerArgumentsBucket = it.createArguments {
                             if (platformArguments != null) {
                                 mergeBeans(platformArguments, this)
                             }
                             copyInheritedFields(compilerArguments!!, this)
-                        }
+                        }.toFlatCompilerArguments()
                     }
                 }
                 configuration.settings.targetPlatform = editor.getChosenPlatform()

@@ -8,7 +8,9 @@ package org.jetbrains.kotlin.allopen
 import com.intellij.lang.jvm.JvmModifier
 import com.intellij.testFramework.LightProjectDescriptor
 import org.jetbrains.kotlin.allopen.ide.ALL_OPEN_ANNOTATION_OPTION_PREFIX
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.LanguageVersion
+import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinProjectDescriptorWithFacet
@@ -31,10 +33,12 @@ class TestAllOpenForLightClass : KotlinLightCodeInsightFixtureTestCase() {
         super.setUp()
 
         val facet = KotlinFacet.get(module) ?: error { "Facet not found" }
-        val configurationArguments = facet.configuration.settings.compilerArguments ?: error { "CompilerArguments not found" }
+        val bucket = facet.configuration.settings.compilerArgumentsBucket ?: error { "CompilerArgumentsBucket not found" }
 
-        configurationArguments.pluginClasspaths = arrayOf("SomeClasspath")
-        configurationArguments.pluginOptions = arrayOf("$ALL_OPEN_ANNOTATION_OPTION_PREFIX$allOpenAnnotationName")
+        with(bucket) {
+            setMultipleArgument(CommonCompilerArguments::pluginClasspaths, arrayOf("SomeClasspath"))
+            setMultipleArgument(CommonCompilerArguments::pluginOptions, arrayOf("$ALL_OPEN_ANNOTATION_OPTION_PREFIX$allOpenAnnotationName"))
+        }
     }
 
     fun testAllOpenAnnotation() {

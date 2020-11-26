@@ -237,10 +237,10 @@ private fun readV4Config(element: Element): KotlinFacetSettings {
         }
         productionOutputPath = element.getChild("productionOutputPath")?.let {
             PathUtil.toSystemDependentName((it.content.firstOrNull() as? Text)?.textTrim)
-        } ?: (compilerArguments as? K2JSCompilerArguments)?.outputFile
+        } ?: compilerArgumentsBucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)
         testOutputPath = element.getChild("testOutputPath")?.let {
             PathUtil.toSystemDependentName((it.content.firstOrNull() as? Text)?.textTrim)
-        } ?: (compilerArguments as? K2JSCompilerArguments)?.outputFile
+        } ?: compilerArgumentsBucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)
     }
 }
 
@@ -426,12 +426,12 @@ private fun KotlinFacetSettings.writeLatestConfig(element: Element) {
         element.setAttribute("pureKotlinSourceFolders", pureKotlinSourceFolders.joinToString(";"))
     }
     productionOutputPath?.let {
-        if (it != (compilerArguments as? K2JSCompilerArguments)?.outputFile) {
+        if (it != compilerArgumentsBucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)) {
             element.addContent(Element("productionOutputPath").apply { addContent(PathUtil.toSystemIndependentName(it)) })
         }
     }
     testOutputPath?.let {
-        if (it != (compilerArguments as? K2JSCompilerArguments)?.outputFile) {
+        if (it != compilerArgumentsBucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)) {
             element.addContent(Element("testOutputPath").apply { addContent(PathUtil.toSystemIndependentName(it)) })
         }
     }
@@ -527,7 +527,7 @@ private fun KotlinFacetSettings.writeV2Config(element: Element) {
     writeLatestConfig(element)
     element.getChild("compilerArguments")?.let {
         it.getOption("coroutinesState")?.detach()
-        val coroutineOption = when (compilerArguments?.coroutinesState) {
+        val coroutineOption = when (compilerArgumentsBucket?.extractSingleArgumentValue(CommonCompilerArguments::coroutinesState)) {
             CommonCompilerArguments.ENABLE -> "coroutinesEnable"
             CommonCompilerArguments.WARN -> "coroutinesWarn"
             CommonCompilerArguments.ERROR -> "coroutinesError"

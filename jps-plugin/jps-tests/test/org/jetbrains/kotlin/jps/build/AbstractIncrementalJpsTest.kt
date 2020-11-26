@@ -46,6 +46,8 @@ import org.jetbrains.jps.util.JpsPathUtil
 import org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2MetadataCompilerArguments
+import org.jetbrains.kotlin.config.setFlagArgument
+import org.jetbrains.kotlin.config.setSingleArgument
 import org.jetbrains.kotlin.incremental.LookupSymbol
 import org.jetbrains.kotlin.incremental.testingUtils.*
 import org.jetbrains.kotlin.jps.build.dependeciestxt.ModulesTxt
@@ -58,6 +60,8 @@ import org.jetbrains.kotlin.jps.targets.KotlinModuleBuildTarget
 import org.jetbrains.kotlin.platform.idePlatformKind
 import org.jetbrains.kotlin.platform.impl.isJavaScript
 import org.jetbrains.kotlin.platform.impl.isJvm
+import org.jetbrains.kotlin.platform.isCommon
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.platform.orDefault
 import org.jetbrains.kotlin.utils.Printer
 import java.io.ByteArrayInputStream
@@ -83,6 +87,7 @@ abstract class AbstractIncrementalJpsTest(
     protected lateinit var testDataDir: File
     protected lateinit var workDir: File
     protected lateinit var projectDescriptor: ProjectDescriptor
+
     // is used to compare lookup dumps in a human readable way (lookup symbols are hashed in an actual lookup storage)
     protected lateinit var lookupsDuringTest: MutableSet<LookupSymbol>
     private var isJvmICEnabledBackup: Boolean = false
@@ -379,7 +384,7 @@ abstract class AbstractIncrementalJpsTest(
     // null means one module
     private fun configureModules(): ModulesTxt? {
         JpsJavaExtensionService.getInstance().getOrCreateProjectExtension(myProject).outputUrl =
-                JpsPathUtil.pathToUrl(getAbsolutePath("out"))
+            JpsPathUtil.pathToUrl(getAbsolutePath("out"))
 
         val jdk = addJdk("my jdk")
         val modulesTxt = readModulesTxt()
@@ -425,13 +430,13 @@ abstract class AbstractIncrementalJpsTest(
 
             val kotlinFacetSettings = module.kotlinFacetSettings
             if (kotlinFacetSettings != null) {
-                val compilerArguments = kotlinFacetSettings.compilerArguments
-                if (compilerArguments is K2MetadataCompilerArguments) {
+                val compilerArgumentsBucket = kotlinFacetSettings.compilerArgumentsBucket
+                if (kotlinFacetSettings.targetPlatform?.isJvm() == true) {
+                    compilerArgumentsBucket!!.setFlagArgument(K2JVMCompilerArguments::disableDefaultScriptingPlugin, true)
+                } else if (kotlinFacetSettings.targetPlatform?.isCommon() == true) {
                     val out = getAbsolutePath("${module.name}/out")
                     File(out).mkdirs()
-                    compilerArguments.destination = out
-                } else if (compilerArguments is K2JVMCompilerArguments) {
-                    compilerArguments.disableDefaultScriptingPlugin = true
+                    compilerArgumentsBucket!!.setSingleArgument(K2MetadataCompilerArguments::destination, out)
                 }
 
                 module.jpsModule.container.setChild(

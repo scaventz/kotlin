@@ -18,7 +18,7 @@ package org.jetbrains.kotlinx.serialization.idea
 
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.createDummyCompilerArgumentsBucket
-import org.jetbrains.kotlin.config.extractMultipleArgument
+import org.jetbrains.kotlin.config.extractMultipleArgumentValue
 import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.utils.PathUtil
@@ -41,7 +41,7 @@ internal object KotlinSerializationImportHandler {
         }
 
         var pluginWasEnabled = false
-        val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginClasspaths)?.second
+        val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginClasspaths)
             ?: emptyArray()).filterTo(mutableListOf()) {
             val lastIndexOfFile = it.lastIndexOfAny(charArrayOf('/', File.separatorChar))
             if (lastIndexOfFile < 0) {

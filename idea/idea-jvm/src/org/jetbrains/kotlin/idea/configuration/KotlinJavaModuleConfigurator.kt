@@ -28,6 +28,7 @@ import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.roots.impl.libraries.LibraryEx
 import com.intellij.openapi.roots.libraries.Library
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
+import org.jetbrains.kotlin.config.setSingleArgument
 import org.jetbrains.kotlin.idea.KotlinJvmBundle
 import org.jetbrains.kotlin.idea.compiler.configuration.Kotlin2JvmCompilerArgumentsHolder
 import org.jetbrains.kotlin.idea.facet.getOrCreateFacet
@@ -116,7 +117,7 @@ open class KotlinJavaModuleConfigurator protected constructor() : KotlinWithLibr
                         val facet = module.getOrCreateFacet(modelsProvider, useProjectSettings = false, commitModel = true)
                         val facetSettings = facet.configuration.settings
                         facetSettings.initializeIfNeeded(module, null, JvmPlatforms.jvm18)
-                        (facetSettings.compilerArguments as? K2JVMCompilerArguments)?.jvmTarget = "1.8"
+                        facetSettings.compilerArgumentsBucket?.setSingleArgument(K2JVMCompilerArguments::jvmTarget, "1.8")
                     } finally {
                         modelsProvider.dispose()
                     }

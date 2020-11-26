@@ -58,6 +58,19 @@ object CoroutineSupport {
         else -> null
     }
 
+    @JvmStatic
+    fun byCompilerArgumentsBucket(bucket: FlatCompilerArgumentsBucket?): LanguageFeature.State =
+        byCompilerArgumentsBucketOrNull(bucket) ?: LanguageFeature.Coroutines.defaultState
+
+    fun byCompilerArgumentsBucketOrNull(bucket: FlatCompilerArgumentsBucket?): LanguageFeature.State? =
+        when (bucket?.extractSingleArgumentValue(CommonCompilerArguments::coroutinesState)) {
+            CommonCompilerArguments.ENABLE -> LanguageFeature.State.ENABLED
+            CommonCompilerArguments.WARN, CommonCompilerArguments.DEFAULT -> LanguageFeature.State.ENABLED_WITH_WARNING
+            CommonCompilerArguments.ERROR -> LanguageFeature.State.ENABLED_WITH_ERROR
+            else -> null
+        }
+
+
     fun byCompilerArgument(argument: String): LanguageFeature.State =
         LanguageFeature.State.values().find { getCompilerArgument(it).equals(argument, ignoreCase = true) }
             ?: LanguageFeature.Coroutines.defaultState
@@ -208,11 +221,13 @@ class KotlinFacetSettings {
 
     var compilerArgumentsBucket: FlatCompilerArgumentsBucket? = null
 
-    var compilerArguments: CommonCompilerArguments? = null
-        set(value) {
-            field = value?.unfrozen() as CommonCompilerArguments?
-            updateMergedArguments()
+    //    @Deprecated(level = DeprecationLevel.ERROR, message = "Use compilerArgumentsBucket instead")
+    val compilerArguments: CommonCompilerArguments?
+        get() = targetPlatform?.createArguments {
+            compilerArgumentsBucket?.let { FlatToRawCompilerArgumentsBucketConverter().convert(it) }
+                ?.let { parseCommandLineArguments(it, this) }
         }
+
 
     var compilerSettings: CompilerSettings? = null
         set(value) {
@@ -225,8 +240,8 @@ class KotlinFacetSettings {
     but present in additional arguments instead, so we have to check both cases manually
      */
     inline fun <reified A : CommonCompilerArguments> isCompilerSettingPresent(settingReference: KProperty1<A, Boolean>): Boolean {
-        val isEnabledByCompilerArgument = compilerArguments?.safeAs<A>()?.let(settingReference::get)
-        if (isEnabledByCompilerArgument == true) return true
+        val isEnabledByCompilerArgumentBucket = compilerArgumentsBucket?.extractFlagArgumentValue(settingReference)
+        if (isEnabledByCompilerArgumentBucket == true) return true
         val isEnabledByAdditionalSettings = run {
             val stringArgumentName = settingReference.findAnnotation<Argument>()?.value ?: return@run null
             compilerSettings?.additionalArguments?.contains(stringArgumentName, ignoreCase = true)
@@ -235,33 +250,32 @@ class KotlinFacetSettings {
     }
 
     var languageLevel: LanguageVersion?
-        get() = compilerArguments?.languageVersion?.let { LanguageVersion.fromFullVersionString(it) }
+        get() = compilerArgumentsBucket?.extractSingleArgumentValue(CommonCompilerArguments::languageVersion)
+            ?.let { LanguageVersion.fromFullVersionString(it) }
         set(value) {
-            compilerArguments?.apply {
-                languageVersion = value?.versionString
-            }
+            compilerArgumentsBucket?.setSingleArgument(CommonCompilerArguments::languageVersion, value?.versionString)
         }
 
     var apiLevel: LanguageVersion?
-        get() = compilerArguments?.apiVersion?.let { LanguageVersion.fromFullVersionString(it) }
+        get() = compilerArgumentsBucket?.extractSingleArgumentValue(CommonCompilerArguments::apiVersion)
+            ?.let { LanguageVersion.fromFullVersionString(it) }
         set(value) {
-            compilerArguments?.apply {
-                apiVersion = value?.versionString
-            }
+            compilerArgumentsBucket?.setSingleArgument(CommonCompilerArguments::apiVersion, value?.versionString)
         }
 
+    //TODO (ychernyshev) serialize and deserialize targetPlatform as string
     var targetPlatform: TargetPlatform? = null
-        get() {
-            // This work-around is required in order to fix importing of the proper JVM target version and works only
-            // for fully actualized JVM target platform
-            //TODO(auskov): this hack should be removed after fixing equals in SimplePlatform
-            val args = compilerArguments
-            val singleSimplePlatform = field?.componentPlatforms?.singleOrNull()
-            if (singleSimplePlatform == JvmPlatforms.defaultJvmPlatform.singleOrNull() && args != null) {
-                return IdePlatformKind.platformByCompilerArguments(args)
-            }
-            return field
-        }
+//        get() {
+//            // This work-around is required in order to fix importing of the proper JVM target version and works only
+//            // for fully actualized JVM target platform
+//            //TODO(auskov): this hack should be removed after fixing equals in SimplePlatform
+//            val singleSimplePlatform = field?.componentPlatforms?.singleOrNull()
+//            if (singleSimplePlatform == JvmPlatforms.defaultJvmPlatform.singleOrNull() && args != null) {
+//                val args = compilerArguments
+//                return IdePlatformKind.platformByCompilerArguments(args)
+//            }
+//            return field
+//        }
 
     var externalSystemRunTasks: List<ExternalSystemRunTask> = emptyList()
 
@@ -279,15 +293,16 @@ class KotlinFacetSettings {
         get() {
             val languageVersion = languageLevel ?: return LanguageFeature.Coroutines.defaultState
             if (languageVersion < LanguageFeature.Coroutines.sinceVersion!!) return LanguageFeature.State.DISABLED
-            return CoroutineSupport.byCompilerArgumentsOrNull(compilerArguments)
+            return CoroutineSupport.byCompilerArgumentsBucketOrNull(compilerArgumentsBucket)
         }
         set(value) {
-            compilerArguments?.coroutinesState = when (value) {
+            val newValue = when (value) {
                 null -> CommonCompilerArguments.DEFAULT
                 LanguageFeature.State.ENABLED -> CommonCompilerArguments.ENABLE
                 LanguageFeature.State.ENABLED_WITH_WARNING -> CommonCompilerArguments.WARN
                 LanguageFeature.State.ENABLED_WITH_ERROR, LanguageFeature.State.DISABLED -> CommonCompilerArguments.ERROR
             }
+            compilerArgumentsBucket?.setSingleArgument(CommonCompilerArguments::coroutinesState, newValue)
         }
 
     var implementedModuleNames: List<String> = emptyList() // used for first implementation of MPP, aka 'old' MPP

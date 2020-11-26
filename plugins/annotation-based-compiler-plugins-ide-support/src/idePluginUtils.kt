@@ -19,16 +19,16 @@ package org.jetbrains.kotlin.annotation.plugin.ide
 import com.intellij.openapi.module.Module
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.createDummyCompilerArgumentsBucket
-import org.jetbrains.kotlin.config.extractMultipleArgument
+import org.jetbrains.kotlin.config.extractMultipleArgumentValue
 import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import java.io.File
 
 fun Module.getSpecialAnnotations(prefix: String): List<String> {
     val kotlinFacet = org.jetbrains.kotlin.idea.facet.KotlinFacet.get(this) ?: return emptyList()
-    val commonArgs = kotlinFacet.configuration.settings.compilerArguments ?: return emptyList()
+    val bucket = kotlinFacet.configuration.settings.compilerArgumentsBucket ?: return emptyList()
 
-    return commonArgs.pluginOptions
+    return bucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginOptions)
         ?.filter { it.startsWith(prefix) }
         ?.map { it.substring(prefix.length) }
         ?: emptyList()
@@ -53,11 +53,11 @@ internal fun modifyCompilerArgumentsForPlugin(
     /** See [CommonCompilerArguments.PLUGIN_OPTION_FORMAT] **/
     val newOptionsForPlugin = setup?.options?.map { "plugin:$compilerPluginId:${it.key}=${it.value}" } ?: emptyList()
 
-    val oldAllPluginOptions = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginOptions)?.second
+    val oldAllPluginOptions = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginOptions)
         ?: emptyArray()).filterTo(mutableListOf()) { !it.startsWith("plugin:$compilerPluginId:") }
     val newAllPluginOptions = oldAllPluginOptions + newOptionsForPlugin
 
-    val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginClasspaths)?.second
+    val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginClasspaths)
         ?: emptyArray()).filterTo(mutableListOf()) {
         val lastIndexOfFile = it.lastIndexOfAny(charArrayOf('/', File.separatorChar))
         if (lastIndexOfFile < 0) {

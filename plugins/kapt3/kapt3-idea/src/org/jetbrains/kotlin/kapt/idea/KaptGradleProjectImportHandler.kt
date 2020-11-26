@@ -9,7 +9,7 @@ import com.intellij.openapi.externalSystem.model.DataNode
 import com.intellij.openapi.externalSystem.model.project.ModuleData
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.createDummyCompilerArgumentsBucket
-import org.jetbrains.kotlin.config.extractMultipleArgument
+import org.jetbrains.kotlin.config.extractMultipleArgumentValue
 import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.configuration.GradleProjectImportHandler
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
@@ -34,9 +34,9 @@ class KaptGradleProjectImportHandler : GradleProjectImportHandler {
             facetSettings.compilerArgumentsBucket = it
         }
 
-        val newPluginOptions = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginOptions)?.second
+        val newPluginOptions = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginOptions)
             ?: emptyArray()).filter { !it.startsWith("plugin:$compilerPluginId:") }
-        val newPluginClasspath = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginClasspaths)?.second
+        val newPluginClasspath = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginClasspaths)
             ?: emptyArray()).filter { !isKaptCompilerPluginPath(it) }
 
         fun List<String>.toArrayIfNotEmpty() = takeIf { it.isNotEmpty() }?.toTypedArray()

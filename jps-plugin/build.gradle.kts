@@ -25,6 +25,7 @@ dependencies {
         includeJars("jdom", "trove4j", "jps-model", "platform-api", "util", "asm-all", rootProject = rootProject)
     }
     compileOnly(jpsStandalone()) { includeJars("jps-builders", "jps-builders-6") }
+    compileOnly(project(":idea:kotlin-gradle-tooling"))
     testCompileOnly(project(":kotlin-reflect-api"))
     testCompile(project(":compiler:incremental-compilation-impl"))
     testCompile(projectTests(":compiler:tests-common"))
@@ -43,7 +44,7 @@ dependencies {
     compilerModules.forEach {
         testRuntime(project(it))
     }
-
+    testCompileOnly(project(":idea:kotlin-gradle-tooling"))
     testRuntimeOnly(intellijPluginDep("java"))
 
     testRuntimeOnly(toolsJar())

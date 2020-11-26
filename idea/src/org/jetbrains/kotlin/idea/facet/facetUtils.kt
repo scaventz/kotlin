@@ -66,7 +66,7 @@ private fun KotlinFacetSettings.initializeCompilerArguments(
 ) {
     if (compilerArguments == null) {
         val targetPlatform = platform ?: getDefaultTargetPlatform(module, rootModel)
-        compilerArguments = createAndPrepareCompilerArguments(targetPlatform, module, commonArguments)
+        compilerArgumentsBucket = createAndPrepareCompilerArguments(targetPlatform, module, commonArguments).toFlatCompilerArguments()
         this.targetPlatform = targetPlatform
     }
 
@@ -206,7 +206,6 @@ fun KotlinFacet.configureFacet(
 ) {
     val module = module
     with(configuration.settings) {
-        compilerArguments = null
         targetPlatform = null
         compilerSettings = null
         isHmppEnabled = hmppEnabled

@@ -12,29 +12,31 @@ import org.jetbrains.kotlin.caching.isSuitableValue
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
+import java.io.File
 import kotlin.reflect.KProperty1
 
-fun createDummyCompilerArgumentsBucket(): FlatCompilerArgumentsBucket = CommonCompilerArguments.DummyImpl()
-    .let { ArgumentUtils.convertArgumentsToStringList(it) }
-    .let { RawToFlatCompilerArgumentsBucketConverter().convert(it) }
+fun CommonCompilerArguments.toFlatCompilerArguments(): FlatCompilerArgumentsBucket =
+    ArgumentUtils.convertArgumentsToStringList(this).let { RawToFlatCompilerArgumentsBucketConverter().convert(it) }
 
-inline fun <reified T : CommonToolArguments, reified R> KProperty1<T, R>.calculateArgumentAnnotation(): ArgumentAnnotationInfo? {
+fun createDummyCompilerArgumentsBucket(): FlatCompilerArgumentsBucket = CommonCompilerArguments.DummyImpl().toFlatCompilerArguments()
+
+fun <T : CommonToolArguments, R> KProperty1<T, R>.calculateArgumentAnnotation(): ArgumentAnnotationInfo? {
     val argumentAnnotation = annotations.firstOrNull { it is Argument } as? Argument ?: return null
     return with(argumentAnnotation) { ArgumentAnnotationInfo(value, shortName, deprecatedName, delimiter, isAdvanced) }
 }
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extractSingleArgument(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.extractSingleArgument(
     property: KProperty1<T, String?>
 ): Pair<String, String>? {
     val argumentAnnotationInfo = property.calculateArgumentAnnotation() ?: return null
     return singleArguments.entries.firstOrNull { argumentAnnotationInfo.isSuitableValue(it.key) }?.toPair()
 }
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extractSingleArgumentValue(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.extractSingleArgumentValue(
     property: KProperty1<T, String?>
 ): String? = extractSingleArgument(property)?.second
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.setSingleArgument(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.setSingleArgument(
     property: KProperty1<T, String?>,
     newValue: String?
 ) {
@@ -45,7 +47,7 @@ inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.setSing
     newValue?.also { singleArguments[argumentAnnotationInfo.value] = it }
 }
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extractMultipleArgument(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.extractMultipleArgument(
     property: KProperty1<T, Array<String>?>
 ): Pair<String, Array<String>>? {
     val argumentAnnotationInfo = property.calculateArgumentAnnotation() ?: return null
@@ -53,12 +55,11 @@ inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extract
         ?.let { it.key to it.value.toTypedArray() }
 }
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extractMultipleArgumentValue(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.extractMultipleArgumentValue(
     property: KProperty1<T, Array<String>?>
 ): Array<String>? = extractMultipleArgument(property)?.second
 
-
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.setMultipleArgument(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.setMultipleArgument(
     property: KProperty1<T, Array<String>?>,
     newValue: Array<String>?
 ) {
@@ -69,7 +70,7 @@ inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.setMult
     newValue?.also { multipleArguments[argumentAnnotationInfo.value] = it.toList() }
 }
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extractFlagArgument(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.extractFlagArgument(
     property: KProperty1<T, Boolean>
 ): Pair<String, Boolean> {
     val argumentAnnotationInfo = property.calculateArgumentAnnotation()!!
@@ -77,11 +78,11 @@ inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extract
         ?: argumentAnnotationInfo.value to false
 }
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.extractFlagArgumentValue(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.extractFlagArgumentValue(
     property: KProperty1<T, Boolean>
 ): Boolean = extractFlagArgument(property).second
 
-inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.setFlagArgument(
+fun <T : CommonToolArguments> FlatCompilerArgumentsBucket.setFlagArgument(
     property: KProperty1<T, Boolean>,
     newValue: Boolean
 ) {
@@ -92,9 +93,12 @@ inline fun <reified T : CommonToolArguments> FlatCompilerArgumentsBucket.setFlag
     if (newValue) flagArguments.add(argumentAnnotationInfo.value)
 }
 
+fun FlatCompilerArgumentsBucket.extractClasspaths(): List<String>? = classpathParts?.second
+
+fun FlatCompilerArgumentsBucket.extractClasspathJoined(): String? = classpathParts?.second?.joinToString(File.pathSeparator)
+
 fun FlatCompilerArgumentsBucket.setClasspathArgument(newClasspaths: List<String>) {
     classpathParts = classpathParts?.let {
         it.first to newClasspaths
     } ?: newClasspaths.ifNotEmpty { K2JVMCompilerArguments::classpath.calculateArgumentAnnotation()!!.value to this }
 }
-

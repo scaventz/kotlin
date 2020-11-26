@@ -6,7 +6,9 @@
 package org.jetbrains.kotlin.jps.build
 
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
+import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.config.KotlinFacetSettings
+import org.jetbrains.kotlin.config.toFlatCompilerArguments
 import org.jetbrains.kotlin.incremental.testingUtils.BuildLogFinder
 import org.jetbrains.kotlin.incremental.testingUtils.BuildLogFinder.Companion.JS_JPS_LOG
 import org.jetbrains.kotlin.jps.model.JpsKotlinFacetModuleExtension
@@ -28,7 +30,7 @@ abstract class AbstractIncrementalJsJpsTest : AbstractIncrementalJpsTest() {
     override fun overrideModuleSettings() {
         myProject.modules.forEach {
             val facet = KotlinFacetSettings()
-            facet.compilerArguments = K2JSCompilerArguments()
+            facet.compilerArgumentsBucket = K2JVMCompilerArguments().toFlatCompilerArguments()
             facet.targetPlatform = JsPlatforms.defaultJsPlatform
 
             it.container.setChild(

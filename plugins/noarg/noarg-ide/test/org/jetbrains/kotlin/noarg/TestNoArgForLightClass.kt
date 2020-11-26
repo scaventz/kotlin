@@ -6,7 +6,9 @@
 package org.jetbrains.kotlin.noarg
 
 import com.intellij.testFramework.LightProjectDescriptor
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.LanguageVersion
+import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinProjectDescriptorWithFacet
@@ -29,10 +31,11 @@ class TestNoArgForLightClass : KotlinLightCodeInsightFixtureTestCase() {
         super.setUp()
 
         val facet = KotlinFacet.get(module) ?: error { "Facet not found" }
-        val configurationArguments = facet.configuration.settings.compilerArguments ?: error { "CompilerArguments not found" }
+        with(facet.configuration.settings.compilerArgumentsBucket ?: error { "CompilerArgumentsBucket not found" }) {
+            setMultipleArgument(CommonCompilerArguments::pluginClasspaths, arrayOf("SomeClasspath"))
+            setMultipleArgument(CommonCompilerArguments::pluginOptions, arrayOf("$NO_ARG_ANNOTATION_OPTION_PREFIX$noArgAnnotationName"))
+        }
 
-        configurationArguments.pluginClasspaths = arrayOf("SomeClasspath")
-        configurationArguments.pluginOptions = arrayOf("$NO_ARG_ANNOTATION_OPTION_PREFIX$noArgAnnotationName")
     }
 
     fun testNoArgAnnotation() {

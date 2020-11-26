@@ -11,8 +11,11 @@ import com.intellij.facet.ui.FacetValidatorsManager
 import com.intellij.facet.ui.ValidationResult
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.table.JBTable
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.compiler.plugin.CliOptionValue
 import org.jetbrains.kotlin.compiler.plugin.parsePluginOption
+import org.jetbrains.kotlin.config.extractMultipleArgumentValue
+import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.KotlinBundle
 import java.awt.BorderLayout
 import java.awt.Component
@@ -28,7 +31,8 @@ class KotlinFacetCompilerPluginsTab(
 ) : FacetEditorTab() {
     companion object {
         fun parsePluginOptions(configuration: KotlinFacetConfiguration) =
-            configuration.settings.compilerArguments?.pluginOptions?.mapNotNull(::parsePluginOption) ?: emptyList()
+            configuration.settings.compilerArgumentsBucket?.extractMultipleArgumentValue(CommonCompilerArguments::pluginOptions)
+                ?.mapNotNull(::parsePluginOption) ?: emptyList()
     }
 
     class PluginInfo(val id: String, var options: List<String>)
@@ -173,7 +177,10 @@ class KotlinFacetCompilerPluginsTab(
     }
 
     override fun apply() {
-        configuration.settings.compilerArguments!!.pluginOptions = optionsByTable.toTypedArray()
+        configuration.settings.compilerArgumentsBucket!!.setMultipleArgument(
+            CommonCompilerArguments::pluginOptions,
+            optionsByTable.toTypedArray()
+        )
     }
 
     override fun disposeUIResources() {

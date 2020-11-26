@@ -7,7 +7,7 @@ package org.jetbrains.kotlin.scripting.idea.plugin
 
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.createDummyCompilerArgumentsBucket
-import org.jetbrains.kotlin.config.extractMultipleArgument
+import org.jetbrains.kotlin.config.extractMultipleArgumentValue
 import org.jetbrains.kotlin.config.setMultipleArgument
 import org.jetbrains.kotlin.idea.configuration.GradleProjectImportHandler
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
@@ -54,14 +54,14 @@ internal fun modifyCompilerArgumentsForPlugin(
     // TODO: find out where new options should come from (or maybe they are not needed here at all)
 //    val newOptionsForPlugin = setup?.options?.map { "plugin:$compilerPluginId:${it.key}=${it.value}" } ?: emptyList()
 
-    val oldAllPluginOptions = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginOptions)?.second
+    val oldAllPluginOptions = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginOptions)
         ?: emptyArray()).filterTo(mutableListOf()) { !it.startsWith("plugin:$compilerPluginId:") }
     val newAllPluginOptions = oldAllPluginOptions // + newOptionsForPlugin
 
     val filterRegexes = pluginJarNames.map {
         "(kotlin-)?(maven-)?$it-.*\\.jar".toRegex()
     }
-    val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgument(CommonCompilerArguments::pluginClasspaths)?.second
+    val oldPluginClasspaths = (compilerArgumentsBucket.extractMultipleArgumentValue(CommonCompilerArguments::pluginClasspaths)
         ?: emptyArray()).filterTo(mutableListOf()) {
         val lastIndexOfFile = it.lastIndexOfAny(charArrayOf('/', File.separatorChar))
         if (lastIndexOfFile < 0) {
