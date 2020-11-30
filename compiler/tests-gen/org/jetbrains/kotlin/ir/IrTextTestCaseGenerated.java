@@ -1806,6 +1806,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/firProblems/FirBuilder.kt");
         }
 
+        @TestMetadata("ImplicitReceiverStack.kt")
+        public void testImplicitReceiverStack() throws Exception {
+            runTest("compiler/testData/ir/irText/firProblems/ImplicitReceiverStack.kt");
+        }
+
         @TestMetadata("InnerClassInAnonymous.kt")
         public void testInnerClassInAnonymous() throws Exception {
             runTest("compiler/testData/ir/irText/firProblems/InnerClassInAnonymous.kt");
