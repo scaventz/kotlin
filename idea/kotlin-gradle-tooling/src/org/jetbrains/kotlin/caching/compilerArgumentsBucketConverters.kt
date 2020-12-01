@@ -28,10 +28,12 @@ class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
         val flattenClasspathParts = from.classpathParts?.let { (k, v) ->
             mapper.getArgument(k) to v.map { mapper.getArgument(it) }
         }
+        val flattenFreeAndInternalArguments = from.freeAndInternalArguments.map { mapper.getArgument(it) }
         return FlatCompilerArgumentsBucket(flattenClasspathParts).apply {
             singleArguments.putAll(flattenSingleArguments)
             multipleArguments.putAll(flattenMultipleArguments)
             flagArguments.addAll(flattenFlagArguments)
+            freeAndInternalArguments.addAll(flattenFreeAndInternalArguments)
         }
     }
 }
@@ -44,6 +46,14 @@ class FlatToRawCompilerArgumentsBucketConverter :
     }
 
     override fun convert(from: FlatCompilerArgumentsBucket): RawCompilerArgumentsBucket = mutableListOf<String>().apply {
+        from.classpathParts?.also {
+            val classpathAnnotationInfo = dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation.values.first()
+            check(classpathAnnotationInfo.isSuitableValue(it.first)) {
+                "Unexpected classpath argument \"$it\"!"
+            }
+            this@apply.add(it.first)
+            this@apply.add(it.second.joinToString(File.pathSeparator))
+        }
 
         val singleArgumentAnnotationInfos = dividedPropertiesWithArgumentAnnotationInfo.singlePropertiesToArgumentAnnotation.values
         from.singleArguments.entries.forEach { (k, v) ->
@@ -69,15 +79,7 @@ class FlatToRawCompilerArgumentsBucketConverter :
         }
 
         addAll(from.flagArguments)
-
-        from.classpathParts?.also {
-            val classpathAnnotationInfo = dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation.values.first()
-            check(classpathAnnotationInfo.isSuitableValue(it.first)) {
-                "Unexpected classpath argument \"$it\"!"
-            }
-            this@apply.add(it.first)
-            this@apply.add(it.second.joinToString(File.pathSeparator))
-        }
+        addAll(from.freeAndInternalArguments)
     }
 }
 
@@ -105,28 +107,37 @@ class RawToFlatCompilerArgumentsBucketConverter :
         val flagPropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.flagPropertiesToArgumentAnnotation
         val classpathPropertiesToArgumentAnnotation = dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation
 
+        val processedArguments = mutableListOf<String>()
+
         val classpathArgumentAnnotation = classpathPropertiesToArgumentAnnotation.values.first()
         val classpathParts = from.indexOfFirst { classpathArgumentAnnotation.isSuitableValue(it) }.takeIf { it != -1 }
+            ?.also { processedArguments.add(from[it]); processedArguments.add(from[it + 1]) }
             ?.let { from[it] to from[it + 1].split(File.pathSeparator) }
 
         fun ArgumentAnnotationInfo.processArgumentWithInfo(): Pair<String, String>? = if (isAdvanced) {
-            val found = from.find { isSuitableValue(it) }
+            val found = from.find { isSuitableValue(it) }?.also { processedArguments.add(it) }
             val separate = found?.split('=')?.toTypedArray()
             separate?.let { it[0] to it[1] }
-        } else from.indexOfFirst { isSuitableValue(it) }.takeIf { it != -1 }?.let { from[it] to from[it + 1] }
-
+        } else from.indexOfFirst { isSuitableValue(it) }.takeIf { it != -1 }
+            ?.also { processedArguments.add(from[it]); processedArguments.add(from[it + 1]) }
+            ?.let { from[it] to from[it + 1] }
 
         val flattenSingleArguments = singlePropertiesToArgumentAnnotation.values.mapNotNull { it.processArgumentWithInfo() }.toMap()
         val flattenMultipleArguments = multiplePropertiesToArgumentAnnotation.values.mapNotNull { info ->
             info.processArgumentWithInfo()?.let { it.first to it.second.split(info.delimiter) }
         }
         val flatFlagArguments =
-            flagPropertiesToArgumentAnnotation.values.mapNotNull { info -> from.find { info.isSuitableValue(it) } }.distinct()
+            flagPropertiesToArgumentAnnotation.values.mapNotNull { info ->
+                from.find { info.isSuitableValue(it) }?.also { processedArguments.add(it) }
+            }.distinct()
+
+        val freeAndInternalArs = from - processedArguments
 
         return FlatCompilerArgumentsBucket(classpathParts).apply {
             singleArguments.putAll(flattenSingleArguments)
             multipleArguments.putAll(flattenMultipleArguments)
             flagArguments.addAll(flatFlagArguments)
+            freeAndInternalArguments.addAll(freeAndInternalArs)
         }
     }
 }
@@ -145,12 +156,13 @@ class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
         val cachedClasspathParts =
             from.classpathParts?.let { mapper.cacheArgument(it.first) to it.second.map { v -> mapper.cacheArgument(v) } }
 
+        val cachedFreeAndInternalArguments = from.freeAndInternalArguments.map { mapper.cacheArgument(it) }
         return CachedCompilerArgumentsBucket(cachedClasspathParts).apply {
             singleArguments.putAll(cachedSingleArguments)
             multipleArguments.putAll(cachedMultipleArguments)
             flagArguments.addAll(cachedFlagArguments)
+            freeAndInternalArguments.addAll(cachedFreeAndInternalArguments)
         }
-
     }
 }
 
