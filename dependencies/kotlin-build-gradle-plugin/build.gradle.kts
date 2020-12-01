@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "org.jetbrains.kotlin"
-version = "0.0.23"
+version = "0.0.24"
 
 repositories {
     mavenCentral()
@@ -31,6 +31,10 @@ sourceSets {
     main {
         java.setSrcDirs(listOf("src"))
     }
+}
+
+tasks.withType<GenerateModuleMetadata> {
+    enabled = false
 }
 
 publishing {
