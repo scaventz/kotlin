@@ -1,4 +1,4 @@
-// !EXPLICIT_FLEXIBLE_TYPES
+public class ft<L, U>
 
 interface A<T>
 interface B<T>: A<ft<T, T?>>

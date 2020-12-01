@@ -1,6 +1,7 @@
 // FIR_IDENTICAL
 // !CHECK_TYPE
-// !EXPLICIT_FLEXIBLE_TYPES
+
+public class ft<L, U>
 
 fun foo(
         p1: ft<MutableMap<Int, String>, Map<Int, String>?>,
