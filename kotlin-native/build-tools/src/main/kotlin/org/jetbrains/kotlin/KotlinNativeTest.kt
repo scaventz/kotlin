@@ -466,7 +466,7 @@ open class KonanDynamicTest : KonanStandaloneTest() {
             this@Action.executable = clangTool
             args = listOf(processCSource(),
                     "-c",
-                    "-o", "$executable.o",
+                    "-o", "${this@KonanDynamicTest.executable}.o",
                     "-I", artifactsDir
             ) + clangFlags
             standardOutput = log
@@ -481,7 +481,7 @@ open class KonanDynamicTest : KonanStandaloneTest() {
 
         val linker = project.platformManager.platform(project.testTarget).linker
         val commands = linker.finalLinkCommands(
-                objectFiles = listOf("$executable.o"),
+                objectFiles = listOf("${this@KonanDynamicTest.executable}.o"),
                 executable = executable,
                 libraries = listOf("-l$name"),
                 linkerArgs = listOf("-L", artifactsDir, "-rpath", artifactsDir),
