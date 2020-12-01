@@ -17,6 +17,8 @@
 package org.jetbrains.kotlin.cli.common.arguments
 
 import com.intellij.util.text.VersionComparatorUtil
+import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.config.forcesPreReleaseBinariesIfEnabled
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty1
@@ -113,3 +115,35 @@ fun CommonCompilerArguments.setApiVersionToLanguageVersionIfNeeded() {
     }
 }
 
+data class ConfiguringResult(
+    val featuresThatForcePreReleaseBinaries: MutableList<LanguageFeature> = mutableListOf<LanguageFeature>(),
+    val disabledFeaturesFromUnsupportedVersions: MutableList<LanguageFeature> = mutableListOf<LanguageFeature>(),
+    var standaloneSamConversionFeaturePassedExplicitly: Boolean = false,
+    var functionReferenceWithDefaultValueFeaturePassedExplicitly: Boolean = false
+)
+
+fun HashMap<LanguageFeature, LanguageFeature.State>.configureFromInternalArgs(
+    internalArguments: List<InternalArgument>
+): ConfiguringResult = ConfiguringResult().apply {
+    for ((feature, state) in internalArguments.filterIsInstance<ManualLanguageFeatureSetting>()) {
+        put(feature, state)
+        if (state == LanguageFeature.State.ENABLED && feature.forcesPreReleaseBinariesIfEnabled()) {
+            featuresThatForcePreReleaseBinaries += feature
+        }
+
+        if (state == LanguageFeature.State.DISABLED && feature.sinceVersion?.isUnsupported == true) {
+            disabledFeaturesFromUnsupportedVersions += feature
+        }
+
+        when (feature) {
+            LanguageFeature.SamConversionPerArgument ->
+                standaloneSamConversionFeaturePassedExplicitly = true
+
+            LanguageFeature.FunctionReferenceWithDefaultValueAsOtherType ->
+                functionReferenceWithDefaultValueFeaturePassedExplicitly = true
+
+            else -> {
+            }
+        }
+    }
+}

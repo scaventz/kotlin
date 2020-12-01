@@ -16,7 +16,8 @@ interface CompilerArgumentsBucket<T> : Serializable {
     val singleArguments: HashMap<T, T>
     val multipleArguments: HashMap<T, List<T>>
     val flagArguments: ArrayList<T>
-    val freeAndInternalArguments: ArrayList<T>
+    val internalArguments: ArrayList<T>
+    val freeArgs: ArrayList<T>
 }
 
 class CachedCompilerArgumentsBucket(
@@ -24,13 +25,15 @@ class CachedCompilerArgumentsBucket(
     override val singleArguments: HashMap<Int, Int> = hashMapOf(),
     override val multipleArguments: HashMap<Int, List<Int>> = hashMapOf(),
     override val flagArguments: ArrayList<Int> = arrayListOf(),
-    override val freeAndInternalArguments: ArrayList<Int> = arrayListOf()
+    override val internalArguments: ArrayList<Int> = arrayListOf(),
+    override val freeArgs: ArrayList<Int> = arrayListOf()
 ) : CompilerArgumentsBucket<Int> {
     constructor(otherBucket: CachedCompilerArgumentsBucket) : this(otherBucket.classpathParts) {
         singleArguments.putAll(otherBucket.singleArguments)
         multipleArguments.putAll(otherBucket.multipleArguments)
         flagArguments.addAll(otherBucket.flagArguments)
-        freeAndInternalArguments.addAll(otherBucket.freeAndInternalArguments)
+        internalArguments.addAll(otherBucket.internalArguments)
+        freeArgs.addAll(otherBucket.freeArgs)
     }
 }
 
@@ -39,12 +42,14 @@ class FlatCompilerArgumentsBucket(
     override val singleArguments: HashMap<String, String> = hashMapOf(),
     override val multipleArguments: HashMap<String, List<String>> = hashMapOf(),
     override val flagArguments: ArrayList<String> = arrayListOf(),
-    override val freeAndInternalArguments: ArrayList<String> = arrayListOf()
+    override val internalArguments: ArrayList<String> = arrayListOf(),
+    override val freeArgs: ArrayList<String> = arrayListOf()
 ) : CompilerArgumentsBucket<String> {
     constructor(otherBucket: FlatCompilerArgumentsBucket) : this(otherBucket.classpathParts) {
         singleArguments.putAll(otherBucket.singleArguments)
         multipleArguments.putAll(otherBucket.multipleArguments)
         flagArguments.addAll(otherBucket.flagArguments)
-        freeAndInternalArguments.addAll(otherBucket.freeAndInternalArguments)
+        internalArguments.addAll(otherBucket.internalArguments)
+        freeArgs.addAll(otherBucket.freeArgs)
     }
 }

@@ -28,12 +28,14 @@ class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
         val flattenClasspathParts = from.classpathParts?.let { (k, v) ->
             mapper.getArgument(k) to v.map { mapper.getArgument(it) }
         }
-        val flattenFreeAndInternalArguments = from.freeAndInternalArguments.map { mapper.getArgument(it) }
+        val flattenInternalArguments = from.internalArguments.map { mapper.getArgument(it) }
+        val flattenFreeArgs = from.freeArgs.map { mapper.getArgument(it) }
         return FlatCompilerArgumentsBucket(flattenClasspathParts).apply {
             singleArguments.putAll(flattenSingleArguments)
             multipleArguments.putAll(flattenMultipleArguments)
             flagArguments.addAll(flattenFlagArguments)
-            freeAndInternalArguments.addAll(flattenFreeAndInternalArguments)
+            internalArguments.addAll(flattenInternalArguments)
+            freeArgs.addAll(flattenFreeArgs)
         }
     }
 }
@@ -79,7 +81,8 @@ class FlatToRawCompilerArgumentsBucketConverter :
         }
 
         addAll(from.flagArguments)
-        addAll(from.freeAndInternalArguments)
+        addAll(from.freeArgs)
+        addAll(from.internalArguments)
     }
 }
 
@@ -131,13 +134,17 @@ class RawToFlatCompilerArgumentsBucketConverter :
                 from.find { info.isSuitableValue(it) }?.also { processedArguments.add(it) }
             }.distinct()
 
-        val freeAndInternalArs = from - processedArguments
+        //TODO replace with InternalArgumentParser.INTERNAL_ARGUMENT_PREFIX via reflection
+        val flatInternalArguments = from.filter { it.startsWith("-XX") }.also { processedArguments.addAll(it) }
+
+        val flatFreeArs = from - processedArguments
 
         return FlatCompilerArgumentsBucket(classpathParts).apply {
             singleArguments.putAll(flattenSingleArguments)
             multipleArguments.putAll(flattenMultipleArguments)
             flagArguments.addAll(flatFlagArguments)
-            freeAndInternalArguments.addAll(freeAndInternalArs)
+            internalArguments.addAll(flatInternalArguments)
+            freeArgs.addAll(flatFreeArs)
         }
     }
 }
@@ -156,12 +163,14 @@ class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
         val cachedClasspathParts =
             from.classpathParts?.let { mapper.cacheArgument(it.first) to it.second.map { v -> mapper.cacheArgument(v) } }
 
-        val cachedFreeAndInternalArguments = from.freeAndInternalArguments.map { mapper.cacheArgument(it) }
+        val cachedInternalArguments = from.internalArguments.map { mapper.cacheArgument(it) }
+        val cachedFreeArgs = from.freeArgs.map { mapper.cacheArgument(it) }
         return CachedCompilerArgumentsBucket(cachedClasspathParts).apply {
             singleArguments.putAll(cachedSingleArguments)
             multipleArguments.putAll(cachedMultipleArguments)
             flagArguments.addAll(cachedFlagArguments)
-            freeAndInternalArguments.addAll(cachedFreeAndInternalArguments)
+            internalArguments.addAll(cachedInternalArguments)
+            freeArgs.addAll(cachedFreeArgs)
         }
     }
 }

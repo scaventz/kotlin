@@ -26,9 +26,9 @@ interface InternalArgumentParser<A : InternalArgument> {
     fun parseInternalArgument(arg: String, errors: ArgumentParseErrors): A?
 
     companion object {
-        internal const val INTERNAL_ARGUMENT_PREFIX = "-XX"
+        const val INTERNAL_ARGUMENT_PREFIX = "-XX"
 
-        internal val PARSERS: List<InternalArgumentParser<*>> = listOf(
+        val PARSERS: List<InternalArgumentParser<*>> = listOf(
             LanguageSettingsParser()
         )
     }

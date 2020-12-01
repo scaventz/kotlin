@@ -452,31 +452,11 @@ abstract class CommonCompilerArguments : CommonToolArguments() {
         }
 
     private fun HashMap<LanguageFeature, LanguageFeature.State>.configureLanguageFeaturesFromInternalArgs(collector: MessageCollector) {
-        val featuresThatForcePreReleaseBinaries = mutableListOf<LanguageFeature>()
-        val disabledFeaturesFromUnsupportedVersions = mutableListOf<LanguageFeature>()
-
-        var standaloneSamConversionFeaturePassedExplicitly = false
-        var functionReferenceWithDefaultValueFeaturePassedExplicitly = false
-        for ((feature, state) in internalArguments.filterIsInstance<ManualLanguageFeatureSetting>()) {
-            put(feature, state)
-            if (state == LanguageFeature.State.ENABLED && feature.forcesPreReleaseBinariesIfEnabled()) {
-                featuresThatForcePreReleaseBinaries += feature
-            }
-
-            if (state == LanguageFeature.State.DISABLED && feature.sinceVersion?.isUnsupported == true) {
-                disabledFeaturesFromUnsupportedVersions += feature
-            }
-
-            when (feature) {
-                LanguageFeature.SamConversionPerArgument ->
-                    standaloneSamConversionFeaturePassedExplicitly = true
-
-                LanguageFeature.FunctionReferenceWithDefaultValueAsOtherType ->
-                    functionReferenceWithDefaultValueFeaturePassedExplicitly = true
-
-                else -> {}
-            }
-        }
+        val (featuresThatForcePreReleaseBinaries,
+            disabledFeaturesFromUnsupportedVersions,
+            standaloneSamConversionFeaturePassedExplicitly,
+            functionReferenceWithDefaultValueFeaturePassedExplicitly
+        ) = configureFromInternalArgs(internalArguments)
 
         if (this[LanguageFeature.NewInference] == LanguageFeature.State.ENABLED) {
             if (!standaloneSamConversionFeaturePassedExplicitly)
