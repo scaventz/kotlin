@@ -21,7 +21,7 @@ import test.kot.JavaAlias
 import test.kot.JavaAlias.member
 
 fun foo(
-    sample: JavaSample,
+    sample: <!UNRESOLVED_REFERENCE!>JavaSample<!>,
     alias: JavaAlias
 ) {
     member()
