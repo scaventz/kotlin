@@ -3,7 +3,7 @@
 // JAVAC_SKIP
 // FULL_JDK
 
-// FILE: f.kt
+// FILE: a.kt
 
 import java.*
 import java.util.*
@@ -53,6 +53,6 @@ fun test(<!UNUSED_PARAMETER!>l<!> : <!PLATFORM_CLASS_MAPPED_TO_KOTLIN!>java.util
 }
 
 
-// FILE: f.kt
+// FILE: b.kt
 package xxx
   import java.lang.Class;
