@@ -49,7 +49,10 @@ fun TargetPlatform.createArguments(init: (CommonCompilerArguments).() -> Unit = 
 }
 
 private fun CommonCompilerArguments.convertToFlatBucket(): FlatCompilerArgumentsBucket = ArgumentUtils.convertArgumentsToStringList(this)
-    .let { RawToFlatCompilerArgumentsBucketConverter().convert(it) }
+    .let {
+        RawToFlatCompilerArgumentsBucketConverter()
+            .convert(it, IdePlatformKind.platformByCompilerArguments(this)?.serializeComponentPlatforms())
+    }
 
 private fun readV1Config(element: Element): KotlinFacetSettings {
     return KotlinFacetSettings().apply {
@@ -173,6 +176,7 @@ private fun readV2Config(element: Element): KotlinFacetSettings {
 
 private fun readCompilerArgumentsBucket(element: Element): FlatCompilerArgumentsBucket? {
     element.getChild("compilerArgumentsBucket")?.let { bucketElement ->
+        val targetPlatform = bucketElement.getAttributeValue("targetPlatform")
         val classpathKey = bucketElement.getAttributeValue("classpathKey")
         val classpathPartsList = readElementsList(bucketElement, "classpathParts", "classpathPart")
         val classpathParts = classpathKey?.takeIf { !classpathPartsList.isNullOrEmpty() }?.let { it to classpathPartsList!! }
@@ -187,7 +191,7 @@ private fun readCompilerArgumentsBucket(element: Element): FlatCompilerArguments
         val flagArguments = arrayListOf<String>().apply {
             readElementsList(bucketElement, "flagArguments", "flagArgument")?.also { addAll(it) }
         }
-        return FlatCompilerArgumentsBucket(classpathParts, singleArguments, multipleArguments, flagArguments)
+        return FlatCompilerArgumentsBucket(targetPlatform, classpathParts, singleArguments, multipleArguments, flagArguments)
     }
     return null
 }
@@ -464,6 +468,9 @@ private fun saveElementsList(element: Element, elementsList: List<String>, rootE
 
 private fun FlatCompilerArgumentsBucket.writeCompilerArgumentsBucket(element: Element): Element {
     val bucketElement = Element("compilerArgumentsBucket")
+    targetPlatform?.also {
+        bucketElement.setAttribute("targetPlatform", it)
+    }
 
     classpathParts?.also { partKv ->
         bucketElement.setAttribute("classpathKey", partKv.first)
@@ -556,7 +563,7 @@ fun KotlinFacetSettings.serializeFacetSettings(element: Element) {
     }
 }
 
-private fun TargetPlatform.serializeComponentPlatforms(): String {
+fun TargetPlatform.serializeComponentPlatforms(): String {
     val componentPlatforms = componentPlatforms
     val componentPlatformNames = componentPlatforms.mapTo(ArrayList()) { it.serializeToString() }
 
@@ -567,7 +574,7 @@ private fun TargetPlatform.serializeComponentPlatforms(): String {
     return componentPlatformNames.sorted().joinToString("/")
 }
 
-private fun String?.deserializeTargetPlatformByComponentPlatforms(): TargetPlatform? {
+fun String?.deserializeTargetPlatformByComponentPlatforms(): TargetPlatform? {
     val componentPlatformNames = this?.split('/')?.toSet()
     if (componentPlatformNames == null || componentPlatformNames.isEmpty())
         return null

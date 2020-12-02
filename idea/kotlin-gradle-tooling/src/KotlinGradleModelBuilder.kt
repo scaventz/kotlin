@@ -17,36 +17,6 @@ import java.io.Serializable
 import java.lang.reflect.InvocationTargetException
 import java.util.*
 
-interface ArgsInfo : Serializable {
-    val currentArguments: List<String>
-    val defaultArguments: List<String>
-    val dependencyClasspath: List<String>
-}
-
-data class ArgsInfoImpl(
-    override val currentArguments: List<String>,
-    override val defaultArguments: List<String>,
-    override val dependencyClasspath: List<String>
-) : ArgsInfo {
-
-    constructor(argsInfo: ArgsInfo) : this(
-        ArrayList(argsInfo.currentArguments),
-        ArrayList(argsInfo.defaultArguments),
-        ArrayList(argsInfo.dependencyClasspath)
-    )
-}
-
-typealias CompilerArgumentsBySourceSet = Map<String, ArgsInfo>
-
-/**
- * Creates deep copy in order to avoid holding links to Proxy objects created by gradle tooling api
- */
-fun CompilerArgumentsBySourceSet.deepCopy(): CompilerArgumentsBySourceSet {
-    val result = HashMap<String, ArgsInfo>()
-    this.forEach { key, value -> result[key] = ArgsInfoImpl(value) }
-    return result
-}
-
 interface KotlinGradleModel : Serializable {
     val hasKotlinPlugin: Boolean
     val cachedCompilerArgumentsBySourceSet: CachedCompilerArgumentBySourceSet
@@ -140,9 +110,9 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun Task.getCompilerArgumentsForBucket(methodName: String): List<List<String>>? {
+    private fun Task.getSerializedTargetPlatform(): String? {
         return try {
-            javaClass.getDeclaredMethod(methodName).invoke(this) as List<List<String>>
+            javaClass.getDeclaredMethod("serializedTargetPlatform").invoke(this) as? String
         } catch (e: Exception) {
             // No argument accessor method is available
             null
@@ -195,16 +165,19 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
             if (compileTask.javaClass.name !in kotlinCompileTaskClasses) return@forEach
 
             val sourceSetName = compileTask.getSourceSetName()
+            val serializedTargetPlatform = compileTask.getSerializedTargetPlatform()
 
             val currentCompilerArgumentsBucket = converter.convert(
                 compileTask.getCompilerArguments("getSerializedCompilerArguments")
                     ?: compileTask.getCompilerArguments("getSerializedCompilerArgumentsIgnoreClasspathIssues")
-                    ?: emptyList()
+                    ?: emptyList(),
+                serializedTargetPlatform
             )
 
 
             val defaultCompilerArgumentsBucket = converter.convert(
-                compileTask.getCompilerArguments("getDefaultSerializedCompilerArguments").orEmpty()
+                compileTask.getCompilerArguments("getDefaultSerializedCompilerArguments").orEmpty(),
+                serializedTargetPlatform
             )
 
             val dependencyClasspath = compileTask.getDependencyClasspath()

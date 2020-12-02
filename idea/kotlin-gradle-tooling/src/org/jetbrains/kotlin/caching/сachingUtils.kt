@@ -120,8 +120,5 @@ class DividedPropertiesWithArgumentAnnotationInfoManager(val classLoader: ClassL
 }
 
 
-/**
- * Creates deep copy in order to avoid holding links to Proxy objects created by gradle tooling api
- */
 fun CachedCompilerArgumentBySourceSet.deepCopy(): CachedCompilerArgumentBySourceSet =
     entries.associate { it.key to CachedArgsInfoImpl(it.value) }

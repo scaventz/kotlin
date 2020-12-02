@@ -12,6 +12,7 @@ typealias ClasspathArgumentsType = List<String>
 typealias RawCompilerArgumentsBucket = List<String>
 
 interface CompilerArgumentsBucket<T> : Serializable {
+    var targetPlatform: T?
     var classpathParts: Pair<T, List<T>>?
     val singleArguments: HashMap<T, T>
     val multipleArguments: HashMap<T, List<T>>
@@ -21,6 +22,7 @@ interface CompilerArgumentsBucket<T> : Serializable {
 }
 
 class CachedCompilerArgumentsBucket(
+    override var targetPlatform: Int? = null,
     override var classpathParts: Pair<Int, List<Int>>? = null,
     override val singleArguments: HashMap<Int, Int> = hashMapOf(),
     override val multipleArguments: HashMap<Int, List<Int>> = hashMapOf(),
@@ -28,7 +30,9 @@ class CachedCompilerArgumentsBucket(
     override val internalArguments: ArrayList<Int> = arrayListOf(),
     override val freeArgs: ArrayList<Int> = arrayListOf()
 ) : CompilerArgumentsBucket<Int> {
-    constructor(otherBucket: CachedCompilerArgumentsBucket) : this(otherBucket.classpathParts) {
+    constructor(otherBucket: CachedCompilerArgumentsBucket) : this() {
+        targetPlatform = otherBucket.targetPlatform
+        classpathParts = otherBucket.classpathParts
         singleArguments.putAll(otherBucket.singleArguments)
         multipleArguments.putAll(otherBucket.multipleArguments)
         flagArguments.addAll(otherBucket.flagArguments)
@@ -38,6 +42,7 @@ class CachedCompilerArgumentsBucket(
 }
 
 class FlatCompilerArgumentsBucket(
+    override var targetPlatform: String? = null,
     override var classpathParts: Pair<String, List<String>>? = null,
     override val singleArguments: HashMap<String, String> = hashMapOf(),
     override val multipleArguments: HashMap<String, List<String>> = hashMapOf(),
@@ -45,7 +50,9 @@ class FlatCompilerArgumentsBucket(
     override val internalArguments: ArrayList<String> = arrayListOf(),
     override val freeArgs: ArrayList<String> = arrayListOf()
 ) : CompilerArgumentsBucket<String> {
-    constructor(otherBucket: FlatCompilerArgumentsBucket) : this(otherBucket.classpathParts) {
+    constructor(otherBucket: FlatCompilerArgumentsBucket) : this() {
+        targetPlatform = otherBucket.targetPlatform
+        classpathParts = otherBucket.classpathParts
         singleArguments.putAll(otherBucket.singleArguments)
         multipleArguments.putAll(otherBucket.multipleArguments)
         flagArguments.addAll(otherBucket.flagArguments)

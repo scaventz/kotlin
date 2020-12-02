@@ -16,11 +16,18 @@
 
 package org.jetbrains.kotlin.gradle.internal
 
+import com.intellij.util.text.VersionComparatorUtil
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Internal
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
-import java.io.File
+import org.jetbrains.kotlin.config.JvmTarget
+import org.jetbrains.kotlin.config.serializeComponentPlatforms
+import org.jetbrains.kotlin.platform.CommonPlatforms
+import org.jetbrains.kotlin.platform.impl.FakeK2NativeCompilerArguments
+import org.jetbrains.kotlin.platform.js.JsPlatforms
+import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
+import org.jetbrains.kotlin.platform.konan.NativePlatforms
 
 interface CompilerArgumentAware<T : CommonToolArguments> {
     val serializedCompilerArguments: List<String>
@@ -37,12 +44,27 @@ interface CompilerArgumentAware<T : CommonToolArguments> {
     val filteredArgumentsMap: Map<String, String>
         get() = CompilerArgumentsGradleInput.createInputsMap(prepareCompilerArguments())
 
+    val serializedTargetPlatform: String?
+        get() = calculateTargetPlatform(prepareCompilerArguments())?.serializeComponentPlatforms()
+
     fun createCompilerArgs(): T
     fun setupCompilerArgs(args: T, defaultsOnly: Boolean = false, ignoreClasspathResolutionErrors: Boolean = false)
 }
 
 internal fun <T : CommonToolArguments> CompilerArgumentAware<T>.prepareCompilerArguments(ignoreClasspathResolutionErrors: Boolean = false) =
     createCompilerArgs().also { setupCompilerArgs(it, ignoreClasspathResolutionErrors = ignoreClasspathResolutionErrors) }
+
+private fun calculateTargetPlatform(arguments: CommonToolArguments) = when (arguments) {
+    is K2JVMCompilerArguments -> arguments.jvmTarget?.let { target ->
+        JvmTarget.values().firstOrNull { VersionComparatorUtil.COMPARATOR.compare(it.description, target) >= 0 }
+            ?.let { JvmPlatforms.jvmPlatformByTargetVersion(it) }
+            ?: JvmPlatforms.defaultJvmPlatform
+    } ?: JvmPlatforms.defaultJvmPlatform
+    is K2JSCompilerArguments -> JsPlatforms.defaultJsPlatform
+    is FakeK2NativeCompilerArguments -> NativePlatforms.unspecifiedNativePlatform
+    is K2MetadataCompilerArguments -> CommonPlatforms.defaultCommonPlatform
+    else -> null
+}
 
 interface CompilerArgumentAwareWithInput<T : CommonToolArguments> : CompilerArgumentAware<T> {
     @get:Internal
@@ -56,6 +78,10 @@ interface CompilerArgumentAwareWithInput<T : CommonToolArguments> : CompilerArgu
     @get:Internal
     override val serializedCompilerArgumentsIgnoreClasspathIssues: List<String>
         get() = super.serializedCompilerArgumentsIgnoreClasspathIssues
+
+    @get:Internal
+    override val serializedTargetPlatform: String?
+        get() = super.serializedTargetPlatform
 
     @get:Input
     override val filteredArgumentsMap: Map<String, String>

@@ -38,6 +38,8 @@ dependencies {
     compile(project(":kotlin-gradle-plugin-model"))
     compileOnly(project(":idea:kotlin-gradle-tooling"))
     compileOnly(project(":compiler"))
+    compileOnly(project(":compiler:config.jvm"))
+    compileOnly(project(":idea:idea-jps-common"))
     compileOnly(project(":compiler:incremental-compilation-impl"))
     compileOnly(project(":daemon-common"))
 
