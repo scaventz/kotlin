@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.load.kotlin.PackagePartClassUtils
 import org.jetbrains.kotlin.test.ConfigurationKind
 import org.jetbrains.kotlin.test.KotlinTestUtils
 import org.jetbrains.kotlin.test.TestJdkKind
+import org.jetbrains.kotlin.test.util.KtTestUtil
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -18,7 +19,7 @@ import java.util.concurrent.TimeUnit
 class Java9CodegenTest : AbstractBlackBoxCodegenTest() {
     override fun setUp() {
         super.setUp()
-        val fileName = KotlinTestUtils.getTestDataPathBase() + "/codegen/" + prefix + "/" + getTestName(true) + ".kt"
+        val fileName = KtTestUtil.getTestDataPathBase() + "/codegen/" + prefix + "/" + getTestName(true) + ".kt"
         val testFile = TestFile(fileName, File(fileName).readText())
         createEnvironmentWithMockJdkAndIdeaAnnotations(ConfigurationKind.NO_KOTLIN_REFLECT, listOf(testFile), TestJdkKind.FULL_JDK_9)
     }
@@ -29,7 +30,7 @@ class Java9CodegenTest : AbstractBlackBoxCodegenTest() {
         val tmpdir = KotlinTestUtils.tmpDirForTest(this)
         generateClassesInFile().writeAll(tmpdir, null)
 
-        val jdk9Home = KotlinTestUtils.getJdk9Home()
+        val jdk9Home = KtTestUtil.getJdk9Home()
         val javaExe = File(jdk9Home, "bin/java.exe").takeIf(File::exists)
             ?: File(jdk9Home, "bin/java").takeIf(File::exists)
             ?: error("Can't find 'java' executable in $jdk9Home")

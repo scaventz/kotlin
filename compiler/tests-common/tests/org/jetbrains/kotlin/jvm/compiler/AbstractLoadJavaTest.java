@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.resolve.DescriptorUtils;
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedClassDescriptor;
 import org.jetbrains.kotlin.test.*;
 import org.jetbrains.kotlin.test.util.DescriptorValidator;
+import org.jetbrains.kotlin.test.util.KtTestUtil;
 import org.junit.Assert;
 
 import java.io.File;
@@ -38,7 +39,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import static org.jetbrains.kotlin.jvm.compiler.LoadDescriptorUtil.*;
-import static org.jetbrains.kotlin.test.KotlinTestUtils.*;
+import static org.jetbrains.kotlin.test.KotlinTestUtils.compileKotlinWithJava;
+import static org.jetbrains.kotlin.test.KotlinTestUtils.newConfiguration;
 import static org.jetbrains.kotlin.test.util.DescriptorValidator.ValidationVisitor.errorTypesAllowed;
 import static org.jetbrains.kotlin.test.util.DescriptorValidator.ValidationVisitor.errorTypesForbidden;
 import static org.jetbrains.kotlin.test.util.RecursiveDescriptorComparator.*;
@@ -88,7 +90,7 @@ public abstract class AbstractLoadJavaTest extends TestCaseWithTmpdir {
     @NotNull
     private List<File> getClasspath(File... files) {
         List<File> classpath = new ArrayList<>(getExtraClasspath());
-        classpath.add(getAnnotationsJar());
+        classpath.add(KtTestUtil.getAnnotationsJar());
         classpath.addAll(Arrays.asList(files));
         return classpath;
     }
@@ -239,7 +241,7 @@ public abstract class AbstractLoadJavaTest extends TestCaseWithTmpdir {
         );
         registerJavacIfNeeded(environment);
         configureEnvironment(environment);
-        KtFile ktFile = KotlinTestUtils.createFile(kotlinSrc.getPath(), FileUtil.loadFile(kotlinSrc, true), environment.getProject());
+        KtFile ktFile = KtTestUtil.createFile(kotlinSrc.getPath(), FileUtil.loadFile(kotlinSrc, true), environment.getProject());
 
         ModuleDescriptor module = GenerationUtils.compileFiles(Collections.singletonList(ktFile), environment).getModule();
         PackageViewDescriptor packageView = module.getPackage(TEST_PACKAGE_FQNAME);

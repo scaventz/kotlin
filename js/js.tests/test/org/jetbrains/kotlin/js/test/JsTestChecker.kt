@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.js.test
 import org.jetbrains.kotlin.js.engine.ScriptEngine
 import org.jetbrains.kotlin.js.engine.ScriptEngineNashorn
 import org.jetbrains.kotlin.js.engine.ScriptEngineV8
-import org.jetbrains.kotlin.test.KotlinTestUtils
+import org.jetbrains.kotlin.test.util.KtTestUtil
 import org.junit.Assert
 
 fun createScriptEngine(): ScriptEngine {
@@ -181,7 +181,7 @@ object V8JsTestChecker : AbstractV8JsTestChecker() {
     }
 
     private fun createV8Engine(): ScriptEngineV8 {
-        val v8 = ScriptEngineV8(KotlinTestUtils.tmpDirForReusableFolder("j2v8_library_path").path)
+        val v8 = ScriptEngineV8(KtTestUtil.tmpDirForReusableFolder("j2v8_library_path").path)
 
         listOf(
             BasicBoxTest.DIST_DIR_JS_PATH + "kotlin.js",
@@ -203,7 +203,7 @@ object V8JsTestChecker : AbstractV8JsTestChecker() {
 }
 
 object V8IrJsTestChecker : AbstractV8JsTestChecker() {
-    override val engine get() = ScriptEngineV8(KotlinTestUtils.tmpDirForReusableFolder("j2v8_library_path").path)
+    override val engine get() = ScriptEngineV8(KtTestUtil.tmpDirForReusableFolder("j2v8_library_path").path)
 
     override fun run(files: List<String>, f: ScriptEngine.() -> Any?): Any? {
 
