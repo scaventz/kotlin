@@ -1,0 +1,61 @@
+/*
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
+ */
+
+package org.jetbrains.kotlin.test.services.impl
+
+import org.jetbrains.kotlin.platform.TargetPlatform
+import org.jetbrains.kotlin.platform.js.JsPlatforms
+import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
+import org.jetbrains.kotlin.platform.konan.NativePlatforms
+import org.jetbrains.kotlin.test.directives.model.RegisteredDirectives
+import org.jetbrains.kotlin.test.model.BinaryKind
+import org.jetbrains.kotlin.test.model.ArtifactKinds
+import org.jetbrains.kotlin.test.model.DependencyKind
+import org.jetbrains.kotlin.test.model.TestModule
+import org.jetbrains.kotlin.test.services.TestModuleStructure
+import java.io.File
+
+class TestModuleStructureImpl(
+    override val modules: List<TestModule>,
+    override val globalDirectives: RegisteredDirectives,
+    override val originalTestDataFiles: List<File>
+) : TestModuleStructure() {
+    @OptIn(ExperimentalStdlibApi::class)
+    private val targetArtifactsByModule: Map<String, List<BinaryKind<*>>> = buildMap {
+        for (module in modules) {
+            val result = mutableListOf<BinaryKind<*>>()
+            for (dependency in module.dependencies) {
+                if (dependency.kind == DependencyKind.KLib) {
+                    result += ArtifactKinds.KLib
+                }
+            }
+            module.targetPlatform.toArtifactKind()?.let { result += it }
+            put(module.name, result)
+        }
+    }
+
+    override fun getTargetArtifactKinds(module: TestModule): List<BinaryKind<*>> {
+        return targetArtifactsByModule[module.name] ?: emptyList()
+    }
+
+    override fun toString(): String {
+        return buildString {
+            appendLine("Global directives:\n  $globalDirectives")
+            modules.forEach {
+                appendLine(it)
+                appendLine()
+            }
+        }
+    }
+
+    companion object {
+        private fun TargetPlatform.toArtifactKind(): BinaryKind<*>? = when (this) {
+            in JvmPlatforms.allJvmPlatforms -> ArtifactKinds.Jvm
+            in JsPlatforms.allJsPlatforms -> ArtifactKinds.Js
+            in NativePlatforms.allNativePlatforms -> ArtifactKinds.Native
+            else -> null
+        }
+    }
+}
