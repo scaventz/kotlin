@@ -90,11 +90,12 @@ object TopDownAnalyzerFacadeForJVM {
         packagePartProvider: (GlobalSearchScope) -> PackagePartProvider,
         declarationProviderFactory: (StorageManager, Collection<KtFile>) -> DeclarationProviderFactory = ::FileBasedDeclarationProviderFactory,
         sourceModuleSearchScope: GlobalSearchScope = newModuleSearchScope(project, files),
-        klibList: List<KotlinLibrary> = emptyList()
+        klibList: List<KotlinLibrary> = emptyList(),
+        explicitModuleDependencyList: List<ModuleDescriptor> = emptyList()
     ): AnalysisResult {
         val container = createContainer(
             project, files, trace, configuration, packagePartProvider, declarationProviderFactory, CompilerEnvironment,
-            sourceModuleSearchScope, klibList
+            sourceModuleSearchScope, klibList, explictModuleDependencyList = explicitModuleDependencyList
         )
 
         val module = container.get<ModuleDescriptor>()
@@ -127,6 +128,7 @@ object TopDownAnalyzerFacadeForJVM {
         return AnalysisResult.success(trace.bindingContext, module)
     }
 
+    @OptIn(ExperimentalStdlibApi::class)
     fun createContainer(
         project: Project,
         files: Collection<KtFile>,
@@ -137,7 +139,8 @@ object TopDownAnalyzerFacadeForJVM {
         targetEnvironment: TargetEnvironment = CompilerEnvironment,
         sourceModuleSearchScope: GlobalSearchScope = newModuleSearchScope(project, files),
         klibList: List<KotlinLibrary> = emptyList(),
-        implicitsResolutionFilter: ImplicitsExtensionsResolutionFilter? = null
+        implicitsResolutionFilter: ImplicitsExtensionsResolutionFilter? = null,
+        explictModuleDependencyList: List<ModuleDescriptor> = emptyList()
     ): ComponentProvider {
         val jvmTarget = configuration.get(JVMConfigurationKeys.JVM_TARGET, JvmTarget.DEFAULT)
         val languageVersionSettings = configuration.languageVersionSettings
@@ -252,8 +255,16 @@ object TopDownAnalyzerFacadeForJVM {
         val klibModules = getKlibModules(klibList, dependencyModule)
 
         // TODO: remove dependencyModule from friends
+        val dependencies = buildList {
+            this += module
+            dependencyModule?.let { this += it }
+            this += fallbackBuiltIns
+            this.addAll(klibModules)
+            @Suppress("UNCHECKED_CAST")
+            this.addAll(explictModuleDependencyList as List<ModuleDescriptorImpl>)
+        }
         module.setDependencies(
-            listOfNotNull(module, dependencyModule, fallbackBuiltIns) + klibModules,
+            dependencies,
             if (dependencyModule != null) setOf(dependencyModule) else emptySet()
         )
         module.initialize(
