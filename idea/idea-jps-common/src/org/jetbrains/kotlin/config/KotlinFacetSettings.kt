@@ -206,13 +206,19 @@ class KotlinFacetSettings {
             compilerSettings?.let { parseCommandLineArguments(it.additionalArgumentsAsList, this) }
         }
 
-    val compilerArguments: CommonCompilerArguments?
+    var compilerArguments: CommonCompilerArguments?
         get() = targetPlatform?.createArguments {
             compilerArgumentsBucket?.let {
                 FlatToRawCompilerArgumentsBucketConverter(CommonCompilerArguments::class.java.classLoader).convert(it)
             }?.also { parseCommandLineArguments(it, this) }
             this.autoAdvanceLanguageVersion = autoAdvanceLanguageVersion
             this.autoAdvanceApiVersion = autoAdvanceApiVersion
+        }
+        set(value) {
+            if (compilerArgumentsBucket != null)
+                value?.apply { mergeFlatCompilerArgumentsBuckets(toFlatCompilerArguments(), compilerArgumentsBucket!!) }
+            else
+                compilerArgumentsBucket = value?.toFlatCompilerArguments()
         }
 
     var compilerArgumentsBucket: FlatCompilerArgumentsBucket? = null
