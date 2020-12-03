@@ -859,9 +859,8 @@ class GradleFacetImportTest : GradleImportingTestCase() {
         configureByFiles()
         importProject()
         with(facetSettings("project_main")) {
-            Assert.assertEquals("1.8", (mergedCompilerArguments as K2JVMCompilerArguments).jvmTarget)
+            Assert.assertEquals("1.8", compilerArgumentsBucket!!.extractSingleArgumentValue(K2JVMCompilerArguments::jvmTarget))
         }
-
     }
 
     private fun checkStableModuleName(projectName: String, expectedName: String, platform: TargetPlatform, isProduction: Boolean) {

@@ -258,16 +258,14 @@ class ModulesTxtBuilder {
             when (flag) {
                 "sourceSetHolder" -> settings.kind = SOURCE_SET_HOLDER
                 "compilationAndSourceSetHolder" -> settings.kind = COMPILATION_AND_SOURCE_SET_HOLDER
-                "common" -> settings.compilerArgumentsBucket =
-                    K2MetadataCompilerArguments().also { settings.targetPlatform = CommonPlatforms.defaultCommonPlatform }
-                        .toFlatCompilerArguments()
-                "jvm" -> settings.compilerArgumentsBucket =
-                    K2JVMCompilerArguments().also { settings.targetPlatform = JvmPlatforms.defaultJvmPlatform }.toFlatCompilerArguments()
-                "js" -> settings.compilerArgumentsBucket =
-                    K2JSCompilerArguments().also { settings.targetPlatform = JsPlatforms.defaultJsPlatform }.toFlatCompilerArguments()
-                "native" -> settings.compilerArgumentsBucket =
-                    FakeK2NativeCompilerArguments().also { settings.targetPlatform = NativePlatforms.unspecifiedNativePlatform }
-                        .toFlatCompilerArguments()
+                "common" -> settings.compilerArgumentsBucket = K2MetadataCompilerArguments().toFlatCompilerArguments()
+                    .also { settings.targetPlatform = CommonPlatforms.defaultCommonPlatform }
+                "jvm" -> settings.compilerArgumentsBucket = K2JVMCompilerArguments().toFlatCompilerArguments()
+                    .also { settings.targetPlatform = JvmPlatforms.defaultJvmPlatform }
+                "js" -> settings.compilerArgumentsBucket = K2JSCompilerArguments().toFlatCompilerArguments()
+                    .also { settings.targetPlatform = JsPlatforms.defaultJsPlatform }
+                "native" -> settings.compilerArgumentsBucket = FakeK2NativeCompilerArguments().toFlatCompilerArguments()
+                    .also { settings.targetPlatform = NativePlatforms.unspecifiedNativePlatform }
 
                 else -> {
                     val flagProperty = ModulesTxt.Module.flags[flag]

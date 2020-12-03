@@ -32,10 +32,7 @@ import org.gradle.tooling.model.idea.IdeaModule
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.caching.*
 import org.jetbrains.kotlin.cli.common.arguments.*
-import org.jetbrains.kotlin.config.ExternalSystemNativeMainRunTask
-import org.jetbrains.kotlin.config.ExternalSystemRunTask
-import org.jetbrains.kotlin.config.ExternalSystemTestRunTask
-import org.jetbrains.kotlin.config.LanguageFeature
+import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.idea.configuration.GradlePropertiesFileFacade.Companion.KOTLIN_NOT_IMPORTED_COMMON_SOURCE_SETS_SETTING
 import org.jetbrains.kotlin.idea.configuration.klib.KotlinNativeLibrariesDependencySubstitutor
@@ -272,21 +269,11 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
 
             val compilations = targets.flatMap { it.compilations }
             val mppMapper = ideProject.mppProjectCompilerArgumentsMapper ?: return
-            val converter = CachedToRawCompilerArgumentsBucketConverter(mppMapper)
             for (compilation in compilations) {
                 val kotlinSourceSetInfo = ideModule.kotlinSourceSetInfoByCompilation[compilation] ?: continue
                 val cachedArgsInfo = ideModule.cachedCompilerArgumentsByCompilation[compilation] ?: continue
 
-                kotlinSourceSetInfo.compilerArguments = converter.convert(cachedArgsInfo.currentCompilerArgumentsBucket).let {
-                    createCompilerArguments(it, compilation.platform, isMultiplatform = true)
-                }
-
-                kotlinSourceSetInfo.defaultCompilerArguments = converter.convert(cachedArgsInfo.defaultCompilerArgumentsBucket).let {
-                    createCompilerArguments(it, compilation.platform, isMultiplatform = true)
-                }
-
-                kotlinSourceSetInfo.dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mppMapper.getArgument(it) }
-
+                kotlinSourceSetInfo.flatArgsInfo = cachedArgsInfo.convertToFlat(mppMapper)
 
                 if (compilation.platform == KotlinPlatform.JVM || compilation.platform == KotlinPlatform.ANDROID) {
                     ideModule.compilationDataByCompilation[compilation]?.targetCompatibility =
@@ -1060,7 +1047,7 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                     getGradleModuleQualifiedName(resolverCtx, gradleModule, it)
                 }
                 //TODO(auskov): target flours are lost here
-                info.compilerArguments =
+                info.flatArgsInfo =
                     createCompilerArguments(emptyList(), sourceSet.actualPlatforms.getSinglePlatform(), isMultiplatform = true).also {
                         it.languageVersion = languageSettings.languageVersion
                         it.apiVersion = languageSettings.apiVersion
@@ -1074,7 +1061,7 @@ open class KotlinMPPGradleProjectResolver : AbstractProjectResolverExtensionComp
                         it.pluginOptions = languageSettings.compilerPluginArguments
                         it.pluginClasspaths = languageSettings.compilerPluginClasspath.map(File::getPath).toTypedArray()
                         it.freeArgs = languageSettings.freeCompilerArgs.toMutableList()
-                    }
+                    }.toFlatCompilerArguments().let { FlatArgsInfoImpl(it) }
             }
         }
 

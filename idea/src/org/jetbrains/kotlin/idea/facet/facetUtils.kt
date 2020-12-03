@@ -17,6 +17,7 @@ import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.text.StringUtil
+import org.jetbrains.kotlin.caching.FlatArgsInfoImpl
 import org.jetbrains.kotlin.caching.RawToFlatCompilerArgumentsBucketConverter
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
@@ -64,7 +65,7 @@ private fun KotlinFacetSettings.initializeCompilerArguments(
     commonArguments: CommonCompilerArguments,
     platform: TargetPlatform? = null, // if null, detect by module dependencies
 ) {
-    if (compilerArguments == null) {
+    if (compilerArgumentsBucket == null) {
         val targetPlatform = platform ?: getDefaultTargetPlatform(module, rootModel)
         compilerArgumentsBucket = createAndPrepareCompilerArguments(targetPlatform, module, commonArguments).toFlatCompilerArguments()
         this.targetPlatform = targetPlatform
@@ -82,7 +83,7 @@ private fun KotlinFacetSettings.initializeCompilerArgumentsBucket(
         val targetPlatform = platform ?: getDefaultTargetPlatform(module, rootModel)
         compilerArgumentsBucket = createAndPrepareCompilerArguments(targetPlatform, module, commonArguments).let {
             val arguments = ArgumentUtils.convertArgumentsToStringList(it)
-            RawToFlatCompilerArgumentsBucketConverter().convert(arguments)
+            RawToFlatCompilerArgumentsBucketConverter(commonArguments::class.java.classLoader).convert(arguments)
         }
         this.targetPlatform = targetPlatform
     }
@@ -101,8 +102,7 @@ fun KotlinFacetSettings.initializeIfNeeded(
     module: Module,
     rootModel: ModuleRootModel?,
     platform: TargetPlatform? = null, // if null, detect by module dependencies
-    compilerVersion: String? = null,
-    hasCompilerArguments: Boolean = true
+    compilerVersion: String? = null
 ) {
     val project = module.project
 
@@ -115,8 +115,7 @@ fun KotlinFacetSettings.initializeIfNeeded(
 
     val commonArguments = KotlinCommonCompilerArgumentsHolder.getInstance(project).settings
 
-    if (hasCompilerArguments) initializeCompilerArguments(module, rootModel, commonArguments, platform)
-    else initializeCompilerArgumentsBucket(module, rootModel, commonArguments, platform)
+    initializeCompilerArgumentsBucket(module, rootModel, commonArguments, platform)
 
     if (shouldInferLanguageLevel) {
         languageLevel = (if (useProjectSettings) LanguageVersion.fromVersionString(commonArguments.languageVersion) else null)
@@ -250,11 +249,10 @@ fun KotlinFacet.configureFacet(
     configureFacet(compilerVersion, coroutineSupport, platform.toNewPlatform(), modelsProvider)
 }
 
-
 fun KotlinFacet.noVersionAutoAdvance() {
-    configuration.settings.compilerArguments?.let {
-        it.autoAdvanceLanguageVersion = false
-        it.autoAdvanceApiVersion = false
+    configuration.settings.apply {
+        autoAdvanceLanguageVersion = false
+        autoAdvanceApiVersion = false
     }
 }
 
@@ -271,7 +269,7 @@ private val commonUIHiddenFields = listOf(
     CommonCompilerArguments::pluginOptions.name,
     CommonCompilerArguments::multiPlatform.name
 )
-private val commonPrimaryFields = commonUIExposedFields + commonUIHiddenFields
+val commonPrimaryFields = commonUIExposedFields + commonUIHiddenFields
 
 private val jvmSpecificUIExposedFields = listOf(
     K2JVMCompilerArguments::jvmTarget.name,
@@ -282,7 +280,7 @@ private val jvmSpecificUIHiddenFields = listOf(
     K2JVMCompilerArguments::friendPaths.name
 )
 val jvmUIExposedFields = commonUIExposedFields + jvmSpecificUIExposedFields
-private val jvmPrimaryFields = commonPrimaryFields + jvmSpecificUIExposedFields + jvmSpecificUIHiddenFields
+val jvmPrimaryFields = commonPrimaryFields + jvmSpecificUIExposedFields + jvmSpecificUIHiddenFields
 
 private val jsSpecificUIExposedFields = listOf(
     K2JSCompilerArguments::sourceMap.name,
@@ -293,63 +291,14 @@ private val jsSpecificUIExposedFields = listOf(
     K2JSCompilerArguments::moduleKind.name
 )
 val jsUIExposedFields = commonUIExposedFields + jsSpecificUIExposedFields
-private val jsPrimaryFields = commonPrimaryFields + jsSpecificUIExposedFields
+val jsPrimaryFields = commonPrimaryFields + jsSpecificUIExposedFields
 
 private val metadataSpecificUIExposedFields = listOf(
     K2MetadataCompilerArguments::destination.name,
     K2MetadataCompilerArguments::classpath.name
 )
 val metadataUIExposedFields = commonUIExposedFields + metadataSpecificUIExposedFields
-private val metadataPrimaryFields = commonPrimaryFields + metadataSpecificUIExposedFields
-
-private val CommonCompilerArguments.primaryFields: List<String>
-    get() = when (this) {
-        is K2JVMCompilerArguments -> jvmPrimaryFields
-        is K2JSCompilerArguments -> jsPrimaryFields
-        is K2MetadataCompilerArguments -> metadataPrimaryFields
-        else -> commonPrimaryFields
-    }
-
-private val CommonCompilerArguments.ignoredFields: List<String>
-    get() = when (this) {
-        is K2JVMCompilerArguments -> listOf(K2JVMCompilerArguments::noJdk.name, K2JVMCompilerArguments::jdkHome.name)
-        else -> emptyList()
-    }
-
-private fun Module.configureSdkIfPossible(compilerArguments: CommonCompilerArguments, modelsProvider: IdeModifiableModelsProvider) {
-    // SDK for Android module is already configured by Android plugin at this point
-    if (isAndroidModule(modelsProvider) || hasNonOverriddenExternalSdkConfiguration(compilerArguments)) return
-
-    val projectSdk = ProjectRootManager.getInstance(project).projectSdk
-    KotlinSdkType.setUpIfNeeded()
-    val allSdks = getProjectJdkTableSafe().allJdks
-    val sdk = if (compilerArguments is K2JVMCompilerArguments) {
-        val jdkHome = compilerArguments.jdkHome
-        when {
-            jdkHome != null -> allSdks.firstOrNull { it.sdkType is JavaSdk && FileUtil.comparePaths(it.homePath, jdkHome) == 0 }
-            projectSdk != null && projectSdk.sdkType is JavaSdk -> projectSdk
-            else -> allSdks.firstOrNull { it.sdkType is JavaSdk }
-        }
-    } else {
-        allSdks.firstOrNull { it.sdkType is KotlinSdkType }
-            ?: modelsProvider
-                .modifiableModuleModel
-                .modules
-                .asSequence()
-                .mapNotNull { modelsProvider.getModifiableRootModel(it).sdk }
-                .firstOrNull { it.sdkType is KotlinSdkType }
-    }
-
-    val rootModel = modelsProvider.getModifiableRootModel(this)
-    if (sdk == null || sdk == projectSdk) {
-        rootModel.inheritSdk()
-    } else {
-        rootModel.sdk = sdk
-    }
-}
-
-private fun Module.hasNonOverriddenExternalSdkConfiguration(compilerArguments: CommonCompilerArguments): Boolean =
-    hasExternalSdkConfiguration && (compilerArguments !is K2JVMCompilerArguments || compilerArguments.jdkHome == null)
+val metadataPrimaryFields = commonPrimaryFields + metadataSpecificUIExposedFields
 
 fun parseCompilerArgumentsToFacet(
     arguments: List<String>,
@@ -357,78 +306,15 @@ fun parseCompilerArgumentsToFacet(
     kotlinFacet: KotlinFacet,
     modelsProvider: IdeModifiableModelsProvider?
 ) {
-    val compilerArgumentsClass = kotlinFacet.configuration.settings.compilerArguments?.javaClass ?: return
-    val currentArgumentsBean = compilerArgumentsClass.newInstance()
-    val defaultArgumentsBean = compilerArgumentsClass.newInstance()
-    parseCommandLineArguments(defaultArguments, defaultArgumentsBean)
-    parseCommandLineArguments(arguments, currentArgumentsBean)
-    applyCompilerArgumentsToFacet(currentArgumentsBean, defaultArgumentsBean, kotlinFacet, modelsProvider)
-}
-
-fun applyCompilerArgumentsToFacet(
-    arguments: CommonCompilerArguments,
-    defaultArguments: CommonCompilerArguments?,
-    kotlinFacet: KotlinFacet,
-    modelsProvider: IdeModifiableModelsProvider?
-) {
-    with(kotlinFacet.configuration.settings) {
-        val compilerArguments = this.compilerArguments ?: return
-
-        val defaultCompilerArguments = defaultArguments?.let { copyBean(it) } ?: compilerArguments::class.java.newInstance()
-        defaultCompilerArguments.convertPathsToSystemIndependent()
-
-        val oldPluginOptions = compilerArguments.pluginOptions
-
-        val emptyArgs = compilerArguments::class.java.newInstance()
-
-        // Ad-hoc work-around for android compilations: middle source sets could be actualized up to
-        // Android target, meanwhile compiler arguments are of type K2Metadata
-        // TODO(auskov): merge classpath once compiler arguments are removed from KotlinFacetSettings
-        if (arguments.javaClass == compilerArguments.javaClass) {
-            copyBeanTo(arguments, compilerArguments) { property, value -> value != property.get(emptyArgs) }
-        }
-        compilerArguments.pluginOptions = joinPluginOptions(oldPluginOptions, arguments.pluginOptions)
-
-        compilerArguments.convertPathsToSystemIndependent()
-
-        // Retain only fields exposed (and not explicitly ignored) in facet configuration editor.
-        // The rest is combined into string and stored in CompilerSettings.additionalArguments
-
-        if (modelsProvider != null)
-            kotlinFacet.module.configureSdkIfPossible(compilerArguments, modelsProvider)
-
-        val primaryFields = compilerArguments.primaryFields
-        val ignoredFields = compilerArguments.ignoredFields
-
-        fun exposeAsAdditionalArgument(property: KProperty1<CommonCompilerArguments, Any?>) =
-            property.name !in primaryFields && property.get(compilerArguments) != property.get(defaultCompilerArguments)
-
-        val additionalArgumentsString = with(compilerArguments::class.java.newInstance()) {
-            copyFieldsSatisfying(compilerArguments, this) { exposeAsAdditionalArgument(it) && it.name !in ignoredFields }
-            ArgumentUtils.convertArgumentsToStringList(this).joinToString(separator = " ") {
-                if (StringUtil.containsWhitespaces(it) || it.startsWith('"')) {
-                    StringUtil.wrapWithDoubleQuote(StringUtil.escapeQuotes(it))
-                } else it
-            }
-        }
-        compilerSettings?.additionalArguments =
-            if (additionalArgumentsString.isNotEmpty()) additionalArgumentsString else CompilerSettings.DEFAULT_ADDITIONAL_ARGUMENTS
-
-        with(compilerArguments::class.java.newInstance()) {
-            copyFieldsSatisfying(this, compilerArguments) { exposeAsAdditionalArgument(it) || it.name in ignoredFields }
-        }
-
-        val languageLevel = languageLevel
-        val apiLevel = apiLevel
-        if (languageLevel != null && apiLevel != null && apiLevel > languageLevel) {
-            this.apiLevel = languageLevel
-        }
-
-        updateMergedArguments()
+    val targetPlatform = kotlinFacet.configuration.settings.targetPlatform ?: return
+    with(RawToFlatCompilerArgumentsBucketConverter(CommonCompilerArguments::class.java.classLoader)) {
+        val argumentsBucket = convert(arguments, targetPlatform.serializeComponentPlatforms())
+        val defaultBucket = convert(defaultArguments, targetPlatform.serializeComponentPlatforms())
+        configureFacetByFlatArgsInfo(kotlinFacet, FlatArgsInfoImpl(argumentsBucket, defaultBucket), modelsProvider)
     }
 }
 
-private fun joinPluginOptions(old: Array<String>?, new: Array<String>?): Array<String>? {
+internal fun joinPluginOptions(old: Array<String>?, new: Array<String>?): Array<String>? {
     if (old == null && new == null) {
         return old
     } else if (new == null) {

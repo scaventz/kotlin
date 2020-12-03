@@ -11,12 +11,17 @@ import org.jetbrains.kotlin.caching.RawToFlatCompilerArgumentsBucketConverter
 import org.jetbrains.kotlin.caching.isSuitableValue
 import org.jetbrains.kotlin.cli.common.arguments.*
 import org.jetbrains.kotlin.compilerRunner.ArgumentUtils
+import org.jetbrains.kotlin.platform.IdePlatformKind
 import org.jetbrains.kotlin.utils.addToStdlib.ifNotEmpty
 import java.io.File
 import kotlin.reflect.KProperty1
 
+private fun CommonCompilerArguments.calculateTargetPlatform() = IdePlatformKind.platformByCompilerArguments(this)?.serializeComponentPlatforms()
+
 fun CommonCompilerArguments.toFlatCompilerArguments(): FlatCompilerArgumentsBucket =
-    ArgumentUtils.convertArgumentsToStringList(this).let { RawToFlatCompilerArgumentsBucketConverter().convert(it) }
+    ArgumentUtils.convertArgumentsToStringList(this).let {
+        RawToFlatCompilerArgumentsBucketConverter(this::class.java.classLoader).convert(it, calculateTargetPlatform())
+    }
 
 fun createDummyCompilerArgumentsBucket(): FlatCompilerArgumentsBucket = CommonCompilerArguments.DummyImpl().toFlatCompilerArguments()
 

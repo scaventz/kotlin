@@ -201,38 +201,28 @@ class KotlinFacetSettings {
     var version = CURRENT_VERSION
     var useProjectSettings: Boolean = true
 
-    var mergedCompilerArguments: CommonCompilerArguments? = null
-        private set
+    val mergedCompilerArguments: CommonCompilerArguments?
+        get() = compilerArguments?.apply {
+            compilerSettings?.let { parseCommandLineArguments(it.additionalArgumentsAsList, this) }
+        }
 
-    // TODO: Workaround for unwanted facet settings modification on code analysis
-    // To be replaced with proper API for settings update (see BaseKotlinCompilerSettings as an example)
-    fun updateMergedArguments() {
-        val compilerArguments = compilerArguments
-        val compilerSettings = compilerSettings
-
-        mergedCompilerArguments = if (compilerArguments != null) {
-            copyBean(compilerArguments).apply {
-                if (compilerSettings != null) {
-                    parseCommandLineArguments(compilerSettings.additionalArgumentsAsList, this)
-                }
-            }
-        } else null
-    }
-
-    var compilerArgumentsBucket: FlatCompilerArgumentsBucket? = null
-
-    //    @Deprecated(level = DeprecationLevel.ERROR, message = "Use compilerArgumentsBucket instead")
     val compilerArguments: CommonCompilerArguments?
         get() = targetPlatform?.createArguments {
-            compilerArgumentsBucket?.let { FlatToRawCompilerArgumentsBucketConverter().convert(it) }
-                ?.let { parseCommandLineArguments(it, this) }
+            compilerArgumentsBucket?.let {
+                FlatToRawCompilerArgumentsBucketConverter(CommonCompilerArguments::class.java.classLoader).convert(it)
+            }?.also { parseCommandLineArguments(it, this) }
+            this.autoAdvanceLanguageVersion = autoAdvanceLanguageVersion
+            this.autoAdvanceApiVersion = autoAdvanceApiVersion
         }
+
+    var compilerArgumentsBucket: FlatCompilerArgumentsBucket? = null
+    var autoAdvanceLanguageVersion: Boolean = true
+    var autoAdvanceApiVersion: Boolean = true
 
 
     var compilerSettings: CompilerSettings? = null
         set(value) {
             field = value?.unfrozen() as CompilerSettings?
-            updateMergedArguments()
         }
 
     /*
@@ -330,6 +320,7 @@ class KotlinFacetSettings {
 
     var pureKotlinSourceFolders: List<String> = emptyList()
 }
+
 
 interface KotlinFacetSettingsProvider {
     fun getSettings(module: Module): KotlinFacetSettings?

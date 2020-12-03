@@ -32,14 +32,10 @@ import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.roots.impl.libraries.LibraryEx
 import com.intellij.openapi.roots.libraries.Library
 import com.intellij.openapi.util.Key
-import com.intellij.util.PathUtil
 import org.jetbrains.kotlin.caching.*
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
-import org.jetbrains.kotlin.cli.common.arguments.parseCommandLineArguments
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.extensions.ProjectExtensionDescriptor
-import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.ide.konan.NativeLibraryKind
 import org.jetbrains.kotlin.idea.compiler.configuration.KotlinCommonCompilerArgumentsHolder
 import org.jetbrains.kotlin.idea.configuration.GradlePropertiesFileFacade.Companion.KOTLIN_CODE_STYLE_GRADLE_SETTING
@@ -65,7 +61,6 @@ import org.jetbrains.kotlin.psi.UserDataProperty
 import org.jetbrains.plugins.gradle.model.data.BuildScriptClasspathData
 import org.jetbrains.plugins.gradle.model.data.GradleSourceSetData
 import org.jetbrains.plugins.gradle.util.GradleConstants
-import java.io.File
 import java.util.*
 
 var Module.sourceSetName
@@ -296,7 +291,7 @@ fun configureFacetByGradleModule(
     if (cachedArgsInfo != null) {
         configureFacetByCachedCompilerArguments(cachedArgsInfo, generalMapper, kotlinFacet, modelsProvider)
     }
-
+    //TODO move into `configureFacetByCachedCompilerArguments`
     with(kotlinFacet.configuration.settings) {
         implementedModuleNames = (sourceSetNode ?: moduleNode).implementedModuleNames
         productionOutputPath = getExplicitOutputPath(moduleNode, platformKind, "main")
@@ -324,25 +319,6 @@ private fun configureFacetByCachedCompilerArguments(
     val dependencyClasspath = cachedArgsInfo.dependencyClasspath.map { mapper.getArgument(it) }
     val flatArgsInfo = FlatArgsInfoImpl(flatCurrentArguments, flatDefaultArguments, dependencyClasspath)
     configureFacetByFlatArgsInfo(kotlinFacet, flatArgsInfo, modelsProvider)
-}
-
-fun configureFacetByFlatArgsInfo(kotlinFacet: KotlinFacet, flatArgsInfo: FlatArgsInfo, modelsProvider: IdeModifiableModelsProvider?) {
-    val converter = FlatToRawCompilerArgumentsBucketConverter()
-    val currentCompilerArguments = converter.convert(flatArgsInfo.currentCompilerArgumentsBucket)
-    val defaultCompilerArguments = converter.convert(flatArgsInfo.defaultCompilerArgumentsBucket)
-    val dependencyClasspath = flatArgsInfo.dependencyClasspath.map { PathUtil.toSystemIndependentName(it) }
-    val argsInfoImpl = ArgsInfoImpl(currentCompilerArguments, defaultCompilerArguments, dependencyClasspath)
-    configureFacetByCompilerArguments(kotlinFacet, argsInfoImpl, modelsProvider)
-}
-
-fun configureFacetByCompilerArguments(kotlinFacet: KotlinFacet, argsInfo: ArgsInfo, modelsProvider: IdeModifiableModelsProvider?) {
-    val currentCompilerArguments = argsInfo.currentArguments
-    val defaultCompilerArguments = argsInfo.defaultArguments
-    val dependencyClasspath = argsInfo.dependencyClasspath.map { PathUtil.toSystemIndependentName(it) }
-    if (currentCompilerArguments.isNotEmpty()) {
-        parseCompilerArgumentsToFacet(currentCompilerArguments, defaultCompilerArguments, kotlinFacet, modelsProvider)
-    }
-    adjustClasspath(kotlinFacet, dependencyClasspath)
 }
 
 private fun getExplicitOutputPath(moduleNode: DataNode<ModuleData>, platformKind: IdePlatformKind<*>?, sourceSet: String): String? {

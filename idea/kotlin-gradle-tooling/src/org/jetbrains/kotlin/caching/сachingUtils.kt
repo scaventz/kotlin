@@ -5,7 +5,9 @@
 
 package org.jetbrains.kotlin.caching
 
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.gradle.getMethodOrNull
+import org.jetbrains.kotlin.utils.addToStdlib.cast
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import kotlin.reflect.KProperty1
@@ -32,13 +34,13 @@ data class ArgumentAnnotationInfo(
 )
 
 fun ArgumentAnnotationInfo.isSuitableValue(value: String): Boolean =
-    (if (isAdvanced) value.substringBefore("=") else value).let { it == this.value || it == shortName || it == deprecatedName}
+    (if (isAdvanced) value.substringBefore("=") else value).let { it == this.value || it == shortName || it == deprecatedName }
 
 data class DividedPropertiesWithArgumentAnnotationInfo(
-    val flagPropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo>,
-    val singlePropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo>,
-    val multiplePropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo>,
-    val classpathPropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo>
+    val flagPropertiesToArgumentAnnotation: HashMap<KProperty1<out CommonCompilerArguments, Boolean>, ArgumentAnnotationInfo>,
+    val singlePropertiesToArgumentAnnotation: HashMap<KProperty1<out CommonCompilerArguments, String?>, ArgumentAnnotationInfo>,
+    val multiplePropertiesToArgumentAnnotation: HashMap<KProperty1<out CommonCompilerArguments, Array<String>?>, ArgumentAnnotationInfo>,
+    val classpathPropertiesToArgumentAnnotation: HashMap<KProperty1<out CommonCompilerArguments, String?>, ArgumentAnnotationInfo>
 )
 
 private fun getClassSafely(className: String, classLoader: ClassLoader?): Class<*>? = try {
@@ -96,25 +98,25 @@ class DividedPropertiesWithArgumentAnnotationInfoManager(val classLoader: ClassL
                 }.toMap()
         }
 
-        val flagPropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo> = hashMapOf()
-        val singlePropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo> = hashMapOf()
-        val multiplePropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo> = hashMapOf()
-        val classpathPropertiesToArgumentAnnotation: HashMap<KProperty1<*, *>, ArgumentAnnotationInfo> = hashMapOf()
+        val flagPropsToArgumentAnnotation = hashMapOf<KProperty1<out CommonCompilerArguments, Boolean>, ArgumentAnnotationInfo>()
+        val singlePropsToArgumentAnnotation = hashMapOf<KProperty1<out CommonCompilerArguments, String?>, ArgumentAnnotationInfo>()
+        val multiplePropsToArgumentAnnotation = hashMapOf<KProperty1<out CommonCompilerArguments, Array<String>?>, ArgumentAnnotationInfo>()
+        val classpathPropsToArgumentAnnotation = hashMapOf<KProperty1<out CommonCompilerArguments, String?>, ArgumentAnnotationInfo>()
 
         allPropertiesToArgumentAnnotation.forEach { (prop, ann) ->
-            if (prop.name == "classpath") classpathPropertiesToArgumentAnnotation[prop] = ann
+            if (prop.name == "classpath") classpathPropsToArgumentAnnotation[prop.cast()] = ann
             else when (prop.returnType.classifier) {
-                Boolean::class -> flagPropertiesToArgumentAnnotation[prop] = ann
-                String::class -> singlePropertiesToArgumentAnnotation[prop] = ann
-                Array<String>::class -> multiplePropertiesToArgumentAnnotation[prop] = ann
+                Boolean::class -> flagPropsToArgumentAnnotation[prop.cast()] = ann
+                String::class -> singlePropsToArgumentAnnotation[prop.cast()] = ann
+                Array<String>::class -> multiplePropsToArgumentAnnotation[prop.cast()] = ann
                 else -> throw IllegalStateException("Unsupported argument type: ${prop.returnType}")
             }
         }
         DividedPropertiesWithArgumentAnnotationInfo(
-            flagPropertiesToArgumentAnnotation,
-            singlePropertiesToArgumentAnnotation,
-            multiplePropertiesToArgumentAnnotation,
-            classpathPropertiesToArgumentAnnotation
+            flagPropsToArgumentAnnotation,
+            singlePropsToArgumentAnnotation,
+            multiplePropsToArgumentAnnotation,
+            classpathPropsToArgumentAnnotation
         )
     }
 }

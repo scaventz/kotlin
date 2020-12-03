@@ -34,6 +34,8 @@ dependencies {
     compileOnly(intellijPluginDep("java"))
 
     compileOnly(intellijPluginDep("gradle"))
+    compileOnly(project(":idea:kotlin-gradle-tooling"))
+    compileOnly(project(":compiler:cli-common"))
 }
 
 sourceSets {

@@ -38,9 +38,11 @@ import org.jetbrains.kotlin.idea.project.*
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.platform.TargetPlatformVersion
 import org.jetbrains.kotlin.platform.jvm.JdkPlatform
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.platform.subplatformsOfType
 import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.utils.JavaTypeEnhancementState
+import org.jetbrains.kotlin.utils.addToStdlib.runIf
 
 object IDELanguageSettingsProvider : LanguageSettingsProvider {
     override fun getLanguageVersionSettings(
@@ -75,14 +77,13 @@ object IDELanguageSettingsProvider : LanguageSettingsProvider {
         var result: JavaTypeEnhancementState? = null
         for (module in ModuleManager.getInstance(project).modules) {
             val settings = KotlinFacetSettingsProvider.getInstance(project)?.getSettings(module) ?: continue
-            val compilerArguments = settings.mergedCompilerArguments as? K2JVMCompilerArguments ?: continue
+            val compilerArgumentsBucket = runIf(settings.targetPlatform?.isJvm() == true) { settings.compilerArgumentsBucket } ?: continue
 
             result = JavaTypeEnhancementStateParser(MessageCollector.NONE).parse(
-                compilerArguments.jsr305,
-                compilerArguments.supportCompatqualCheckerFrameworkAnnotations,
-                compilerArguments.jspecifyAnnotations
+                compilerArgumentsBucket.extractMultipleArgumentValue(K2JVMCompilerArguments::jsr305),
+                compilerArgumentsBucket.extractSingleArgumentValue(K2JVMCompilerArguments::supportCompatqualCheckerFrameworkAnnotations),
+                compilerArgumentsBucket.extractSingleArgumentValue(K2JVMCompilerArguments::jspecifyAnnotations)
             )
-
         }
         return result
     }

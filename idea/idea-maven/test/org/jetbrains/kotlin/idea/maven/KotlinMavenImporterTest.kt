@@ -689,7 +689,7 @@ class KotlinMavenImporterTest : MavenImportingTestCase() {
 
         with(facetSettings) {
             Assert.assertEquals("-java-parameters", compilerSettings!!.additionalArguments)
-            Assert.assertTrue((mergedCompilerArguments as K2JVMCompilerArguments).javaParameters)
+            Assert.assertTrue(compilerArgumentsBucket!!.extractFlagArgumentValue(K2JVMCompilerArguments::javaParameters))
         }
     }
 

@@ -159,7 +159,7 @@ class KotlinGradleModelBuilder : AbstractKotlinGradleModelBuilder() {
 
         val cachedArgumentsBySourceSet = LinkedHashMap<String, CachedArgsInfo>()
         val extraProperties = HashMap<String, KotlinTaskProperties>()
-        val converter = RawToCachedCompilerArgumentsBucketConverter(modelDetachableMapper)
+        val converter = RawToCachedCompilerArgumentsBucketConverter(project::class.java.classLoader, modelDetachableMapper)
 
         project.getAllTasks(false)[project]?.forEach { compileTask ->
             if (compileTask.javaClass.name !in kotlinCompileTaskClasses) return@forEach

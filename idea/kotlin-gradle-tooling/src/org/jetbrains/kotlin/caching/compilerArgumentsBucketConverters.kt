@@ -5,12 +5,10 @@
 
 package org.jetbrains.kotlin.caching
 
+import org.gradle.api.Project
 import java.io.File
 
 interface CompilerArgumentsBucketConverter<From, To> {
-    val classLoader: ClassLoader
-        get() = CompilerArgumentsBucketConverter::class.java.classLoader
-
     fun convert(from: From): To
 }
 
@@ -31,7 +29,8 @@ class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
         }
         val flattenInternalArguments = from.internalArguments.map { mapper.getArgument(it) }
         val flattenFreeArgs = from.freeArgs.map { mapper.getArgument(it) }
-        return FlatCompilerArgumentsBucket(flattenTargetPlatform).apply {
+        return FlatCompilerArgumentsBucket().apply {
+            targetPlatform = flattenTargetPlatform
             classpathParts = flattenClasspathParts
             singleArguments.putAll(flattenSingleArguments)
             multipleArguments.putAll(flattenMultipleArguments)
@@ -42,7 +41,7 @@ class CachedToFlatCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
     }
 }
 
-class FlatToRawCompilerArgumentsBucketConverter :
+class FlatToRawCompilerArgumentsBucketConverter(val classLoader: ClassLoader) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
 
     private val dividedPropertiesWithArgumentAnnotationInfo by lazy {
@@ -51,10 +50,9 @@ class FlatToRawCompilerArgumentsBucketConverter :
 
     override fun convert(from: FlatCompilerArgumentsBucket): RawCompilerArgumentsBucket = mutableListOf<String>().apply {
         from.classpathParts?.also {
-            val classpathAnnotationInfo = dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation.values.first()
-            check(classpathAnnotationInfo.isSuitableValue(it.first)) {
-                "Unexpected classpath argument \"$it\"!"
-            }
+            dividedPropertiesWithArgumentAnnotationInfo.classpathPropertiesToArgumentAnnotation.values
+                .find { info -> info.isSuitableValue(it.first) } ?: error("Unexpected classpath argument \"$it\"!")
+
             this@apply.add(it.first)
             this@apply.add(it.second.joinToString(File.pathSeparator))
         }
@@ -88,18 +86,18 @@ class FlatToRawCompilerArgumentsBucketConverter :
     }
 }
 
-class CachedToRawCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
+class CachedToRawCompilerArgumentsBucketConverter(val classLoader: ClassLoader, val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<CachedCompilerArgumentsBucket, RawCompilerArgumentsBucket> {
 
     private val cachedToFlatCompilerArgumentsBucketConverter by lazy { CachedToFlatCompilerArgumentsBucketConverter(mapper) }
-    private val flatToRawCompilerArgumentsBucketConverter by lazy { FlatToRawCompilerArgumentsBucketConverter() }
+    private val flatToRawCompilerArgumentsBucketConverter by lazy { FlatToRawCompilerArgumentsBucketConverter(classLoader) }
     override fun convert(from: CachedCompilerArgumentsBucket): RawCompilerArgumentsBucket =
         cachedToFlatCompilerArgumentsBucketConverter.convert(from).let {
             flatToRawCompilerArgumentsBucketConverter.convert(it)
         }
 }
 
-class RawToFlatCompilerArgumentsBucketConverter :
+class RawToFlatCompilerArgumentsBucketConverter(val classLoader: ClassLoader) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, FlatCompilerArgumentsBucket> {
     private val dividedPropertiesWithArgumentAnnotationInfo by lazy {
         DividedPropertiesWithArgumentAnnotationInfoManager(classLoader).dividedPropertiesWithArgumentAnnotationInfo
@@ -159,7 +157,6 @@ class RawToFlatCompilerArgumentsBucketConverter :
 
 class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<FlatCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
-    override val classLoader: ClassLoader = mapper.javaClass.classLoader
     override fun convert(from: FlatCompilerArgumentsBucket): CachedCompilerArgumentsBucket {
         val cachedTargetPlatform = from.targetPlatform?.let { mapper.cacheArgument(it) }
         val cachedSingleArguments = from.singleArguments.entries.associate {
@@ -185,10 +182,9 @@ class FlatToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgument
     }
 }
 
-class RawToCachedCompilerArgumentsBucketConverter(val mapper: ICompilerArgumentsMapper) :
+class RawToCachedCompilerArgumentsBucketConverter(val classLoader: ClassLoader, val mapper: ICompilerArgumentsMapper) :
     CompilerArgumentsBucketConverter<RawCompilerArgumentsBucket, CachedCompilerArgumentsBucket> {
-    override val classLoader: ClassLoader = mapper.javaClass.classLoader
-    private val rawToFlatCompilerArgumentsBucketConverter by lazy { RawToFlatCompilerArgumentsBucketConverter() }
+    private val rawToFlatCompilerArgumentsBucketConverter by lazy { RawToFlatCompilerArgumentsBucketConverter(classLoader) }
     private val flatToCachedCompilerArgumentsBucketConverter by lazy { FlatToCachedCompilerArgumentsBucketConverter(mapper) }
 
     fun convert(from: RawCompilerArgumentsBucket, serializedTargetPlatform: String?): CachedCompilerArgumentsBucket =

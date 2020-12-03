@@ -44,7 +44,6 @@ class Jsr305HighlightingTest : KotlinLightCodeInsightFixtureTestCase() {
                         ReportLevel.findByDescription(getTestName(true)) ?: return@apply
 
                     compilerSettings!!.additionalArguments += " -Xjsr305=${jsrStateByTestName.description}"
-                    updateMergedArguments()
                 }
             }
         }

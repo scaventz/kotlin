@@ -432,7 +432,6 @@ class KotlinFacetEditorGeneralTab(
                     }
                 }
                 configuration.settings.targetPlatform = editor.getChosenPlatform()
-                updateMergedArguments()
             }
         }
     }

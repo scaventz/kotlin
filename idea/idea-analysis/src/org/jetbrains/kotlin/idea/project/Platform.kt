@@ -30,7 +30,9 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.caching.FlatCompilerArgumentsBucket
 import org.jetbrains.kotlin.cli.common.arguments.*
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.idea.caches.project.getModuleInfo
@@ -43,7 +45,9 @@ import org.jetbrains.kotlin.idea.facet.getLibraryLanguageLevel
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.*
 import org.jetbrains.kotlin.platform.impl.isCommon
+import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.UserDataProperty
@@ -98,11 +102,14 @@ fun Module.getStableName(): Name {
     // Here we check ideal situation: we have a facet, and it has 'moduleName' argument.
     // This should be the case for the most environments
     val settingsProvider = KotlinFacetSettingsProvider.getInstance(project)
-    val arguments = settingsProvider?.getInitializedSettings(this)?.mergedCompilerArguments
-    val explicitNameFromArguments = when (arguments) {
-        is K2JVMCompilerArguments -> arguments.moduleName
-        is K2JSCompilerArguments -> arguments.outputFile?.let { FileUtil.getNameWithoutExtension(File(it)) }
-        is K2MetadataCompilerArguments -> arguments.moduleName
+    val settings = settingsProvider?.getInitializedSettings(this)
+    val targetPlatform = settings?.targetPlatform ?: TargetPlatformDetector.getPlatform(this)
+    val bucket = settings?.compilerArgumentsBucket
+    val explicitNameFromArguments = when {
+        targetPlatform.isJvm() -> bucket?.extractSingleArgumentValue(K2JVMCompilerArguments::moduleName)
+        targetPlatform.isJs() -> bucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)
+            ?.let { FileUtil.getNameWithoutExtension(File(it)) }
+        targetPlatform.isCommon() -> bucket?.extractSingleArgumentValue(K2MetadataCompilerArguments::moduleName)
         else -> null // Actually, only 'null' possible here
     }
 
@@ -123,16 +130,24 @@ fun Project.getLanguageVersionSettings(
         KotlinFacetSettingsProvider.getInstance(this)?.getInitializedSettings(it)
     }
 
-    val arguments = kotlinFacetSettings?.compilerArguments ?: KotlinCommonCompilerArgumentsHolder.getInstance(this).settings
+    val targetPlatform = kotlinFacetSettings?.targetPlatform
+        ?: contextModule?.let { TargetPlatformDetector.getPlatform(it) }
+        ?: DefaultIdeTargetPlatformKindProvider.defaultPlatform
+
+    val bucket = kotlinFacetSettings?.compilerArgumentsBucket
+        ?: KotlinCommonCompilerArgumentsHolder.getInstance(this).settings.toFlatCompilerArguments()
     val languageVersion =
-        kotlinFacetSettings?.languageLevel ?: LanguageVersion.fromVersionString(arguments.languageVersion)
-        ?: contextModule?.getAndCacheLanguageLevelByDependencies()
-        ?: VersionView.RELEASED_VERSION
-    val apiVersion = ApiVersion.createByLanguageVersion(LanguageVersion.fromVersionString(arguments.apiVersion) ?: languageVersion)
+        kotlinFacetSettings?.languageLevel
+            ?: LanguageVersion.fromVersionString(bucket.extractSingleArgumentValue(CommonCompilerArguments::languageVersion))
+            ?: contextModule?.getAndCacheLanguageLevelByDependencies()
+            ?: VersionView.RELEASED_VERSION
+    val apiVersion = ApiVersion.createByLanguageVersion(
+        LanguageVersion.fromVersionString(bucket.extractSingleArgumentValue(CommonCompilerArguments::apiVersion)) ?: languageVersion
+    )
     val compilerSettings = KotlinCompilerSettings.getInstance(this).settings
 
     val additionalArguments: CommonCompilerArguments = parseArguments(
-        DefaultIdeTargetPlatformKindProvider.defaultPlatform,
+        targetPlatform,
         compilerSettings.additionalArgumentsAsList
     )
 
@@ -156,8 +171,8 @@ fun Project.getLanguageVersionSettings(
 
     return LanguageVersionSettingsImpl(
         languageVersion, apiVersion,
-        arguments.configureAnalysisFlags(MessageCollector.NONE) + extraAnalysisFlags,
-        arguments.configureLanguageFeatures(MessageCollector.NONE) + extraLanguageFeatures
+        bucket.configureAnalysisFlags(targetPlatform, MessageCollector.NONE) + extraAnalysisFlags,
+        bucket.configureLanguageFeatures(targetPlatform, MessageCollector.NONE) + extraLanguageFeatures
     )
 }
 
@@ -227,14 +242,16 @@ private fun Module.computeLanguageVersionSettings(): LanguageVersionSettings {
         apiVersion = languageVersion
     }
 
-    val languageFeatures = facetSettings?.mergedCompilerArguments?.configureLanguageFeatures(MessageCollector.NONE)?.apply {
+    val targetPlatform = facetSettings?.targetPlatform ?: TargetPlatformDetector.getPlatform(this)
+
+    val languageFeatures = facetSettings?.compilerArgumentsBucket?.configureLanguageFeatures(targetPlatform, MessageCollector.NONE)?.apply {
         configureCoroutinesSupport(facetSettings.coroutineSupport, languageVersion)
         configureMultiplatformSupport(facetSettings.targetPlatform?.idePlatformKind, this@computeLanguageVersionSettings)
     }.orEmpty()
 
     val analysisFlags = facetSettings
-        ?.mergedCompilerArguments
-        ?.configureAnalysisFlags(MessageCollector.NONE)
+        ?.compilerArgumentsBucket
+        ?.configureAnalysisFlags(targetPlatform, MessageCollector.NONE)
         ?.apply { initIDESpecificAnalysisSettings(project) }
         .orEmpty()
 
@@ -309,3 +326,194 @@ val PsiElement.languageVersionSettings: LanguageVersionSettings
         }
         return IDELanguageSettingsProvider.getLanguageVersionSettings(this.getModuleInfo(), project)
     }
+
+fun FlatCompilerArgumentsBucket.configureAnalysisFlags(
+    targetPlatform: TargetPlatform,
+    collector: MessageCollector
+): MutableMap<AnalysisFlag<*>, Any> =
+    HashMap<AnalysisFlag<*>, Any>().apply {
+        put(AnalysisFlags.skipMetadataVersionCheck, extractFlagArgumentValue(CommonCompilerArguments::skipMetadataVersionCheck))
+        put(
+            AnalysisFlags.skipPrereleaseCheck,
+            extractFlagArgumentValue(CommonCompilerArguments::skipPrereleaseCheck)
+                    || (extractFlagArgumentValue(CommonCompilerArguments::skipMetadataVersionCheck))
+        )
+        put(AnalysisFlags.multiPlatformDoNotCheckActual, extractFlagArgumentValue(CommonCompilerArguments::noCheckActual))
+        val experimentalFqNames = extractMultipleArgumentValue(CommonCompilerArguments::experimental)?.toList().orEmpty()
+        if (experimentalFqNames.isNotEmpty()) {
+            put(AnalysisFlags.experimental, experimentalFqNames)
+            collector.report(CompilerMessageSeverity.WARNING, "'-Xexperimental' is deprecated and will be removed in a future release")
+        }
+        put(
+            AnalysisFlags.useExperimental, extractMultipleArgumentValue(CommonCompilerArguments::useExperimental)?.toList().orEmpty()
+                    + extractMultipleArgumentValue(CommonCompilerArguments::optIn)?.toList().orEmpty()
+        )
+        put(AnalysisFlags.expectActualLinker, extractFlagArgumentValue(CommonCompilerArguments::expectActualLinker))
+        put(AnalysisFlags.explicitApiVersion, extractSingleArgumentValue(CommonCompilerArguments::apiVersion) != null)
+        put(AnalysisFlags.allowResultReturnType, extractFlagArgumentValue(CommonCompilerArguments::allowResultReturnType))
+        extractSingleArgumentValue(CommonCompilerArguments::explicitApi)?.apply {
+            ExplicitApiMode.fromString(this)?.also { put(AnalysisFlags.explicitApiMode, it) } ?: collector.report(
+                CompilerMessageSeverity.ERROR,
+                "Unknown value for parameter -Xexplicit-api: '$this'. Value should be one of ${ExplicitApiMode.availableValues()}"
+            )
+        }
+        if (targetPlatform.isJvm()) {
+            put(
+                JvmAnalysisFlags.strictMetadataVersionSemantics,
+                extractFlagArgumentValue(K2JVMCompilerArguments::strictMetadataVersionSemantics)
+            )
+            put(
+                JvmAnalysisFlags.javaTypeEnhancementState, JavaTypeEnhancementStateParser(collector).parse(
+                    extractMultipleArgumentValue(K2JVMCompilerArguments::jsr305),
+                    extractSingleArgumentValue(K2JVMCompilerArguments::supportCompatqualCheckerFrameworkAnnotations),
+                    extractSingleArgumentValue(K2JVMCompilerArguments::jspecifyAnnotations)
+                )
+            )
+            put(
+                AnalysisFlags.ignoreDataFlowInAssert,
+                JVMAssertionsMode.fromString(extractSingleArgumentValue(K2JVMCompilerArguments::assertionsMode)) != JVMAssertionsMode.LEGACY
+            )
+            extractSingleArgumentValue(K2JVMCompilerArguments::jvmDefault).apply {
+                JvmDefaultMode.fromStringOrNull(this)?.let {
+                    put(JvmAnalysisFlags.jvmDefaultMode, it)
+                } ?: collector.report(
+                    CompilerMessageSeverity.ERROR,
+                    "Unknown @JvmDefault mode: $this, " +
+                            "supported modes: ${JvmDefaultMode.values().map { it.description }}"
+                )
+            }
+            put(JvmAnalysisFlags.inheritMultifileParts, extractFlagArgumentValue(K2JVMCompilerArguments::inheritMultifileParts))
+            put(JvmAnalysisFlags.sanitizeParentheses, extractFlagArgumentValue(K2JVMCompilerArguments::sanitizeParentheses))
+            put(
+                JvmAnalysisFlags.suppressMissingBuiltinsError,
+                extractFlagArgumentValue(K2JVMCompilerArguments::suppressMissingBuiltinsError)
+            )
+            put(JvmAnalysisFlags.irCheckLocalNames, extractFlagArgumentValue(K2JVMCompilerArguments::irCheckLocalNames))
+            put(
+                AnalysisFlags.reportErrorsOnIrDependencies,
+                !extractFlagArgumentValue(K2JVMCompilerArguments::useIR)
+                        && !extractFlagArgumentValue(K2JVMCompilerArguments::useFir)
+                        && !extractFlagArgumentValue(K2JVMCompilerArguments::allowJvmIrDependencies)
+            )
+            put(JvmAnalysisFlags.disableUltraLightClasses, extractFlagArgumentValue(K2JVMCompilerArguments::disableUltraLightClasses))
+        }
+    }
+
+fun FlatCompilerArgumentsBucket.configureLanguageFeatures(
+    targetPlatform: TargetPlatform,
+    collector: MessageCollector
+): MutableMap<LanguageFeature, LanguageFeature.State> =
+    hashMapOf<LanguageFeature, LanguageFeature.State>().apply {
+        if (extractFlagArgumentValue(CommonCompilerArguments::multiPlatform)) {
+            put(LanguageFeature.MultiPlatformProjects, LanguageFeature.State.ENABLED)
+        }
+
+        when (val state = extractSingleArgumentValue(CommonCompilerArguments::coroutinesState)) {
+            CommonCompilerArguments.ERROR -> put(LanguageFeature.Coroutines, LanguageFeature.State.ENABLED_WITH_ERROR)
+            CommonCompilerArguments.ENABLE -> put(LanguageFeature.Coroutines, LanguageFeature.State.ENABLED)
+            CommonCompilerArguments.WARN, CommonCompilerArguments.DEFAULT -> {
+            }
+            else -> {
+                val message = "Invalid value of -Xcoroutines (should be: enable, warn or error): " + state
+                collector.report(CompilerMessageSeverity.ERROR, message, null)
+            }
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::newInference)) {
+            put(LanguageFeature.NewInference, LanguageFeature.State.ENABLED)
+            put(LanguageFeature.SamConversionPerArgument, LanguageFeature.State.ENABLED)
+            put(LanguageFeature.FunctionReferenceWithDefaultValueAsOtherType, LanguageFeature.State.ENABLED)
+            put(LanguageFeature.DisableCompatibilityModeForNewInference, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::inlineClasses)) {
+            put(LanguageFeature.InlineClasses, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::polymorphicSignature)) {
+            put(LanguageFeature.PolymorphicSignature, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::legacySmartCastAfterTry)) {
+            put(LanguageFeature.SoundSmartCastsAfterTry, LanguageFeature.State.DISABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::effectSystem)) {
+            put(LanguageFeature.UseCallsInPlaceEffect, LanguageFeature.State.ENABLED)
+            put(LanguageFeature.UseReturnsEffect, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::readDeserializedContracts)) {
+            put(LanguageFeature.ReadDeserializedContracts, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::properIeee754Comparisons)) {
+            put(LanguageFeature.ProperIeee754Comparisons, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::useMixedNamedArguments)) {
+            put(LanguageFeature.MixedNamedArgumentsInTheirOwnPosition, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::inferenceCompatibility)) {
+            put(LanguageFeature.InferenceCompatibility, LanguageFeature.State.ENABLED)
+        }
+
+        if (extractFlagArgumentValue(CommonCompilerArguments::progressiveMode)) {
+            LanguageFeature.values().filter { it.kind.enabledInProgressiveMode }.forEach {
+                // Don't overwrite other settings: users may want to turn off some particular
+                // breaking change manually instead of turning off whole progressive mode
+                putIfAbsent(it, LanguageFeature.State.ENABLED)
+            }
+        }
+
+        if (targetPlatform.isJvm() && extractFlagArgumentValue(K2JVMCompilerArguments::strictJavaNullabilityAssertions)) {
+            put(LanguageFeature.StrictJavaNullabilityAssertions, LanguageFeature.State.ENABLED)
+        }
+
+        if (internalArguments.isNotEmpty()) {
+            configureLanguageFeaturesFromInternalArgs(this@configureLanguageFeatures, collector)
+        }
+    }
+
+private fun HashMap<LanguageFeature, LanguageFeature.State>.configureLanguageFeaturesFromInternalArgs(
+    bucket: FlatCompilerArgumentsBucket,
+    collector: MessageCollector
+) {
+    val errors = ArgumentParseErrors()
+
+    val internalArgs = bucket.internalArguments.mapNotNull { arg ->
+        InternalArgumentParser.PARSERS.firstOrNull { it.canParse(arg) }?.parseInternalArgument(arg, errors)
+    }
+
+    val (featuresThatForcePreReleaseBinaries,
+        disabledFeaturesFromUnsupportedVersions,
+        standaloneSamConversionFeaturePassedExplicitly,
+        functionReferenceWithDefaultValueFeaturePassedExplicitly
+    ) = configureFromInternalArgs(internalArgs)
+
+    if (this[LanguageFeature.NewInference] == LanguageFeature.State.ENABLED) {
+        if (!standaloneSamConversionFeaturePassedExplicitly)
+            put(LanguageFeature.SamConversionPerArgument, LanguageFeature.State.ENABLED)
+
+        if (!functionReferenceWithDefaultValueFeaturePassedExplicitly)
+            put(LanguageFeature.FunctionReferenceWithDefaultValueAsOtherType, LanguageFeature.State.ENABLED)
+
+        put(LanguageFeature.DisableCompatibilityModeForNewInference, LanguageFeature.State.ENABLED)
+    }
+
+    if (featuresThatForcePreReleaseBinaries.isNotEmpty()) {
+        collector.report(
+            CompilerMessageSeverity.STRONG_WARNING,
+            "Following manually enabled features will force generation of pre-release binaries: ${featuresThatForcePreReleaseBinaries.joinToString()}"
+        )
+    }
+
+    if (disabledFeaturesFromUnsupportedVersions.isNotEmpty()) {
+        collector.report(
+            CompilerMessageSeverity.ERROR,
+            "The following features cannot be disabled manually, because the version they first appeared in is no longer " +
+                    "supported:\n${disabledFeaturesFromUnsupportedVersions.joinToString()}"
+        )
+    }
+}

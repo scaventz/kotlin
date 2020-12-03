@@ -15,10 +15,7 @@ import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
 import com.intellij.openapi.util.Key
 import com.intellij.serialization.PropertyMapping
 import com.intellij.util.containers.MultiMap
-import org.jetbrains.kotlin.caching.CachedArgsInfo
-import org.jetbrains.kotlin.caching.CachedCompilerArgumentsBucket
-import org.jetbrains.kotlin.caching.CompilerArgumentsBucket
-import org.jetbrains.kotlin.caching.CompilerArgumentsMapper
+import org.jetbrains.kotlin.caching.*
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.config.ExternalSystemRunTask
 import org.jetbrains.kotlin.gradle.*
@@ -60,13 +57,7 @@ class KotlinSourceSetInfo @PropertyMapping("kotlinModule") constructor(val kotli
         get() = actualPlatforms.getSinglePlatform()
 
     @Transient
-    var defaultCompilerArguments: CommonCompilerArguments? = null
-
-    @Transient
-    var compilerArguments: CommonCompilerArguments? = null
-
-    @Transient
-    var dependencyClasspath: List<String> = emptyList()
+    var flatArgsInfo: FlatArgsInfo? = null
 
     var isTestModule: Boolean = false
     var sourceSetIdsByName: MutableMap<String, String> = LinkedHashMap()

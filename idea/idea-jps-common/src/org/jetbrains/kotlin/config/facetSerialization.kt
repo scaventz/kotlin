@@ -50,7 +50,7 @@ fun TargetPlatform.createArguments(init: (CommonCompilerArguments).() -> Unit = 
 
 private fun CommonCompilerArguments.convertToFlatBucket(): FlatCompilerArgumentsBucket = ArgumentUtils.convertArgumentsToStringList(this)
     .let {
-        RawToFlatCompilerArgumentsBucketConverter()
+        RawToFlatCompilerArgumentsBucketConverter(this::class.java.classLoader)
             .convert(it, IdePlatformKind.platformByCompilerArguments(this)?.serializeComponentPlatforms())
     }
 

@@ -17,10 +17,9 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.DependencyScope
 import com.intellij.openapi.roots.ExportableOrderEntry
 import com.intellij.openapi.roots.ModifiableRootModel
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JSCompilerArguments
-import org.jetbrains.kotlin.config.CoroutineSupport
-import org.jetbrains.kotlin.config.JvmTarget
-import org.jetbrains.kotlin.config.KotlinModuleKind
+import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.gradle.KotlinCompilation
 import org.jetbrains.kotlin.gradle.KotlinModule
 import org.jetbrains.kotlin.gradle.KotlinPlatform
@@ -38,10 +37,12 @@ import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.platform.impl.JvmIdePlatformKind
 import org.jetbrains.kotlin.platform.impl.NativeIdePlatformKind
 import org.jetbrains.kotlin.platform.js.JsPlatform
+import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.JvmPlatform
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.platform.konan.NativePlatform
 import org.jetbrains.kotlin.platform.konan.NativePlatforms
+import org.jetbrains.kotlin.utils.addToStdlib.runIf
 import org.jetbrains.plugins.gradle.model.data.BuildScriptClasspathData
 import org.jetbrains.plugins.gradle.model.data.GradleSourceSetData
 import org.jetbrains.plugins.gradle.util.GradleConstants
@@ -187,10 +188,13 @@ class KotlinSourceSetDataService : AbstractProjectDataService<GradleSourceSetDat
             val coroutinesProperty = CoroutineSupport.byCompilerArgument(
                 mainModuleNode.coroutines ?: findKotlinCoroutinesProperty(ideModule.project)
             )
-            val compilerArguments = kotlinSourceSet.compilerArguments
+            val flatArgsInfo = kotlinSourceSet.flatArgsInfo
+            val currentArgumentsBucket = flatArgsInfo?.currentCompilerArgumentsBucket
             // Used ID is the same as used in org/jetbrains/kotlin/idea/configuration/KotlinGradleSourceSetDataService.kt:280
             // because this DataService was separated from KotlinGradleSourceSetDataService for MPP projects only
-            val id = if (compilerArguments?.multiPlatform == true) GradleConstants.SYSTEM_ID.id else null
+            val id = currentArgumentsBucket?.extractFlagArgumentValue(CommonCompilerArguments::multiPlatform)?.let {
+                if (it) GradleConstants.SYSTEM_ID.id else null
+            }
             val kotlinFacet = ideModule.getOrCreateFacet(modelsProvider, false, id)
             kotlinFacet.configureFacet(
                 compilerVersion,
@@ -202,17 +206,11 @@ class KotlinSourceSetDataService : AbstractProjectDataService<GradleSourceSetDat
                 kotlinSourceSet.dependsOn
             )
 
-            val defaultCompilerArguments = kotlinSourceSet.defaultCompilerArguments
-            if (compilerArguments != null) {
-                applyCompilerArgumentsToFacet(
-                    compilerArguments,
-                    defaultCompilerArguments,
-                    kotlinFacet,
-                    modelsProvider
-                )
+            if (flatArgsInfo != null) {
+                configureFacetByFlatArgsInfo(kotlinFacet, flatArgsInfo, modelsProvider)
             }
 
-            adjustClasspath(kotlinFacet, kotlinSourceSet.dependencyClasspath)
+            adjustClasspath(kotlinFacet, flatArgsInfo?.dependencyClasspath.orEmpty())
 
             kotlinFacet.noVersionAutoAdvance()
 
@@ -231,10 +229,14 @@ class KotlinSourceSetDataService : AbstractProjectDataService<GradleSourceSetDat
                 }
 
                 if (kotlinSourceSet.isTestModule) {
-                    testOutputPath = (compilerArguments as? K2JSCompilerArguments)?.outputFile
+                    testOutputPath = runIf(targetPlatform?.isJs() == true) {
+                        currentArgumentsBucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)
+                    }
                     productionOutputPath = null
                 } else {
-                    productionOutputPath = (compilerArguments as? K2JSCompilerArguments)?.outputFile
+                    productionOutputPath = runIf(targetPlatform?.isJs() == true) {
+                        currentArgumentsBucket?.extractSingleArgumentValue(K2JSCompilerArguments::outputFile)
+                    }
                     testOutputPath = null
                 }
 

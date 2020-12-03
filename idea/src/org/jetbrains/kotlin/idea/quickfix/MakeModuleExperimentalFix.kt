@@ -52,7 +52,6 @@ class MakeModuleExperimentalFix(
             }
 
             compilerSettings.additionalArguments += " $compilerArgument"
-            facetSettings.updateMergedArguments()
             project.invalidateProjectRoots()
         } finally {
             modelsProvider.dispose()
