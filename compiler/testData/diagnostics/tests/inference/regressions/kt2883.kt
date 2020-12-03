@@ -22,7 +22,7 @@ fun test() {
     
     doAction { bar(12) }
 
-    val <!UNUSED_VARIABLE!>u<!>: Unit =  <!NI;TYPE_MISMATCH, NI;TYPE_MISMATCH, OI;TYPE_INFERENCE_EXPECTED_TYPE_MISMATCH!>bar(11)<!>
+    val <!UNUSED_VARIABLE!>u<!>: Unit =  <!TYPE_MISMATCH{NI}, TYPE_MISMATCH{NI}, TYPE_INFERENCE_EXPECTED_TYPE_MISMATCH{OI}!>bar(11)<!>
 }
 
 fun testWithoutInference(col: MutableCollection<Int>) {

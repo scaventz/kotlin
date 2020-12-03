@@ -5,5 +5,5 @@ fun <T> f1(l: <!UNRESOLVED_REFERENCE!>List2<!><T>): T {throw Exception()} // ERR
 fun <T> f1(c: Collection<T>): T{throw Exception()}
 
 fun <T> test(l: List<T>) {
-    <!NI;OVERLOAD_RESOLUTION_AMBIGUITY, OI;CANNOT_COMPLETE_RESOLVE!>f1<!>(l)
+    <!OVERLOAD_RESOLUTION_AMBIGUITY{NI}, CANNOT_COMPLETE_RESOLVE{OI}!>f1<!>(l)
 }

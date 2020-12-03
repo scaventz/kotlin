@@ -15,5 +15,5 @@ import foo.*
 import bar.*
 
 fun <T> test(l: List<T>) {
-    <!NI;OVERLOAD_RESOLUTION_AMBIGUITY, OI;CANNOT_COMPLETE_RESOLVE!>f<!>(l)
+    <!OVERLOAD_RESOLUTION_AMBIGUITY{NI}, CANNOT_COMPLETE_RESOLVE{OI}!>f<!>(l)
 }

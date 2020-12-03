@@ -7,6 +7,6 @@ interface C : B
 
 fun test(b: B) {
     b checkType { _<B>() }
-    b checkType { <!NI;UNRESOLVED_REFERENCE_WRONG_RECEIVER, OI;TYPE_MISMATCH!>_<!><A>() }
-    b checkType { <!NI;UNRESOLVED_REFERENCE_WRONG_RECEIVER, OI;TYPE_MISMATCH!>_<!><C>() }
+    b checkType { <!UNRESOLVED_REFERENCE_WRONG_RECEIVER{NI}, TYPE_MISMATCH{OI}!>_<!><A>() }
+    b checkType { <!UNRESOLVED_REFERENCE_WRONG_RECEIVER{NI}, TYPE_MISMATCH{OI}!>_<!><C>() }
 }
