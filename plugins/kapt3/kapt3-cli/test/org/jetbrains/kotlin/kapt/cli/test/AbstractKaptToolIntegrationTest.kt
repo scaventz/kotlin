@@ -104,13 +104,15 @@ abstract class AbstractKaptToolIntegrationTest : TestCaseWithTmpdir() {
 
     private fun transformArguments(args: List<String>): List<String> {
         val transformed = args.map { it.replace("%KOTLIN_STDLIB%", File("dist/kotlinc/lib/kotlin-stdlib.jar").absolutePath) }
-        if (System.getProperty("os.name")!!.contains("Windows")) {
+        if (isWindows()) {
             return transformed.map {
-                if (it.startsWith('\"') || it.startsWith('\'')) it else "\"$it\""
+                (if (it.startsWith('\"') || it.startsWith('\'')) it else "\"$it\"").replace(':', ';')
             }
         }
         return transformed
     }
+
+    private fun isWindows() = System.getProperty("os.name")!!.contains("Windows")
 
     private fun getJdk8Home(): File {
         val homePath = System.getenv()["JDK_18"] ?: error("Can't find JDK 1.8 home")
