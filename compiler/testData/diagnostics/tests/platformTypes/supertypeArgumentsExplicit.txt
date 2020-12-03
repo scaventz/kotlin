@@ -6,7 +6,7 @@ public interface A</*0*/ T> {
     public open override /*1*/ /*fake_override*/ fun toString(): kotlin.String
 }
 
-public interface B</*0*/ T> : A<T!> {
+public interface B</*0*/ T> : A<ft<T, T?>> {
     public open override /*1*/ /*fake_override*/ fun equals(/*0*/ other: kotlin.Any?): kotlin.Boolean
     public open override /*1*/ /*fake_override*/ fun hashCode(): kotlin.Int
     public open override /*1*/ /*fake_override*/ fun toString(): kotlin.String
@@ -53,3 +53,11 @@ public interface I : B<kotlin.Int>, A<kotlin.String> {
     public open override /*2*/ /*fake_override*/ fun hashCode(): kotlin.Int
     public open override /*2*/ /*fake_override*/ fun toString(): kotlin.String
 }
+
+public final class ft</*0*/ L, /*1*/ U> {
+    public constructor ft</*0*/ L, /*1*/ U>()
+    public open override /*1*/ /*fake_override*/ fun equals(/*0*/ other: kotlin.Any?): kotlin.Boolean
+    public open override /*1*/ /*fake_override*/ fun hashCode(): kotlin.Int
+    public open override /*1*/ /*fake_override*/ fun toString(): kotlin.String
+}
+
