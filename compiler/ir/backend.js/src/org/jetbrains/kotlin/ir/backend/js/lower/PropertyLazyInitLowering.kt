@@ -296,11 +296,13 @@ private fun IrDeclaration.propertyWithPersistentSafe(transform: IrDeclaration.()
     } else null
 
 private fun IrDeclaration.isCompatibleDeclaration() =
-    origin in compatibleOrigins
+    (this as? PersistentIrElementBase<*>)?.createdOn?.let { it == 0 }
+        ?: (origin in compatibleOrigins)
 
 private val compatibleOrigins = listOf(
     IrDeclarationOrigin.DEFINED,
     IrDeclarationOrigin.DELEGATED_PROPERTY_ACCESSOR,
+    IrDeclarationOrigin.PROPERTY_DELEGATE,
     IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR,
     IrDeclarationOrigin.PROPERTY_BACKING_FIELD,
 )
