@@ -8,6 +8,7 @@ public interface Processor<T> {
 // DONT_TARGET_EXACT_BACKEND: WASM
 // IGNORE_BACKEND: JS
 // IGNORE_BACKEND: JS_IR
+// IGNORE_BACKEND: NATIVE
 
 interface PsiModifierListOwner
 interface KtClassOrObject {
