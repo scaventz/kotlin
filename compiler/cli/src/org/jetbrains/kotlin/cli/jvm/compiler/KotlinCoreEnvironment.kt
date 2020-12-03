@@ -410,6 +410,7 @@ class KotlinCoreEnvironment private constructor(
         private val APPLICATION_LOCK = Object()
         private var ourApplicationEnvironment: KotlinCoreApplicationEnvironment? = null
         private var ourProjectCount = 0
+        private var disposeSurvived = 0
 
         @JvmStatic
         fun createForProduction(
@@ -470,22 +471,25 @@ class KotlinCoreEnvironment private constructor(
                         }
                     })
                 }
-                // Disposing of the environment is unsafe in production then parallel builds are enabled, but turning it off universally
-                // breaks a lot of tests, therefore it is disabled for production and enabled for tests
-                if (System.getProperty(KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY).toBooleanLenient() != true) {
-                    // JPS may run many instances of the compiler in parallel (there's an option for compiling independent modules in parallel in IntelliJ)
-                    // All projects share the same ApplicationEnvironment, and when the last project is disposed, the ApplicationEnvironment is disposed as well
-                    @Suppress("ObjectLiteralToLambda") // Disposer tree depends on identity of disposables.
-                    Disposer.register(parentDisposable, object : Disposable {
-                        override fun dispose() {
-                            synchronized(APPLICATION_LOCK) {
-                                if (--ourProjectCount <= 0) {
+
+                // JPS may run many instances of the compiler in parallel (there's an option for compiling independent modules in parallel in IntelliJ)
+                // All projects share the same ApplicationEnvironment, and when the last project is disposed, the ApplicationEnvironment is disposed as well
+                @Suppress("ObjectLiteralToLambda") // Disposer tree depends on identity of disposables.
+                Disposer.register(parentDisposable, object : Disposable {
+                    override fun dispose() {
+                        synchronized(APPLICATION_LOCK) {
+                            if (--ourProjectCount <= 0) {
+                                // Disposing of the environment is unsafe in production then parallel builds are enabled, but turning it off universally
+                                // breaks a lot of tests, therefore it is disabled for production and enabled for tests
+                                if (System.getProperty(KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY).toBooleanLenient() != true) {
                                     disposeApplicationEnvironment()
+                                } else {
+                                    disposeSurvived++
                                 }
                             }
                         }
-                    })
-                }
+                    }
+                })
 
                 return ourApplicationEnvironment!!
             }
