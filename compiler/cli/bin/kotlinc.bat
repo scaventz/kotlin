@@ -52,7 +52,7 @@ if "%_KOTLIN_RUNNER%"=="1" (
   SET _ADDITIONAL_CLASSPATH=
 
   if not "%_KOTLIN_TOOL%"=="" (
-    set _ADDITIONAL_CLASSPATH=;%_KOTLIN_HOME%\lib\%_KOTLIN_TOOL%
+    call :add_cpath %_KOTLIN_HOME%\lib\%_KOTLIN_TOOL%
   )
 
   "%_JAVACMD%" %JAVA_OPTS% -noverify -cp "%_KOTLIN_HOME%\lib\kotlin-preloader.jar" ^
@@ -65,6 +65,10 @@ goto end
 
 rem ##########################################################################
 rem # subroutines
+
+:add_cpath
+    set _ADDITIONAL_CLASSPATH=%~1
+goto :eof
 
 :set_home
   set _BIN_DIR=
