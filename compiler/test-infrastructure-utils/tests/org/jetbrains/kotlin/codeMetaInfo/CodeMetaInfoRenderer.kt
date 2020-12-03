@@ -105,4 +105,4 @@ fun clearFileFromDiagnosticMarkup(file: File) {
     file.writeText(cleanText)
 }
 
-fun clearTextFromDiagnosticMarkup(text: String): String = CheckerTestUtil.rangeStartOrEndPattern.matcher(text).replaceAll("")
+fun clearTextFromDiagnosticMarkup(text: String): String = text.replace(CodeMetaInfoParser.openingOrClosingRegex, "")
