@@ -191,6 +191,12 @@ private fun readCompilerArgumentsBucket(element: Element): FlatCompilerArguments
         val flagArguments = arrayListOf<String>().apply {
             readElementsList(bucketElement, "flagArguments", "flagArgument")?.also { addAll(it) }
         }
+        val freeArgs = arrayListOf<String>().apply {
+            readElementsList(bucketElement, "freeArgs", "freeArg")?.also { addAll(it) }
+        }
+        val internalArguments = arrayListOf<String>().apply {
+            readElementsList(bucketElement, "internalArguments", "internalArgument")?.also { addAll(it) }
+        }
         return FlatCompilerArgumentsBucket(targetPlatform, classpathParts, singleArguments, multipleArguments, flagArguments)
     }
     return null
@@ -498,6 +504,8 @@ private fun FlatCompilerArgumentsBucket.writeCompilerArgumentsBucket(element: El
     }
     bucketElement.addContent(multipleArgumentsElement)
     saveElementsList(bucketElement, flagArguments, "flagArguments", "flagArgument")
+    saveElementsList(bucketElement, freeArgs, "freeArgs", "freeArg")
+    saveElementsList(bucketElement, internalArguments, "internalArguments", "internalArgument")
     element.addContent(bucketElement)
     return bucketElement
 }
