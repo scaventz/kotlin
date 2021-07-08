@@ -46,9 +46,17 @@ abstract class ControlFlowGraphVisitor<out R, in D> {
         return visitNode(node, data)
     }
 
+    open fun visitAnonymousFunctionExpressionExitNode(node: AnonymousFunctionExpressionExitNode, data: D): R {
+        return visitNode(node, data)
+    }
+
     // ----------------------------------- Classes -----------------------------------
 
     open fun visitAnonymousObjectExitNode(node: AnonymousObjectExitNode, data: D): R {
+        return visitNode(node, data)
+    }
+
+    open fun visitAnonymousObjectExpressionExitNode(node: AnonymousObjectExpressionExitNode, data: D): R {
         return visitNode(node, data)
     }
 
@@ -77,6 +85,16 @@ abstract class ControlFlowGraphVisitor<out R, in D> {
     }
 
     open fun visitPropertyInitializerExitNode(node: PropertyInitializerExitNode, data: D): R {
+        return visitNode(node, data)
+    }
+
+    // ----------------------------------- Field -----------------------------------
+
+    open fun visitFieldInitializerEnterNode(node: FieldInitializerEnterNode, data: D): R {
+        return visitNode(node, data)
+    }
+
+    open fun visitFieldInitializerExitNode(node: FieldInitializerExitNode, data: D): R {
         return visitNode(node, data)
     }
 
@@ -277,7 +295,15 @@ abstract class ControlFlowGraphVisitor<out R, in D> {
         return visitNode(node, data)
     }
 
+    open fun visitCallableReferenceNode(node: CallableReferenceNode, data: D): R {
+        return visitNode(node, data)
+    }
+
     open fun visitDelegatedConstructorCallNode(node: DelegatedConstructorCallNode, data: D): R {
+        return visitNode(node, data)
+    }
+
+    open fun visitStringConcatenationCallNode(node: StringConcatenationCallNode, data: D): R {
         return visitNode(node, data)
     }
 

@@ -46,6 +46,12 @@ class LazyJavaPackageFragmentProvider(
     override fun collectPackageFragments(fqName: FqName, packageFragments: MutableCollection<PackageFragmentDescriptor>) =
         packageFragments.addIfNotNull(getPackageFragment(fqName))
 
+    override fun isEmpty(fqName: FqName): Boolean {
+        return c.components.finder.findPackage(fqName) == null
+    }
+
     override fun getSubPackagesOf(fqName: FqName, nameFilter: (Name) -> Boolean) =
         getPackageFragment(fqName)?.getSubPackageFqNames().orEmpty()
+
+    override fun toString(): String = "LazyJavaPackageFragmentProvider of module ${c.components.module}"
 }

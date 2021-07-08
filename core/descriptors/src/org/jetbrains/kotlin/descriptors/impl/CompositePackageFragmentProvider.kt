@@ -16,16 +16,14 @@
 
 package org.jetbrains.kotlin.descriptors.impl
 
-import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
-import org.jetbrains.kotlin.descriptors.PackageFragmentProvider
-import org.jetbrains.kotlin.descriptors.PackageFragmentProviderOptimized
-import org.jetbrains.kotlin.descriptors.collectPackageFragmentsOptimizedIfPossible
+import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.name.FqName
 import java.util.*
 import org.jetbrains.kotlin.name.Name
 
 class CompositePackageFragmentProvider(// can be modified from outside
-    private val providers: List<PackageFragmentProvider>
+    private val providers: List<PackageFragmentProvider>,
+    private val debugName: String
 ) : PackageFragmentProviderOptimized {
 
     init {
@@ -48,6 +46,9 @@ class CompositePackageFragmentProvider(// can be modified from outside
         }
     }
 
+    override fun isEmpty(fqName: FqName): Boolean =
+        providers.all { it.isEmpty(fqName) }
+
     override fun getSubPackagesOf(fqName: FqName, nameFilter: (Name) -> Boolean): Collection<FqName> {
         val result = HashSet<FqName>()
         for (provider in providers) {
@@ -55,4 +56,6 @@ class CompositePackageFragmentProvider(// can be modified from outside
         }
         return result
     }
+
+    override fun toString(): String = debugName
 }

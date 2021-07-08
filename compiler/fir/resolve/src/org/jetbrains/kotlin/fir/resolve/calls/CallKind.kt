@@ -12,16 +12,19 @@ sealed class CallKind(vararg resolutionSequence: ResolutionStage) {
         CheckExplicitReceiverConsistency,
         NoTypeArguments,
         CreateFreshTypeVariableSubstitutorStage,
+        CollectTypeVariableUsagesInfo,
         CheckDispatchReceiver,
         CheckExtensionReceiver,
         CheckLowPriorityInOverloadResolution,
-        PostponedVariablesInitializerResolutionStage
+        PostponedVariablesInitializerResolutionStage,
+        CheckDeprecatedSinceKotlin,
     )
 
     object SyntheticSelect : CallKind(
         MapArguments,
         NoTypeArguments,
         CreateFreshTypeVariableSubstitutorStage,
+        CollectTypeVariableUsagesInfo,
         CheckArguments,
         EagerResolveOfCallableReferences
     )
@@ -33,12 +36,15 @@ sealed class CallKind(vararg resolutionSequence: ResolutionStage) {
         CheckExplicitReceiverConsistency,
         MapTypeArguments,
         CreateFreshTypeVariableSubstitutorStage,
+        CollectTypeVariableUsagesInfo,
         CheckDispatchReceiver,
         CheckExtensionReceiver,
         CheckArguments,
+        CheckCallModifiers,
         EagerResolveOfCallableReferences,
         CheckLowPriorityInOverloadResolution,
-        PostponedVariablesInitializerResolutionStage
+        PostponedVariablesInitializerResolutionStage,
+        CheckDeprecatedSinceKotlin
     )
 
     object DelegatingConstructorCall : CallKind(
@@ -47,10 +53,12 @@ sealed class CallKind(vararg resolutionSequence: ResolutionStage) {
         CheckExplicitReceiverConsistency,
         MapTypeArguments,
         CreateFreshTypeVariableSubstitutorStage,
+        CollectTypeVariableUsagesInfo,
         CheckDispatchReceiver,
         CheckExtensionReceiver,
         CheckArguments,
-        EagerResolveOfCallableReferences
+        EagerResolveOfCallableReferences,
+        CheckDeprecatedSinceKotlin,
     )
 
     object CallableReference : CallKind(
@@ -58,16 +66,19 @@ sealed class CallKind(vararg resolutionSequence: ResolutionStage) {
         DiscriminateSynthetics,
         NoTypeArguments,
         CreateFreshTypeVariableSubstitutorStage,
+        CollectTypeVariableUsagesInfo,
         CheckDispatchReceiver,
         CheckExtensionReceiver,
         CheckCallableReferenceExpectedType,
-        CheckLowPriorityInOverloadResolution
+        CheckLowPriorityInOverloadResolution,
+        CheckDeprecatedSinceKotlin,
     )
 
     object SyntheticIdForCallableReferencesResolution : CallKind(
         MapArguments,
         NoTypeArguments,
         CreateFreshTypeVariableSubstitutorStage,
+        CollectTypeVariableUsagesInfo,
         CheckArguments,
         EagerResolveOfCallableReferences
     )

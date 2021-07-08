@@ -23,8 +23,6 @@ import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 
 interface InnerClassesSupport {
-    object FIELD_FOR_OUTER_THIS : IrDeclarationOriginImpl("FIELD_FOR_OUTER_THIS", isSynthetic = true)
-
     fun getOuterThisField(innerClass: IrClass): IrField
     fun getInnerClassConstructorWithOuterThisParameter(innerClassConstructor: IrConstructor): IrConstructor
     fun getInnerClassOriginalPrimaryConstructorOrNull(innerClass: IrClass): IrConstructor?
@@ -35,7 +33,7 @@ class InnerClassesLowering(val context: BackendContext, private val innerClasses
 
     override fun transformFlat(declaration: IrDeclaration): List<IrDeclaration>? {
         if (declaration is IrClass && declaration.isInner) {
-            stageController.unrestrictDeclarationListsAccess {
+            context.irFactory.stageController.unrestrictDeclarationListsAccess {
                 declaration.declarations += innerClassesSupport.getOuterThisField(declaration)
             }
         } else if (declaration is IrConstructor) {

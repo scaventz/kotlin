@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.test.TestJdkKind
 import org.jetbrains.kotlin.test.testFramework.resetApplicationToNull
 import org.jetbrains.uast.UastLanguagePlugin
 import org.jetbrains.uast.evaluation.UEvaluatorExtension
+import org.jetbrains.uast.kotlin.BaseKotlinUastResolveProviderService
 import org.jetbrains.uast.kotlin.KotlinUastLanguagePlugin
 import org.jetbrains.uast.kotlin.KotlinUastResolveProviderService
 import org.jetbrains.uast.kotlin.evaluation.KotlinEvaluatorExtension
@@ -41,8 +42,10 @@ abstract class AbstractKotlinUastTest : AbstractUastTest() {
     private lateinit var compilerConfiguration: CompilerConfiguration
     private var kotlinCoreEnvironment: KotlinCoreEnvironment? = null
 
+    open var testDataDir: File = File("plugins/uast-kotlin/testData")
+
     override fun getVirtualFile(testName: String): VirtualFile {
-        val testFile = TEST_KOTLIN_MODEL_DIR.listFiles { pathname -> pathname.nameWithoutExtension == testName }.first()
+        val testFile = testDataDir.listFiles { pathname -> pathname.nameWithoutExtension == testName }.first()
 
         super.initializeEnvironment(testFile)
 
@@ -92,6 +95,10 @@ abstract class AbstractKotlinUastTest : AbstractUastTest() {
         area.getExtensionPoint(UEvaluatorExtension.EXTENSION_POINT_NAME)
             .registerExtension(KotlinEvaluatorExtension())
 
+        project.registerService(
+            BaseKotlinUastResolveProviderService::class.java,
+            CliKotlinUastResolveProviderService::class.java
+        )
         project.registerService(
             KotlinUastResolveProviderService::class.java,
             CliKotlinUastResolveProviderService::class.java

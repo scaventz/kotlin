@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -63,7 +63,6 @@ actual enum class RegexOption {
 
 // From char.kt
 
-actual fun Char.isWhitespace(): Boolean = TODO("Wasm stdlib: Text")
 actual fun Char.isHighSurrogate(): Boolean = TODO("Wasm stdlib: Text")
 actual fun Char.isLowSurrogate(): Boolean = TODO("Wasm stdlib: Text")
 
@@ -81,8 +80,7 @@ public actual fun Char.toLowerCase(): Char = TODO("Wasm stdlib: Text")
  *
  * @sample samples.text.Chars.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
 public actual fun Char.lowercaseChar(): Char = TODO("Wasm stdlib: Text")
 
 /**
@@ -95,8 +93,7 @@ public actual fun Char.lowercaseChar(): Char = TODO("Wasm stdlib: Text")
  *
  * @sample samples.text.Chars.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
 public actual fun Char.lowercase(): String = TODO("Wasm stdlib: Text")
 
 /**
@@ -113,8 +110,7 @@ public actual fun Char.toUpperCase(): Char = TODO("Wasm stdlib: Text")
  *
  * @sample samples.text.Chars.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
 public actual fun Char.uppercaseChar(): Char = TODO("Wasm stdlib: Text")
 
 /**
@@ -127,9 +123,115 @@ public actual fun Char.uppercaseChar(): Char = TODO("Wasm stdlib: Text")
  *
  * @sample samples.text.Chars.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
 public actual fun Char.uppercase(): String = TODO("Wasm stdlib: Text")
+
+/**
+ * Converts this character to title case using Unicode mapping rules of the invariant locale.
+ *
+ * This function performs one-to-one character mapping.
+ * To support one-to-many character mapping use the [titlecase] function.
+ * If this character has no mapping equivalent, the result of calling [uppercaseChar] is returned.
+ *
+ * @sample samples.text.Chars.titlecase
+ */
+@SinceKotlin("1.5")
+public actual fun Char.titlecaseChar(): Char = TODO("Wasm stdlib: Text")
+
+
+/**
+ * Returns the Unicode general category of this character.
+ */
+@SinceKotlin("1.5")
+public actual val Char.category: CharCategory get() = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character (Unicode code point) is defined in Unicode.
+ *
+ * A character is considered to be defined in Unicode if its [category] is not [CharCategory.UNASSIGNED].
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isDefined(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is a letter.
+ *
+ * A character is considered to be a letter if its [category] is [CharCategory.UPPERCASE_LETTER],
+ * [CharCategory.LOWERCASE_LETTER], [CharCategory.TITLECASE_LETTER], [CharCategory.MODIFIER_LETTER], or [CharCategory.OTHER_LETTER].
+ *
+ * @sample samples.text.Chars.isLetter
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isLetter(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is a letter or digit.
+ *
+ * @see isLetter
+ * @see isDigit
+ *
+ * @sample samples.text.Chars.isLetterOrDigit
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isLetterOrDigit(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is a digit.
+ *
+ * A character is considered to be a digit if its [category] is [CharCategory.DECIMAL_DIGIT_NUMBER].
+ *
+ * @sample samples.text.Chars.isDigit
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isDigit(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is an upper case letter.
+ *
+ * A character is considered to be an upper case letter if its [category] is [CharCategory.UPPERCASE_LETTER].
+ *
+ * @sample samples.text.Chars.isUpperCase
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isUpperCase(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is a lower case letter.
+ *
+ * A character is considered to be a lower case letter if its [category] is [CharCategory.LOWERCASE_LETTER].
+ *
+ * @sample samples.text.Chars.isLowerCase
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isLowerCase(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is a title case letter.
+ *
+ * A character is considered to be a title case letter if its [category] is [CharCategory.TITLECASE_LETTER].
+ *
+ * @sample samples.text.Chars.isTitleCase
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isTitleCase(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if this character is an ISO control character.
+ *
+ * A character is considered to be an ISO control character if its [category] is [CharCategory.CONTROL].
+ *
+ * @sample samples.text.Chars.isISOControl
+ */
+@SinceKotlin("1.5")
+public actual fun Char.isISOControl(): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Determines whether a character is whitespace according to the Unicode standard.
+ * Returns `true` if the character is whitespace.
+ *
+ * @sample samples.text.Chars.isWhitespace
+ */
+public actual fun Char.isWhitespace(): Boolean = TODO("Wasm stdlib: Text")
 
 // From string.kt
 
@@ -266,8 +368,7 @@ public actual fun String.toUpperCase(): String = TODO("Wasm stdlib: Text")
  *
  * @sample samples.text.Strings.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
 public actual fun String.uppercase(): String = TODO("Wasm stdlib: Text")
 
 /**
@@ -283,8 +384,7 @@ public actual fun String.toLowerCase(): String = TODO("Wasm stdlib: Text")
  *
  * @sample samples.text.Strings.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
 public actual fun String.lowercase(): String = TODO("Wasm stdlib: Text")
 
 public actual fun String.capitalize(): String = TODO("Wasm stdlib: Text")
@@ -327,6 +427,25 @@ actual fun String?.equals(other: String?, ignoreCase: Boolean): Boolean = TODO("
 @SinceKotlin("1.2")
 actual fun String.compareTo(other: String, ignoreCase: Boolean): Int = TODO("Wasm stdlib: Text")
 
+/**
+ * Returns `true` if the contents of this char sequence are equal to the contents of the specified [other],
+ * i.e. both char sequences contain the same number of the same characters in the same order.
+ *
+ * @sample samples.text.Strings.contentEquals
+ */
+@SinceKotlin("1.5")
+public actual infix fun CharSequence?.contentEquals(other: CharSequence?): Boolean = TODO("Wasm stdlib: Text")
+
+/**
+ * Returns `true` if the contents of this char sequence are equal to the contents of the specified [other], optionally ignoring case difference.
+ *
+ * @param ignoreCase `true` to ignore character case when comparing contents.
+ *
+ * @sample samples.text.Strings.contentEquals
+ */
+@SinceKotlin("1.5")
+public actual fun CharSequence?.contentEquals(other: CharSequence?, ignoreCase: Boolean): Boolean = TODO("Wasm stdlib: Text")
+
 
 public actual fun String.startsWith(prefix: String, ignoreCase: Boolean): Boolean = TODO("Wasm stdlib: Text")
 public actual fun String.startsWith(prefix: String, startIndex: Int, ignoreCase: Boolean): Boolean = TODO("Wasm stdlib: Text")
@@ -367,6 +486,8 @@ actual fun String.toBoolean(): Boolean = TODO("Wasm stdlib: Text")
 
 /**
  * Returns `true` if the contents of this string is equal to the word "true", ignoring case, and `false` otherwise.
+ *
+ * There are also strict versions of the function available on non-nullable String, [toBooleanStrict] and [toBooleanStrictOrNull].
  */
 actual fun String?.toBoolean(): Boolean = TODO("Wasm stdlib: Text")
 

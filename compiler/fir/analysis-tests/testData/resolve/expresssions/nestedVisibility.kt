@@ -11,8 +11,8 @@ open class Outer {
 
 class Derived : Outer() {
     fun foo() {
-        Outer.<!HIDDEN{LT}!><!HIDDEN{PSI}!>PrivateNested<!>()<!>
-        super.<!HIDDEN{LT}!><!HIDDEN{PSI}!>PrivateInner<!>()<!>
+        Outer.<!INVISIBLE_REFERENCE!>PrivateNested<!>()
+        super.<!INVISIBLE_REFERENCE!>PrivateInner<!>()
 
         Outer.ProtectedNested()
         super.ProtectedInner()
@@ -23,11 +23,11 @@ class Derived : Outer() {
 }
 
 fun foo() {
-    Outer.<!HIDDEN{LT}!><!HIDDEN{PSI}!>PrivateNested<!>()<!>
-    Outer().<!HIDDEN{LT}!><!HIDDEN{PSI}!>PrivateInner<!>()<!>
+    Outer.<!INVISIBLE_REFERENCE!>PrivateNested<!>()
+    Outer().<!INVISIBLE_REFERENCE!>PrivateInner<!>()
 
-    Outer.<!HIDDEN{LT}!><!HIDDEN{PSI}!>ProtectedNested<!>()<!>
-    Outer().<!HIDDEN{LT}!><!HIDDEN{PSI}!>ProtectedInner<!>()<!>
+    Outer.<!INVISIBLE_REFERENCE!>ProtectedNested<!>()
+    Outer().<!INVISIBLE_REFERENCE!>ProtectedInner<!>()
 
     Outer.PublicNested()
     Outer().PublicInner()

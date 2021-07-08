@@ -6,11 +6,10 @@
 package org.jetbrains.kotlin.idea.fir.low.level.api.providers
 
 import com.intellij.openapi.project.Project
-import com.intellij.psi.search.GlobalSearchScope
+import org.jetbrains.kotlin.analyzer.ModuleSourceInfoBase
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.NoMutableState
 import org.jetbrains.kotlin.fir.ThreadSafeMutableState
-import org.jetbrains.kotlin.fir.builder.RawFirBuilder
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
 import org.jetbrains.kotlin.fir.originalForSubstitutionOverride
@@ -18,44 +17,39 @@ import org.jetbrains.kotlin.fir.resolve.providers.FirProvider
 import org.jetbrains.kotlin.fir.resolve.providers.FirProviderInternals
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProviderInternals
-import org.jetbrains.kotlin.fir.scopes.KotlinScopeProvider
+import org.jetbrains.kotlin.fir.scopes.FirKotlinScopeProvider
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.idea.caches.project.ModuleSourceInfo
-import org.jetbrains.kotlin.idea.fir.low.level.api.IndexHelper
-import org.jetbrains.kotlin.idea.fir.low.level.api.PackageExistenceCheckerForSingleModule
+import org.jetbrains.kotlin.idea.fir.low.level.api.DeclarationProvider
+import org.jetbrains.kotlin.idea.fir.low.level.api.KtPackageProvider
 import org.jetbrains.kotlin.idea.fir.low.level.api.file.builder.FirFileBuilder
 import org.jetbrains.kotlin.idea.fir.low.level.api.file.builder.ModuleFileCache
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.psi.KtNamedFunction
-import org.jetbrains.kotlin.psi.KtProperty
 
 @ThreadSafeMutableState
 internal class FirIdeProvider(
     project: Project,
     val session: FirSession,
-    moduleInfo: ModuleSourceInfo,
-    val kotlinScopeProvider: KotlinScopeProvider,
+    moduleInfo: ModuleSourceInfoBase,
+    val kotlinScopeProvider: FirKotlinScopeProvider,
     firFileBuilder: FirFileBuilder,
     val cache: ModuleFileCache,
-    searchScope: GlobalSearchScope,
+    private val declarationProvider: DeclarationProvider,
+    private val packageExistenceChecker: KtPackageProvider,
 ) : FirProvider() {
     override val symbolProvider: FirSymbolProvider = SymbolProvider()
-
-    private val indexHelper = IndexHelper(project, searchScope)
-    private val packageExistenceChecker = PackageExistenceCheckerForSingleModule(project, moduleInfo)
 
     private val providerHelper = FirProviderHelper(
         cache,
         firFileBuilder,
-        indexHelper,
+        declarationProvider,
         packageExistenceChecker,
     )
 
     override val isPhasedFirAllowed: Boolean get() = true
 
-    override fun getFirClassifierByFqName(classId: ClassId): FirClassLikeDeclaration<*>? =
+    override fun getFirClassifierByFqName(classId: ClassId): FirClassLikeDeclaration? =
         providerHelper.getFirClassifierByFqName(classId)
 
     override fun getFirClassifierContainerFile(fqName: ClassId): FirFile {
@@ -93,17 +87,6 @@ internal class FirIdeProvider(
     override fun getFirFilesByPackage(fqName: FqName): List<FirFile> = error("Should not be called in FIR IDE")
 
 
-    // TODO move out of here
-    // used only for completion
-    fun buildFunctionWithBody(ktNamedFunction: KtNamedFunction): FirFunction<*> {
-        return RawFirBuilder(session, kotlinScopeProvider).buildFunctionWithBody(ktNamedFunction)
-    }
-
-    fun buildPropertyWithBody(ktNamedFunction: KtProperty): FirProperty {
-        return RawFirBuilder(session, kotlinScopeProvider).buildPropertyWithBody(ktNamedFunction)
-    }
-
-
     @FirProviderInternals
     override fun recordGeneratedClass(owner: FirAnnotatedDeclaration, klass: FirRegularClass) {
         TODO()
@@ -114,10 +97,8 @@ internal class FirIdeProvider(
         TODO()
     }
 
-    override fun getClassNamesInPackage(fqName: FqName): Set<Name> {
-        // TODO: KT-41048
-        return emptySet()
-    }
+    override fun getClassNamesInPackage(fqName: FqName): Set<Name> =
+        declarationProvider.getClassNamesInPackage(fqName)
 
     @NoMutableState
     private inner class SymbolProvider : FirSymbolProvider(session) {

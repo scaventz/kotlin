@@ -7,10 +7,10 @@ package org.jetbrains.kotlin.fir.java.declarations
 
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.fir.FirImplementationDetail
-import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.fir.FirImplementationDetail
+import org.jetbrains.kotlin.fir.FirModuleData
+import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.builder.FirAnnotationContainerBuilder
 import org.jetbrains.kotlin.fir.builder.FirBuilderDsl
 import org.jetbrains.kotlin.fir.declarations.*
@@ -31,7 +31,7 @@ import kotlin.properties.Delegates
 @OptIn(FirImplementationDetail::class)
 class FirJavaClass @FirImplementationDetail internal constructor(
     override val source: FirSourceElement?,
-    override val session: FirSession,
+    override val moduleData: FirModuleData,
     override var resolvePhase: FirResolvePhase,
     override val name: Name,
     override val annotations: MutableList<FirAnnotationCall>,
@@ -47,6 +47,7 @@ class FirJavaClass @FirImplementationDetail internal constructor(
 ) : FirRegularClass() {
     override val hasLazyNestedClassifiers: Boolean get() = true
     override val controlFlowGraphReference: FirControlFlowGraphReference? get() = null
+    override var deprecation: DeprecationsPerUseSite? = null
 
     init {
         symbol.bind(this)
@@ -67,6 +68,10 @@ class FirJavaClass @FirImplementationDetail internal constructor(
 
     override fun replaceResolvePhase(newResolvePhase: FirResolvePhase) {
         resolvePhase = newResolvePhase
+    }
+
+    override fun replaceDeprecation(newDeprecation: DeprecationsPerUseSite?) {
+        deprecation = newDeprecation
     }
 
     override fun replaceControlFlowGraphReference(newControlFlowGraphReference: FirControlFlowGraphReference?) {}
@@ -140,7 +145,7 @@ internal class FirJavaClassBuilder : FirRegularClassBuilder(), FirAnnotationCont
     override fun build(): FirJavaClass {
         return FirJavaClass(
             source,
-            session,
+            moduleData,
             resolvePhase = FirResolvePhase.ANALYZED_DEPENDENCIES,
             name,
             annotations,

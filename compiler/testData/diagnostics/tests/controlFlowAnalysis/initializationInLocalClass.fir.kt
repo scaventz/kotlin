@@ -59,7 +59,7 @@ fun gau() {
         object: Any() {
             init {
                 // Error!
-                y = ""
+                <!CAPTURED_VAL_INITIALIZATION!>y<!> = ""
             }
         }
     }
@@ -83,7 +83,7 @@ class My {
     }
 }
 
-val top: Int
+<!MUST_BE_INITIALIZED!>val top: Int<!>
 
 fun init() {
     top = 1

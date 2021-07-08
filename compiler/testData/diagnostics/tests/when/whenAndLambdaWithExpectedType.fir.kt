@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 /*
  * KOTLIN DIAGNOSTICS SPEC TEST (NEGATIVE)
  *
@@ -30,7 +29,7 @@ val test3: (String) -> Boolean =
 
 val test4: (String) -> Boolean =
         when {
-            true -> { s1, s2 -> true }
+            true -> { s1, <!CANNOT_INFER_PARAMETER_TYPE!>s2<!> -> true }
             else -> null!!
         }
 

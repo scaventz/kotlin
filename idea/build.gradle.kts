@@ -7,10 +7,6 @@ plugins {
 
 val kotlinVersion: String by rootProject.extra
 
-repositories {
-    maven("https://jetbrains.bintray.com/markdown")
-}
-
 sourceSets {
     "main" {
         projectDefault()
@@ -73,6 +69,7 @@ dependencies {
     compile(project(":compiler:fir:fir2ir"))
     compile(project(":compiler:fir:resolve"))
     compile(project(":compiler:fir:checkers"))
+    compile(project(":compiler:fir:checkers:checkers.jvm"))
     compile(project(":compiler:fir:java"))
     compile(project(":compiler:fir:jvm"))
     compile(project(":idea:idea-core"))
@@ -81,11 +78,14 @@ dependencies {
     compile(project(":idea:idea-jps-common"))
     compile(project(":idea:kotlin-gradle-tooling"))
     compile(project(":idea:line-indent-provider"))
+    compile(project(":plugins:uast-kotlin-base"))
     compile(project(":plugins:uast-kotlin"))
     compile(project(":plugins:uast-kotlin-idea"))
+    compile(project(":plugins:uast-kotlin-idea-base"))
     compile(project(":kotlin-script-util")) { isTransitive = false }
     compile(project(":kotlin-scripting-intellij"))
     compile(project(":compiler:backend.jvm")) // Do not delete, for Pill
+    compile(project(":compiler:backend.jvm:backend.jvm.entrypoint"))
 
     compile(commonDep("org.jetbrains.kotlinx", "kotlinx-coroutines-core")) { isTransitive = false }
 
@@ -115,6 +115,7 @@ dependencies {
     testCompile(project(":kotlin-test:kotlin-test-junit"))
     testCompile(projectTests(":compiler:tests-common"))
     testCompile(projectTests(":idea:idea-test-framework")) { isTransitive = false }
+    testImplementation(projectTests(":idea:idea-frontend-independent")) { isTransitive = false }
     testCompile(project(":idea:idea-jvm")) { isTransitive = false }
     testCompile(project(":idea:idea-gradle")) { isTransitive = false }
     testCompile(project(":idea:idea-maven")) { isTransitive = false }
@@ -139,8 +140,12 @@ dependencies {
     testRuntime(project(":noarg-ide-plugin")) { isTransitive = false }
     testRuntime(project(":kotlin-noarg-compiler-plugin"))
     testRuntime(project(":plugins:annotation-based-compiler-plugins-ide-support")) { isTransitive = false }
+    testRuntime(project(":plugins:base-compiler-plugins-ide-support")) { isTransitive = false }
     testRuntime(project(":plugins:parcelize:parcelize-compiler"))
     testRuntime(project(":plugins:parcelize:parcelize-ide")) { isTransitive = false }
+    testRuntime(project(":plugins:base-compiler-plugins-ide-support")) { isTransitive = false }
+    testRuntime(project(":plugins:lombok:lombok-compiler-plugin"))
+    testRuntime(project(":plugins:lombok:lombok-ide-plugin")) { isTransitive = false }
     testRuntime(project(":kotlin-scripting-idea")) { isTransitive = false }
     testRuntime(project(":kotlin-scripting-compiler-impl"))
     testRuntime(project(":sam-with-receiver-ide-plugin")) { isTransitive = false }
@@ -169,10 +174,7 @@ dependencies {
     if (Ide.IJ()) {
         testCompileOnly(intellijPluginDep("maven"))
         testRuntime(intellijPluginDep("maven"))
-
-        if (Ide.IJ201.orHigher()) {
-            testRuntime(intellijPluginDep("repository-search"))
-        }
+        testRuntime(intellijPluginDep("repository-search"))
     }
 
     testRuntime(intellijPluginDep("junit"))
@@ -187,14 +189,11 @@ dependencies {
         testRuntime(project(":idea:idea-fir"))
     }
 
-    if (Ide.AS36.orHigher()) {
+    if (Ide.AS()) {
         testRuntime(intellijPluginDep("android-layoutlib"))
         testRuntime(intellijPluginDep("git4idea"))
         testRuntime(intellijPluginDep("google-cloud-tools-core-as"))
         testRuntime(intellijPluginDep("google-login-as"))
-    }
-
-    if (Ide.AS41.orHigher()) {
         testRuntime(intellijPluginDep("platform-images"))
     }
 }

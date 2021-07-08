@@ -12,12 +12,13 @@ import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.ConeClassifierLookupTag
 import org.jetbrains.kotlin.fir.symbols.ConeClassifierLookupTagWithFixedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.*
+import org.jetbrains.kotlin.fir.utils.WeakPair
 
 fun ConeClassifierLookupTag.toSymbol(useSiteSession: FirSession): FirClassifierSymbol<*>? =
     when (this) {
         is ConeClassLikeLookupTag -> toSymbol(useSiteSession)
         is ConeClassifierLookupTagWithFixedSymbol -> this.symbol
-        else -> error("Unknown lookupTag type: ${this::class}")
+        else -> null
     }
 
 @OptIn(LookupTagInternals::class)
@@ -25,20 +26,26 @@ fun ConeClassLikeLookupTag.toSymbol(useSiteSession: FirSession): FirClassLikeSym
     if (this is ConeClassLookupTagWithFixedSymbol) {
         return this.symbol
     }
-    val firSymbolProvider = useSiteSession.firSymbolProvider
-    (this as? ConeClassLikeLookupTagImpl)?.boundSymbol?.takeIf { it.key === useSiteSession }?.let { return it.value }
+    val firSymbolProvider = useSiteSession.symbolProvider
+    (this as? ConeClassLikeLookupTagImpl)?.boundSymbol?.takeIf { it.first === useSiteSession }?.let { return it.second }
 
     return firSymbolProvider.getClassLikeSymbolByFqName(classId).also {
         (this as? ConeClassLikeLookupTagImpl)?.bindSymbolToLookupTag(useSiteSession, it)
     }
 }
 
+@OptIn(LookupTagInternals::class)
+fun ConeClassLikeLookupTag.toSymbolOrError(useSiteSession: FirSession): FirClassLikeSymbol<*> =
+    toSymbol(useSiteSession)
+        ?: error("Class symbol with classId $classId was not found")
+
+
 fun ConeClassLikeLookupTag.toFirRegularClass(session: FirSession): FirRegularClass? =
-    session.firSymbolProvider.getSymbolByLookupTag(this)?.fir as? FirRegularClass
+    session.symbolProvider.getSymbolByLookupTag(this)?.fir as? FirRegularClass
 
 @OptIn(LookupTagInternals::class)
 fun ConeClassLikeLookupTagImpl.bindSymbolToLookupTag(session: FirSession, symbol: FirClassLikeSymbol<*>?) {
-    boundSymbol = OneElementWeakMap(session, symbol)
+    boundSymbol = WeakPair(session, symbol)
 }
 
 fun FirSymbolProvider.getSymbolByLookupTag(lookupTag: ConeClassifierLookupTag): FirClassifierSymbol<*>? {

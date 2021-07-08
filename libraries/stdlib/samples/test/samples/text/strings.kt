@@ -6,12 +6,14 @@ import kotlin.test.*
 
 class Strings {
 
+    @Suppress("DEPRECATION")
     @Sample
     fun capitalize() {
         assertPrints("abcd".capitalize(), "Abcd")
         assertPrints("Abcd".capitalize(), "Abcd")
     }
 
+    @Suppress("DEPRECATION")
     @Sample
     fun decapitalize() {
         assertPrints("abcd".decapitalize(), "abcd")
@@ -126,7 +128,7 @@ class Strings {
     fun associate() {
         val string = "bonne journée"
         // associate each character with its code
-        val result = string.associate { char -> char to char.toInt() }
+        val result = string.associate { char -> char to char.code }
         // notice each letter occurs only once
         assertPrints(result, "{b=98, o=111, n=110, e=101,  =32, j=106, u=117, r=114, é=233}")
     }
@@ -135,7 +137,7 @@ class Strings {
     fun associateBy() {
         val string = "bonne journée"
         // associate each character by its code
-        val result = string.associateBy { char -> char.toInt() }
+        val result = string.associateBy { char -> char.code }
         // notice each char code occurs only once
         assertPrints(result, "{98=b, 111=o, 110=n, 101=e, 32= , 106=j, 117=u, 114=r, 233=é}")
     }
@@ -144,7 +146,7 @@ class Strings {
     fun associateByWithValueTransform() {
         val string = "bonne journée"
         // associate each character by the code of its upper case equivalent and transform the character to upper case
-        val result = string.associateBy({ char -> char.toUpperCase().toInt() }, { char -> char.toUpperCase() })
+        val result = string.associateBy({ char -> char.uppercaseChar().code }, { char -> char.uppercaseChar() })
         // notice each char code occurs only once
         assertPrints(result, "{66=B, 79=O, 78=N, 69=E, 32= , 74=J, 85=U, 82=R, 201=É}")
     }
@@ -154,7 +156,7 @@ class Strings {
         val string = "bonne journée"
         // associate each character by its code
         val result = mutableMapOf<Int, Char>()
-        string.associateByTo(result) { char -> char.toInt() }
+        string.associateByTo(result) { char -> char.code }
         // notice each char code occurs only once
         assertPrints(result, "{98=b, 111=o, 110=n, 101=e, 32= , 106=j, 117=u, 114=r, 233=é}")
     }
@@ -164,7 +166,7 @@ class Strings {
         val string = "bonne journée"
         // associate each character by the code of its upper case equivalent and transform the character to upper case
         val result = mutableMapOf<Int, Char>()
-        string.associateByTo(result, { char -> char.toUpperCase().toInt() }, { char -> char.toUpperCase() })
+        string.associateByTo(result, { char -> char.uppercaseChar().code }, { char -> char.uppercaseChar() })
         // notice each char code occurs only once
         assertPrints(result, "{66=B, 79=O, 78=N, 69=E, 32= , 74=J, 85=U, 82=R, 201=É}")
     }
@@ -174,7 +176,7 @@ class Strings {
         val string = "bonne journée"
         // associate each character with its code
         val result = mutableMapOf<Char, Int>()
-        string.associateTo(result) { char -> char to char.toInt() }
+        string.associateTo(result) { char -> char to char.code }
         // notice each letter occurs only once
         assertPrints(result, "{b=98, o=111, n=110, e=101,  =32, j=106, u=117, r=114, é=233}")
     }
@@ -183,7 +185,7 @@ class Strings {
     fun associateWith() {
         val string = "bonne journée"
         // associate each character with its code
-        val result = string.associateWith { char -> char.toInt() }
+        val result = string.associateWith { char -> char.code }
         // notice each letter occurs only once
         assertPrints(result, "{b=98, o=111, n=110, e=101,  =32, j=106, u=117, r=114, é=233}")
     }
@@ -193,7 +195,7 @@ class Strings {
         val string = "bonne journée"
         // associate each character with its code
         val result = mutableMapOf<Char, Int>()
-        string.associateWithTo(result) { char -> char.toInt() }
+        string.associateWithTo(result) { char -> char.code }
         // notice each letter occurs only once
         assertPrints(result, "{b=98, o=111, n=110, e=101,  =32, j=106, u=117, r=114, é=233}")
     }
@@ -414,7 +416,7 @@ class Strings {
     @Sample
     fun map() {
         val string = "kotlin"
-        assertPrints(string.map { it.toUpperCase() }, "[K, O, T, L, I, N]")
+        assertPrints(string.map { it.uppercaseChar() }, "[K, O, T, L, I, N]")
     }
 
     @Sample
@@ -444,5 +446,53 @@ class Strings {
         val emptyString = ""
         assertPrints(emptyString.lastOrNull(), "null")
         assertFails { emptyString.last() }
+    }
+
+    @Sample
+    fun replace() {
+        val inputString0 = "Mississippi"
+        val inputString1 = "Insufficient data for meaningful answer."
+
+        assertPrints(inputString0.replace('s', 'z'), "Mizzizzippi")
+        assertPrints(inputString1.replace("data", "information"), "Insufficient information for meaningful answer.")
+    }
+
+    @Sample
+    fun contentEquals() {
+        val stringBuilder = StringBuilder()
+        stringBuilder.append("Kot").append("lin")
+        assertPrints(stringBuilder, "Kotlin")
+        assertTrue(stringBuilder contentEquals "Kotlin")
+
+        stringBuilder.setCharAt(0, 'k')
+        assertPrints(stringBuilder, "kotlin")
+        assertFalse("Kotlin".contentEquals(stringBuilder))
+        assertTrue("Kotlin".contentEquals(stringBuilder, ignoreCase = true))
+    }
+
+    @Sample
+    fun toBooleanStrict() {
+        assertPrints("true".toBooleanStrict(), "true")
+        assertFails { "True".toBooleanStrict() }
+        assertFails { "TRUE".toBooleanStrict() }
+
+        assertPrints("false".toBooleanStrict(), "false")
+        assertFails { "False".toBooleanStrict() }
+        assertFails { "FALSE".toBooleanStrict() }
+
+        assertFails { "abc".toBooleanStrict() }
+    }
+
+    @Sample
+    fun toBooleanStrictOrNull() {
+        assertPrints("true".toBooleanStrictOrNull(), "true")
+        assertPrints("True".toBooleanStrictOrNull(), "null")
+        assertPrints("TRUE".toBooleanStrictOrNull(), "null")
+
+        assertPrints("false".toBooleanStrictOrNull(), "false")
+        assertPrints("False".toBooleanStrictOrNull(), "null")
+        assertPrints("FALSE".toBooleanStrictOrNull(), "null")
+
+        assertPrints("abc".toBooleanStrictOrNull(), "null")
     }
 }

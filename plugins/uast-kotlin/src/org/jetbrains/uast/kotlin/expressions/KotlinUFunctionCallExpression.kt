@@ -28,9 +28,7 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
 import org.jetbrains.uast.*
 import org.jetbrains.uast.internal.acceptList
-import org.jetbrains.uast.kotlin.declarations.KotlinUIdentifier
 import org.jetbrains.uast.kotlin.internal.TypedResolveResult
-import org.jetbrains.uast.kotlin.internal.getReferenceVariants
 import org.jetbrains.uast.visitor.UastVisitor
 
 class KotlinUFunctionCallExpression(
@@ -144,7 +142,8 @@ class KotlinUFunctionCallExpression(
             }
 
             val ktNameReferenceExpression = sourcePsi.calleeExpression as? KtNameReferenceExpression ?: return null
-            val localCallableDeclaration = resolveToDeclaration(ktNameReferenceExpression) as? PsiVariable ?: return null
+            val localCallableDeclaration =
+                baseResolveProviderService.resolveToDeclaration(ktNameReferenceExpression) as? PsiVariable ?: return null
             if (localCallableDeclaration !is PsiLocalVariable && localCallableDeclaration !is PsiParameter) return null
 
             // an implicit receiver for variables calls (KT-25524)
@@ -164,7 +163,7 @@ class KotlinUFunctionCallExpression(
         val contextElement = sourcePsi
         val calleeExpression = contextElement.calleeExpression as? KtReferenceExpression ?: return emptyList()
         val methodName = methodName ?: calleeExpression.text ?: return emptyList()
-        val variants = getReferenceVariants(calleeExpression, methodName)
+        val variants = baseResolveProviderService.getReferenceVariants(calleeExpression, methodName)
         return variants.flatMap {
             when (it) {
                 is PsiClass -> it.constructors.asSequence()

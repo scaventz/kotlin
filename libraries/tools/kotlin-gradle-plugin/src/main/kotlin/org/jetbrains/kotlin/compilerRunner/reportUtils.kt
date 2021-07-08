@@ -37,7 +37,7 @@ import java.time.format.DateTimeFormatter
 import java.util.zip.ZipFile
 import kotlin.concurrent.thread
 
-internal fun loadCompilerVersion(compilerClasspath: List<File>): String {
+internal fun loadCompilerVersion(compilerClasspath: Iterable<File>): String {
     var result: String? = null
 
     fun checkVersion(bytes: ByteArray) {
@@ -88,16 +88,24 @@ internal fun loadCompilerVersion(compilerClasspath: List<File>): String {
 internal fun runToolInSeparateProcess(
     argsArray: Array<String>,
     compilerClassName: String,
-    classpath: List<File>,
+    classpath: Iterable<File>,
     logger: KotlinLogger,
-    buildDir: File
+    buildDir: File,
+    jvmArgs: List<String> = emptyList()
 ): ExitCode {
     val javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java"
-    val classpathString = classpath.map { it.absolutePath }.joinToString(separator = File.pathSeparator)
+    val classpathString = classpath.joinToString(separator = File.pathSeparator) { it.absolutePath }
 
     val compilerOptions = writeArgumentsToFile(buildDir, argsArray)
 
-    val builder = ProcessBuilder(javaBin, "-cp", classpathString, compilerClassName, "@${compilerOptions.absolutePath}")
+    val builder = ProcessBuilder(
+        javaBin,
+        *(jvmArgs.toTypedArray()),
+        "-cp",
+        classpathString,
+        compilerClassName,
+        "@${compilerOptions.absolutePath}"
+    )
     val messageCollector = createLoggingMessageCollector(logger)
     val process = launchProcessWithFallback(builder, DaemonReportingTargets(messageCollector = messageCollector))
 

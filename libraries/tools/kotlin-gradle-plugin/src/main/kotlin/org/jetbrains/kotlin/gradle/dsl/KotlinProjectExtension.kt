@@ -6,14 +6,17 @@
 package org.jetbrains.kotlin.gradle.dsl
 
 import groovy.lang.Closure
+import org.gradle.api.Action
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Project
 import org.gradle.api.internal.plugins.DslObject
+import org.gradle.jvm.toolchain.JavaToolchainSpec
 import org.gradle.util.ConfigureUtil
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinAndroidTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJsSingleTargetPreset
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinWithJavaTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.pm20.KotlinPm20ProjectExtension
 import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatsService
 import org.jetbrains.kotlin.gradle.targets.js.calculateJsCompilerType
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
@@ -25,16 +28,22 @@ import kotlin.reflect.KClass
 
 private const val KOTLIN_PROJECT_EXTENSION_NAME = "kotlin"
 
-internal fun Project.createKotlinExtension(extensionClass: KClass<out KotlinProjectExtension>): KotlinProjectExtension {
-    val kotlinExt = extensions.create(KOTLIN_PROJECT_EXTENSION_NAME, extensionClass.java)
+internal fun Project.createKotlinExtension(extensionClass: KClass<out KotlinTopLevelExtension>): KotlinTopLevelExtension {
+    val kotlinExt = extensions.create(KOTLIN_PROJECT_EXTENSION_NAME, extensionClass.java, this)
     DslObject(kotlinExt).extensions.create("experimental", ExperimentalExtension::class.java)
-    return kotlinExtension
+    return topLevelExtension
 }
+
+internal val Project.topLevelExtension: KotlinTopLevelExtension
+    get() = extensions.getByName(KOTLIN_PROJECT_EXTENSION_NAME) as KotlinTopLevelExtension
+
+internal val Project.topLevelExtensionOrNull: KotlinTopLevelExtension?
+    get() = extensions.findByName(KOTLIN_PROJECT_EXTENSION_NAME) as KotlinTopLevelExtension?
 
 internal val Project.kotlinExtensionOrNull: KotlinProjectExtension?
     get() = extensions.findByName(KOTLIN_PROJECT_EXTENSION_NAME) as? KotlinProjectExtension
 
-internal val Project.kotlinExtension: KotlinProjectExtension
+val Project.kotlinExtension: KotlinProjectExtension
     get() = extensions.getByName(KOTLIN_PROJECT_EXTENSION_NAME) as KotlinProjectExtension
 
 internal val Project.multiplatformExtensionOrNull: KotlinMultiplatformExtension?
@@ -43,11 +52,25 @@ internal val Project.multiplatformExtensionOrNull: KotlinMultiplatformExtension?
 internal val Project.multiplatformExtension: KotlinMultiplatformExtension
     get() = extensions.getByName(KOTLIN_PROJECT_EXTENSION_NAME) as KotlinMultiplatformExtension
 
-open class KotlinProjectExtension : KotlinSourceSetContainer {
+internal val Project.pm20Extension: KotlinPm20ProjectExtension
+    get() = extensions.getByName(KOTLIN_PROJECT_EXTENSION_NAME) as KotlinPm20ProjectExtension
+
+open class KotlinTopLevelExtension (internal val project: Project) {
     val experimental: ExperimentalExtension
         get() = DslObject(this).extensions.getByType(ExperimentalExtension::class.java)
 
     lateinit var coreLibrariesVersion: String
+
+    private val toolchainSupport = ToolchainSupport.createToolchain(project)
+
+    /**
+     * Configures [Java toolchain](https://docs.gradle.org/current/userguide/toolchains.html) both for Kotlin JVM and Java tasks.
+     *
+     * @param action - action to configure [JavaToolchainSpec]. You could safely cast `Any` into `JavaToolchainSpec`.
+     */
+    fun jvmToolchain(action: Action<Any>) {
+        toolchainSupport.applyToolchain(action)
+    }
 
     var explicitApi: ExplicitApiMode? = null
 
@@ -58,7 +81,9 @@ open class KotlinProjectExtension : KotlinSourceSetContainer {
     fun explicitApiWarning() {
         explicitApi = ExplicitApiMode.Warning
     }
+}
 
+open class KotlinProjectExtension(project: Project) : KotlinTopLevelExtension(project), KotlinSourceSetContainer {
     override var sourceSets: NamedDomainObjectContainer<KotlinSourceSet>
         @Suppress("UNCHECKED_CAST")
         get() = DslObject(this).extensions.getByName("sourceSets") as NamedDomainObjectContainer<KotlinSourceSet>
@@ -67,32 +92,32 @@ open class KotlinProjectExtension : KotlinSourceSetContainer {
         }
 }
 
-abstract class KotlinSingleTargetExtension : KotlinProjectExtension() {
+abstract class KotlinSingleTargetExtension(project: Project) : KotlinProjectExtension(project) {
     abstract val target: KotlinTarget
 
     open fun target(body: Closure<out KotlinTarget>) = ConfigureUtil.configure(body, target)
 }
 
-abstract class KotlinSingleJavaTargetExtension : KotlinSingleTargetExtension() {
+abstract class KotlinSingleJavaTargetExtension(project: Project) : KotlinSingleTargetExtension(project) {
     abstract override val target: KotlinWithJavaTarget<*>
 }
 
-open class KotlinJvmProjectExtension : KotlinSingleJavaTargetExtension() {
+open class KotlinJvmProjectExtension(project: Project) : KotlinSingleJavaTargetExtension(project) {
     override lateinit var target: KotlinWithJavaTarget<KotlinJvmOptions>
         internal set
 
     open fun target(body: KotlinWithJavaTarget<KotlinJvmOptions>.() -> Unit) = target.run(body)
 }
 
-open class Kotlin2JsProjectExtension : KotlinSingleJavaTargetExtension() {
+open class Kotlin2JsProjectExtension(project: Project) : KotlinSingleJavaTargetExtension(project) {
     override lateinit var target: KotlinWithJavaTarget<KotlinJsOptions>
         internal set
 
     open fun target(body: KotlinWithJavaTarget<KotlinJsOptions>.() -> Unit) = target.run(body)
 }
 
-open class KotlinJsProjectExtension :
-    KotlinSingleTargetExtension(),
+open class KotlinJsProjectExtension(project: Project) :
+    KotlinSingleTargetExtension(project),
     KotlinJsCompilerTypeHolder {
     lateinit var irPreset: KotlinJsIrSingleTargetPreset
 
@@ -116,6 +141,7 @@ open class KotlinJsProjectExtension :
     }
 
     @Deprecated("Use js() instead", ReplaceWith("js()"))
+    @Suppress("DEPRECATION")
     override var target: KotlinJsTargetDsl
         get() {
             if (_target == null) {
@@ -129,6 +155,7 @@ open class KotlinJsProjectExtension :
 
     override lateinit var defaultJsCompilerType: KotlinJsCompilerType
 
+    @Suppress("DEPRECATION")
     private fun jsInternal(
         compiler: KotlinJsCompilerType? = null,
         body: KotlinJsTargetDsl.() -> Unit
@@ -217,6 +244,7 @@ open class KotlinJsProjectExtension :
         "Needed for IDE import using the MPP import mechanism",
         level = DeprecationLevel.HIDDEN
     )
+    @Suppress("DEPRECATION")
     fun getTargets(): NamedDomainObjectContainer<KotlinTarget>? =
         _target?.let { target ->
             target.project.container(KotlinTarget::class.java)
@@ -224,14 +252,14 @@ open class KotlinJsProjectExtension :
         }
 }
 
-open class KotlinCommonProjectExtension : KotlinSingleJavaTargetExtension() {
+open class KotlinCommonProjectExtension(project: Project) : KotlinSingleJavaTargetExtension(project) {
     override lateinit var target: KotlinWithJavaTarget<KotlinMultiplatformCommonOptions>
         internal set
 
     open fun target(body: KotlinWithJavaTarget<KotlinMultiplatformCommonOptions>.() -> Unit) = target.run(body)
 }
 
-open class KotlinAndroidProjectExtension : KotlinSingleTargetExtension() {
+open class KotlinAndroidProjectExtension(project: Project) : KotlinSingleTargetExtension(project) {
     override lateinit var target: KotlinAndroidTarget
         internal set
 

@@ -48,9 +48,8 @@ internal abstract class KPropertyImpl<out V> private constructor(
 
     override val isBound: Boolean get() = rawBoundReceiver != CallableReference.NO_RECEIVER
 
-    private val _javaField = ReflectProperties.lazy {
-        val jvmSignature = RuntimeTypeMapper.mapPropertySignature(descriptor)
-        when (jvmSignature) {
+    private val _javaField: ReflectProperties.LazyVal<Field?> = ReflectProperties.lazy {
+        when (val jvmSignature = RuntimeTypeMapper.mapPropertySignature(descriptor)) {
             is KotlinProperty -> {
                 val descriptor = jvmSignature.descriptor
                 JvmProtoBufUtil.getJvmFieldSignature(jvmSignature.proto, jvmSignature.nameResolver, jvmSignature.typeTable)?.let {
@@ -155,6 +154,14 @@ internal abstract class KPropertyImpl<out V> private constructor(
         override val caller: Caller<*> by ReflectProperties.lazy {
             computeCallerForAccessor(isGetter = true)
         }
+
+        override fun toString(): String = "getter of $property"
+
+        override fun equals(other: Any?): Boolean =
+            other is Getter<*> && property == other.property
+
+        override fun hashCode(): Int =
+            property.hashCode()
     }
 
     abstract class Setter<V> : Accessor<V, Unit>(), KMutableProperty.Setter<V> {
@@ -168,6 +175,14 @@ internal abstract class KPropertyImpl<out V> private constructor(
         override val caller: Caller<*> by ReflectProperties.lazy {
             computeCallerForAccessor(isGetter = false)
         }
+
+        override fun toString(): String = "setter of $property"
+
+        override fun equals(other: Any?): Boolean =
+            other is Setter<*> && property == other.property
+
+        override fun hashCode(): Int =
+            property.hashCode()
     }
 
     companion object {

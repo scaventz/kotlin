@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -14,6 +14,8 @@ import kotlin.jvm.JvmName
 /**
  * Returns a copy of this string converted to upper case using the rules of the default locale.
  */
+@Deprecated("Use uppercase() instead.", ReplaceWith("uppercase()"))
+@DeprecatedSinceKotlin(warningSince = "1.5")
 public expect fun String.toUpperCase(): String
 
 /**
@@ -24,13 +26,15 @@ public expect fun String.toUpperCase(): String
  *
  * @sample samples.text.Strings.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public expect fun String.uppercase(): String
 
 /**
  * Returns a copy of this string converted to lower case using the rules of the default locale.
  */
+@Deprecated("Use lowercase() instead.", ReplaceWith("lowercase()"))
+@DeprecatedSinceKotlin(warningSince = "1.5")
 public expect fun String.toLowerCase(): String
 
 /**
@@ -41,8 +45,8 @@ public expect fun String.toLowerCase(): String
  *
  * @sample samples.text.Strings.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 public expect fun String.lowercase(): String
 
 /**
@@ -54,6 +58,8 @@ public expect fun String.lowercase(): String
  *
  * @sample samples.text.Strings.capitalize
  */
+@Deprecated("Use replaceFirstChar instead.", ReplaceWith("replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }"))
+@DeprecatedSinceKotlin(warningSince = "1.5")
 public expect fun String.capitalize(): String
 
 /**
@@ -62,6 +68,8 @@ public expect fun String.capitalize(): String
  *
  * @sample samples.text.Strings.decapitalize
  */
+@Deprecated("Use replaceFirstChar instead.", ReplaceWith("replaceFirstChar { it.lowercase() }"))
+@DeprecatedSinceKotlin(warningSince = "1.5")
 public expect fun String.decapitalize(): String
 
 /**
@@ -492,7 +500,6 @@ public fun String.substringAfterLast(delimiter: String, missingDelimiterValue: S
  * @param startIndex the index of the first character to be replaced.
  * @param endIndex the index of the first character after the replacement to keep in the string.
  */
-@OptIn(ExperimentalStdlibApi::class)
 public fun CharSequence.replaceRange(startIndex: Int, endIndex: Int, replacement: CharSequence): CharSequence {
     if (endIndex < startIndex)
         throw IndexOutOfBoundsException("End index ($endIndex) is less than start index ($startIndex).")
@@ -538,7 +545,6 @@ public inline fun String.replaceRange(range: IntRange, replacement: CharSequence
  *
  * [endIndex] is not included in the removed part.
  */
-@OptIn(ExperimentalStdlibApi::class)
 public fun CharSequence.removeRange(startIndex: Int, endIndex: Int): CharSequence {
     if (endIndex < startIndex)
         throw IndexOutOfBoundsException("End index ($endIndex) is less than start index ($startIndex).")
@@ -772,8 +778,8 @@ public inline fun CharSequence.replaceFirst(regex: Regex, replacement: String): 
  *
  * @sample samples.text.Strings.replaceFirstChar
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @OptIn(kotlin.experimental.ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
 @JvmName("replaceFirstCharWithChar")
@@ -790,8 +796,8 @@ public inline fun String.replaceFirstChar(transform: (Char) -> Char): String {
  *
  * @sample samples.text.Strings.replaceFirstChar
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @OptIn(kotlin.experimental.ExperimentalTypeInference::class)
 @OverloadResolutionByLambdaReturnType
 @JvmName("replaceFirstCharWithCharSequence")
@@ -1378,3 +1384,88 @@ public fun CharSequence.lineSequence(): Sequence<String> = splitToSequence("\r\n
  * The lines returned do not include terminating line separators.
  */
 public fun CharSequence.lines(): List<String> = lineSequence().toList()
+
+/**
+ * Returns `true` if the contents of this char sequence are equal to the contents of the specified [other],
+ * i.e. both char sequences contain the same number of the same characters in the same order.
+ *
+ * @sample samples.text.Strings.contentEquals
+ */
+@SinceKotlin("1.5")
+public expect infix fun CharSequence?.contentEquals(other: CharSequence?): Boolean
+
+/**
+ * Returns `true` if the contents of this char sequence are equal to the contents of the specified [other], optionally ignoring case difference.
+ *
+ * @param ignoreCase `true` to ignore character case when comparing contents.
+ *
+ * @sample samples.text.Strings.contentEquals
+ */
+@SinceKotlin("1.5")
+public expect fun CharSequence?.contentEquals(other: CharSequence?, ignoreCase: Boolean): Boolean
+
+internal fun CharSequence?.contentEqualsIgnoreCaseImpl(other: CharSequence?): Boolean {
+    if (this is String && other is String) {
+        return this.equals(other, ignoreCase = true)
+    }
+
+    if (this === other) return true
+    if (this == null || other == null || this.length != other.length) return false
+
+    for (i in 0 until length) {
+        if (!this[i].equals(other[i], ignoreCase = true)) {
+            return false
+        }
+    }
+
+    return true
+}
+
+internal fun CharSequence?.contentEqualsImpl(other: CharSequence?): Boolean {
+    if (this is String && other is String) {
+        return this == other
+    }
+
+    if (this === other) return true
+    if (this == null || other == null || this.length != other.length) return false
+
+    for (i in 0 until length) {
+        if (this[i] != other[i]) {
+            return false
+        }
+    }
+
+    return true
+}
+
+/**
+ * Returns `true` if the content of this string is equal to the word "true", `false` if it is equal to "false",
+ * and throws an exception otherwise.
+ *
+ * There is also a lenient version of the function available on nullable String, [String?.toBoolean].
+ * Note that this function is case-sensitive.
+ *
+ * @sample samples.text.Strings.toBooleanStrict
+ */
+@SinceKotlin("1.5")
+public fun String.toBooleanStrict(): Boolean = when (this) {
+    "true" -> true
+    "false" -> false
+    else -> throw IllegalArgumentException("The string doesn't represent a boolean value: $this")
+}
+
+/**
+ * Returns `true` if the content of this string is equal to the word "true", `false` if it is equal to "false",
+ * and `null` otherwise.
+ *
+ * There is also a lenient version of the function available on nullable String, [String?.toBoolean].
+ * Note that this function is case-sensitive.
+ *
+ * @sample samples.text.Strings.toBooleanStrictOrNull
+ */
+@SinceKotlin("1.5")
+public fun String.toBooleanStrictOrNull(): Boolean? = when (this) {
+    "true" -> true
+    "false" -> false
+    else -> null
+}

@@ -9,7 +9,15 @@ import org.jetbrains.kotlin.idea.frontend.api.ImplicitReceiverSmartCast
 import org.jetbrains.kotlin.idea.frontend.api.types.KtType
 import org.jetbrains.kotlin.psi.KtExpression
 
-abstract class KtSmartCastProvider : KtAnalysisSessionComponent() {
-    abstract fun getSmartCastedToTypes(expression: KtExpression): Collection<KtType>
-    abstract fun getImplicitReceiverSmartCasts(expression: KtExpression): Collection<ImplicitReceiverSmartCast>
+public abstract class KtSmartCastProvider : KtAnalysisSessionComponent() {
+    public abstract fun getSmartCastedToType(expression: KtExpression): KtType?
+    public abstract fun getImplicitReceiverSmartCast(expression: KtExpression): Collection<ImplicitReceiverSmartCast>
+}
+
+public interface KtSmartCastProviderMixIn : KtAnalysisSessionMixIn {
+    public fun KtExpression.getSmartCast(): KtType? =
+        analysisSession.smartCastProvider.getSmartCastedToType(this)
+
+    public fun KtExpression.getImplicitReceiverSmartCast(): Collection<ImplicitReceiverSmartCast> =
+        analysisSession.smartCastProvider.getImplicitReceiverSmartCast(this)
 }

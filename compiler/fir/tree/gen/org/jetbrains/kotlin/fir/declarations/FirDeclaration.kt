@@ -6,8 +6,10 @@
 package org.jetbrains.kotlin.fir.declarations
 
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirModuleData
+import org.jetbrains.kotlin.fir.FirPureAbstractElement
 import org.jetbrains.kotlin.fir.FirSourceElement
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.visitors.*
 
 /*
@@ -15,14 +17,19 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-interface FirDeclaration : FirElement {
-    override val source: FirSourceElement?
-    val session: FirSession
-    val resolvePhase: FirResolvePhase
-    val origin: FirDeclarationOrigin
-    val attributes: FirDeclarationAttributes
+sealed class FirDeclaration : FirPureAbstractElement(), FirElement {
+    abstract override val source: FirSourceElement?
+    abstract val symbol: FirBasedSymbol<out FirDeclaration>
+    abstract val moduleData: FirModuleData
+    abstract val resolvePhase: FirResolvePhase
+    abstract val origin: FirDeclarationOrigin
+    abstract val attributes: FirDeclarationAttributes
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitDeclaration(this, data)
 
-    fun replaceResolvePhase(newResolvePhase: FirResolvePhase)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformDeclaration(this, data) as E
+
+    abstract fun replaceResolvePhase(newResolvePhase: FirResolvePhase)
 }

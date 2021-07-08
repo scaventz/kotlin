@@ -12,21 +12,23 @@ import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.utils.classId
+import org.jetbrains.kotlin.fir.declarations.utils.isInner
+import org.jetbrains.kotlin.fir.declarations.utils.isLocal
 import org.jetbrains.kotlin.fir.resolve.defaultType
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
 import org.jetbrains.kotlin.fir.resolve.inference.*
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.fir.symbols.ConeClassifierLookupTag
 import org.jetbrains.kotlin.fir.symbols.ConeTypeParameterLookupTag
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
-import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
 import org.jetbrains.kotlin.name.SpecialNames
+import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.types.AbstractTypeMapper
 import org.jetbrains.kotlin.types.TypeMappingContext
 import org.jetbrains.kotlin.types.TypeSystemCommonBackendContext
@@ -51,8 +53,11 @@ class FirJvmTypeMapper(val session: FirSession) : TypeMappingContext<JvmSignatur
         return typeConstructor.classId.asString().replace(".", "$").replace("/", ".")
     }
 
-    override fun JvmSignatureWriter.writeGenericType(type: SimpleTypeMarker, asmType: Type, mode: TypeMappingMode) {
-        if (type !is ConeClassLikeType) return
+    override fun getScriptInternalName(typeConstructor: TypeConstructorMarker): String =
+        TODO("Not yet implemented")
+
+    override fun JvmSignatureWriter.writeGenericType(type: KotlinTypeMarker, asmType: Type, mode: TypeMappingMode) {
+        if (type !is ConeKotlinType) return
         if (skipGenericSignature() || hasNothingInNonContravariantPosition(type) || type.typeArguments.isEmpty()) {
             writeAsmType(asmType)
             return
@@ -96,12 +101,14 @@ class FirJvmTypeMapper(val session: FirSession) : TypeMappingContext<JvmSignatur
         else -> null
     }
 
-    private fun ConeClassLikeType.buildPossiblyInnerType(): PossiblyInnerConeType? =
-        buildPossiblyInnerType(lookupTag.toSymbol(session)?.toRegularClassSymbol(), 0)
+    private fun ConeKotlinType.buildPossiblyInnerType(): PossiblyInnerConeType? {
+        if (this !is ConeClassLikeType) return null
+        return buildPossiblyInnerType(lookupTag.toSymbol(session)?.toRegularClassSymbol(), 0)
+    }
 
     private fun ConeClassLikeType.parentClassOrNull(): FirRegularClassSymbol? {
         val parentClassId = classId?.outerClassId ?: return null
-        return session.firSymbolProvider.getClassLikeSymbolByFqName(parentClassId) as? FirRegularClassSymbol?
+        return session.symbolProvider.getClassLikeSymbolByFqName(parentClassId) as? FirRegularClassSymbol?
     }
 
     private fun ConeClassLikeType.buildPossiblyInnerType(classifier: FirRegularClassSymbol?, index: Int): PossiblyInnerConeType? {
@@ -191,7 +198,7 @@ class ConeTypeSystemCommonBackendContextForTypeMapping(
     val context: ConeTypeContext
 ) : TypeSystemCommonBackendContext by context, TypeSystemCommonBackendContextForTypeMapping {
     private val session = context.session
-    private val symbolProvider = session.firSymbolProvider
+    private val symbolProvider = session.symbolProvider
 
     override fun TypeConstructorMarker.isTypeParameter(): Boolean {
         return this is ConeTypeParameterLookupTag
@@ -209,6 +216,8 @@ class ConeTypeSystemCommonBackendContextForTypeMapping(
             else -> error("Unsupported type constructor: $this")
         }
     }
+
+    override fun TypeConstructorMarker.isScript(): Boolean = false
 
     override fun SimpleTypeMarker.isSuspendFunction(): Boolean {
         require(this is ConeSimpleKotlinType)
@@ -229,7 +238,10 @@ class ConeTypeSystemCommonBackendContextForTypeMapping(
             require(it is ConeKotlinType)
         }
         @Suppress("UNCHECKED_CAST")
-        return defaultType().withArguments((arguments as List<ConeKotlinType>).toTypedArray())
+        return defaultType().withArguments(
+            (arguments as List<ConeKotlinType>).toTypedArray(),
+            session.typeContext,
+        )
     }
 
     override fun TypeParameterMarker.representativeUpperBound(): ConeKotlinType {

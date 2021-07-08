@@ -158,7 +158,7 @@ public class KotlinExpressionParsing extends AbstractKotlinParsing {
         AS(AS_KEYWORD, AS_SAFE) {
             @Override
             public IElementType parseRightHandSide(IElementType operation, KotlinExpressionParsing parser) {
-                parser.myKotlinParsing.parseTypeRef();
+                parser.myKotlinParsing.parseTypeRefWithoutDefinitelyNotNull();
                 return BINARY_WITH_TYPE;
             }
 
@@ -177,7 +177,7 @@ public class KotlinExpressionParsing extends AbstractKotlinParsing {
             @Override
             public IElementType parseRightHandSide(IElementType operation, KotlinExpressionParsing parser) {
                 if (operation == IS_KEYWORD || operation == NOT_IS) {
-                    parser.myKotlinParsing.parseTypeRef();
+                    parser.myKotlinParsing.parseTypeRefWithoutDefinitelyNotNull();
                     return IS_EXPRESSION;
                 }
 
@@ -682,7 +682,7 @@ public class KotlinExpressionParsing extends AbstractKotlinParsing {
         else if (!parseLiteralConstant()) {
             ok = false;
             // TODO: better recovery if FIRST(element) did not match
-            errorWithRecovery("Expecting an element", EXPRESSION_FOLLOW);
+            errorWithRecovery("Expecting an element", TokenSet.orSet(EXPRESSION_FOLLOW, TokenSet.create(LONG_TEMPLATE_ENTRY_END)));
         }
 
         return ok;

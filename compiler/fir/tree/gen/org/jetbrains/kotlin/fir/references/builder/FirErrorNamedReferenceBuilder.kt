@@ -11,7 +11,7 @@ import org.jetbrains.kotlin.fir.builder.FirBuilderDsl
 import org.jetbrains.kotlin.fir.diagnostics.ConeDiagnostic
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.references.impl.FirErrorNamedReferenceImpl
-import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.visitors.*
 import org.jetbrains.kotlin.name.Name
 
@@ -23,11 +23,13 @@ import org.jetbrains.kotlin.name.Name
 @FirBuilderDsl
 class FirErrorNamedReferenceBuilder {
     var source: FirSourceElement? = null
+    var candidateSymbol: FirBasedSymbol<*>? = null
     lateinit var diagnostic: ConeDiagnostic
 
     fun build(): FirErrorNamedReference {
         return FirErrorNamedReferenceImpl(
             source,
+            candidateSymbol,
             diagnostic,
         )
     }

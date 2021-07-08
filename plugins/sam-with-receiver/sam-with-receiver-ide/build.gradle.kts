@@ -18,9 +18,6 @@ dependencies {
     compileOnly(project(":idea"))
     compileOnly(project(":idea:idea-jvm"))
 
-    Platform[193].orLower {
-        compileOnly(intellijDep()) { includeJars("openapi") }
-    }
     compileOnly(intellijDep()) { includeJars("platform-api", "extensions", "util") }
     compileOnly(intellijDep("gradle"))
     compileOnly(project(":idea:kotlin-gradle-tooling"))
@@ -36,5 +33,3 @@ runtimeJar()
 sourcesJar()
 
 javadocJar()
-
-apply(from = "$rootDir/gradle/kotlinPluginPublication.gradle.kts")

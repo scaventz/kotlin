@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.platform.js.isJs
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.test.InTextDirectivesUtils
+import org.jetbrains.kotlin.test.utils.IgnoreTests
 import org.junit.Assert
 import java.util.*
 
@@ -63,7 +64,19 @@ object ExpectedCompletionUtils {
             }
         }
 
-        fun matches(expectedProposal: CompletionProposal): Boolean = expectedProposal.map.entries.none { it.value != map[it.key] }
+        fun matches(expectedProposal: CompletionProposal, ignoreProperties: Collection<String>): Boolean {
+            return expectedProposal.map.entries.none { expected ->
+                val actualValues = when (expected.key) {
+                    in ignoreProperties -> return@none false
+                    "lookupString" -> {
+                        // FIR IDE adds `.` after package names in completion
+                        listOf(map[expected.key]?.removeSuffix("."), map[expected.key])
+                    }
+                    else -> listOf(map[expected.key])
+                }
+                expected.value !in actualValues
+            }
+        }
 
         override fun toString(): String {
             val jsonObject = JsonObject()
@@ -134,7 +147,8 @@ object ExpectedCompletionUtils {
         RUNTIME_TYPE,
         COMPLETION_TYPE_PREFIX,
         LightClassComputationControl.LIGHT_CLASS_DIRECTIVE,
-        AstAccessControl.ALLOW_AST_ACCESS_DIRECTIVE
+        AstAccessControl.ALLOW_AST_ACCESS_DIRECTIVE,
+        IgnoreTests.DIRECTIVES.FIR_COMPARISON,
     )
 
     fun itemsShouldExist(fileText: String, platform: TargetPlatform?): Array<CompletionProposal> = when {
@@ -210,7 +224,8 @@ object ExpectedCompletionUtils {
         expected: Array<CompletionProposal>,
         items: Array<LookupElement>,
         checkOrder: Boolean,
-        nothingElse: Boolean
+        nothingElse: Boolean,
+        ignoreProperties: Collection<String>,
     ) {
         val itemsInformation = getItemsInformation(items)
         val allItemsString = listToString(itemsInformation)
@@ -225,7 +240,7 @@ object ExpectedCompletionUtils {
             for (index in itemsInformation.indices) {
                 val proposal = itemsInformation[index]
 
-                if (proposal.matches(expectedProposal)) {
+                if (proposal.matches(expectedProposal, ignoreProperties)) {
                     isFound = true
 
                     Assert.assertTrue(
@@ -267,7 +282,7 @@ object ExpectedCompletionUtils {
         return InTextDirectivesUtils.getPrefixedInt(fileText, NUMBER_LINE_PREFIX)
     }
 
-    fun assertNotContainsRenderedItems(unexpected: Array<CompletionProposal>, items: Array<LookupElement>) {
+    fun assertNotContainsRenderedItems(unexpected: Array<CompletionProposal>, items: Array<LookupElement>, ignoreProperties: Collection<String>) {
         val itemsInformation = getItemsInformation(items)
         val allItemsString = listToString(itemsInformation)
 
@@ -275,7 +290,7 @@ object ExpectedCompletionUtils {
             for (proposal in itemsInformation) {
                 Assert.assertFalse(
                     "Unexpected '$unexpectedProposal' presented in\n$allItemsString",
-                    proposal.matches(unexpectedProposal)
+                    proposal.matches(unexpectedProposal, ignoreProperties)
                 )
             }
         }

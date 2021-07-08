@@ -8,10 +8,11 @@ package org.jetbrains.kotlin.idea.frontend.api.fir.components
 import org.jetbrains.kotlin.fir.BuiltinTypes
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.FirImplicitBuiltinTypeRef
-import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ValidityToken
 import org.jetbrains.kotlin.idea.frontend.api.components.KtBuiltinTypes
 import org.jetbrains.kotlin.idea.frontend.api.fir.KtSymbolByFirBuilder
-import org.jetbrains.kotlin.idea.frontend.api.fir.types.KtFirClassType
+import org.jetbrains.kotlin.idea.frontend.api.fir.types.KtFirUsualClassType
+import org.jetbrains.kotlin.idea.frontend.api.fir.utils.ValidityAwareCachedValue
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.cached
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.weakRef
 import org.jetbrains.kotlin.idea.frontend.api.types.KtType
@@ -39,7 +40,7 @@ internal class KtFirBuiltInTypes(builtinTypes: BuiltinTypes, builder: KtSymbolBy
     override val NULLABLE_ANY: KtType by cachedBuiltin(builtinTypes.nullableAnyType)
     override val NULLABLE_NOTHING: KtType by cachedBuiltin(builtinTypes.nullableNothingType)
 
-    private fun cachedBuiltin(builtinTypeRef: FirImplicitBuiltinTypeRef) = cached {
-        KtFirClassType(builtinTypeRef.type as ConeClassLikeTypeImpl, token, builder) // TODO builder leaking
+    private fun cachedBuiltin(builtinTypeRef: FirImplicitBuiltinTypeRef): ValidityAwareCachedValue<KtFirUsualClassType> = cached {
+        KtFirUsualClassType(builtinTypeRef.type as ConeClassLikeTypeImpl, token, builder) // TODO builder leaking
     }
 }

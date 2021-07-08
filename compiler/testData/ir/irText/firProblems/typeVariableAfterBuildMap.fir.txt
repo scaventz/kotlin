@@ -82,24 +82,32 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.Private'
             CONST Boolean type=kotlin.Boolean value=true
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -107,16 +115,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:PrivateToThis modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.PrivateToThis
@@ -127,6 +135,8 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
             isPublicAPI: CONST Boolean type=kotlin.Boolean value=false
           INSTANCE_INITIALIZER_CALL classDescriptor='CLASS OBJECT name:PrivateToThis modality:FINAL visibility:public superTypes:[<root>.Visibility]'
       PROPERTY name:internalDisplayName visibility:public modality:FINAL [val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN name:<get-internalDisplayName> visibility:public modality:FINAL <> ($this:<root>.Visibilities.PrivateToThis) returnType:kotlin.String
           correspondingProperty: PROPERTY name:internalDisplayName visibility:public modality:FINAL [val]
           overridden:
@@ -143,18 +153,24 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.PrivateToThis'
             CONST Boolean type=kotlin.Boolean value=true
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -162,16 +178,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:Protected modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.Protected
@@ -189,24 +205,32 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.Protected'
             CONST Boolean type=kotlin.Boolean value=false
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -214,16 +238,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:Internal modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.Internal
@@ -241,24 +265,32 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.Internal'
             CONST Boolean type=kotlin.Boolean value=true
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -266,16 +298,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:Public modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.Public
@@ -293,24 +325,32 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.Public'
             CONST Boolean type=kotlin.Boolean value=false
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -318,16 +358,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:Local modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.Local
@@ -345,24 +385,32 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.Local'
             CONST Boolean type=kotlin.Boolean value=true
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -370,16 +418,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:Inherited modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.Inherited
@@ -395,27 +443,35 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
         $this: VALUE_PARAMETER name:<this> type:<root>.Visibilities.Inherited
         BLOCK_BODY
           THROW type=kotlin.Nothing
-            CONSTRUCTOR_CALL 'public constructor <init> (p0: kotlin.String?) declared in java.lang.IllegalStateException' type=java.lang.IllegalStateException origin=null
+            CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] kotlin.String?) declared in java.lang.IllegalStateException' type=java.lang.IllegalStateException origin=null
               p0: CONST String type=kotlin.String value="This method shouldn't be invoked for INHERITED visibility"
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -423,16 +479,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:InvisibleFake modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.InvisibleFake
@@ -450,6 +506,8 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           RETURN type=kotlin.Nothing from='public final fun mustCheckInImports (): kotlin.Boolean declared in <root>.Visibilities.InvisibleFake'
             CONST Boolean type=kotlin.Boolean value=true
       PROPERTY name:externalDisplayName visibility:public modality:FINAL [val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN name:<get-externalDisplayName> visibility:public modality:FINAL <> ($this:<root>.Visibilities.InvisibleFake) returnType:kotlin.String
           correspondingProperty: PROPERTY name:externalDisplayName visibility:public modality:FINAL [val]
           overridden:
@@ -459,18 +517,24 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
             RETURN type=kotlin.Nothing from='public final fun <get-externalDisplayName> (): kotlin.String declared in <root>.Visibilities.InvisibleFake'
               CONST String type=kotlin.String value="invisible (private in a supertype)"
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -478,16 +542,16 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     CLASS OBJECT name:Unknown modality:FINAL visibility:public superTypes:[<root>.Visibility]
       $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:<root>.Visibilities.Unknown
@@ -503,27 +567,35 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
         $this: VALUE_PARAMETER name:<this> type:<root>.Visibilities.Unknown
         BLOCK_BODY
           THROW type=kotlin.Nothing
-            CONSTRUCTOR_CALL 'public constructor <init> (p0: kotlin.String?) declared in java.lang.IllegalStateException' type=java.lang.IllegalStateException origin=null
+            CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] kotlin.String?) declared in java.lang.IllegalStateException' type=java.lang.IllegalStateException origin=null
               p0: CONST String type=kotlin.String value="This method shouldn't be invoked for UNKNOWN visibility"
       PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final name: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-name> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:name visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-name> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
+        overridden:
+          public final isPublicAPI: kotlin.Boolean [val]
         FUN FAKE_OVERRIDE name:<get-isPublicAPI> visibility:public modality:FINAL <> ($this:<root>.Visibility) returnType:kotlin.Boolean [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:isPublicAPI visibility:public modality:FINAL [fake_override,val]
           overridden:
             public final fun <get-isPublicAPI> (): kotlin.Boolean declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open internalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-internalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:internalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
             public open fun <get-internalDisplayName> (): kotlin.String declared in <root>.Visibility
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
+        overridden:
+          public open externalDisplayName: kotlin.String [val]
         FUN FAKE_OVERRIDE name:<get-externalDisplayName> visibility:public modality:OPEN <> ($this:<root>.Visibility) returnType:kotlin.String [fake_override]
           correspondingProperty: PROPERTY FAKE_OVERRIDE name:externalDisplayName visibility:public modality:OPEN [fake_override,val]
           overridden:
@@ -531,21 +603,21 @@ FILE fqName:<root> fileName:/typeVariableAfterBuildMap.kt
           $this: VALUE_PARAMETER name:<this> type:<root>.Visibility
       FUN FAKE_OVERRIDE name:equals visibility:public modality:OPEN <> ($this:kotlin.Any, other:kotlin.Any?) returnType:kotlin.Boolean [fake_override,operator]
         overridden:
-          public open fun equals (other: kotlin.Any?): kotlin.Boolean [operator] declared in kotlin.Any
+          public open fun equals (other: kotlin.Any?): kotlin.Boolean [fake_override,operator] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
         VALUE_PARAMETER name:other index:0 type:kotlin.Any?
       FUN FAKE_OVERRIDE name:hashCode visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.Int [fake_override]
         overridden:
-          public open fun hashCode (): kotlin.Int declared in kotlin.Any
+          public open fun hashCode (): kotlin.Int [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
       FUN FAKE_OVERRIDE name:toString visibility:public modality:OPEN <> ($this:kotlin.Any) returnType:kotlin.String [fake_override]
         overridden:
-          public open fun toString (): kotlin.String declared in kotlin.Any
+          public open fun toString (): kotlin.String [fake_override] declared in <root>.Visibility
         $this: VALUE_PARAMETER name:<this> type:kotlin.Any
     PROPERTY name:ORDERED_VISIBILITIES visibility:private modality:FINAL [val]
       FIELD PROPERTY_BACKING_FIELD name:ORDERED_VISIBILITIES type:kotlin.collections.Map<<root>.Visibility, kotlin.Int> visibility:private [final]
         EXPRESSION_BODY
-          CALL 'public final fun buildMap <K, V> (builderAction: @[ExtensionFunctionType] kotlin.Function1<kotlin.collections.MutableMap<K of kotlin.collections.buildMap, V of kotlin.collections.buildMap>, kotlin.Unit>): kotlin.collections.Map<K of kotlin.collections.buildMap, V of kotlin.collections.buildMap> [inline] declared in kotlin.collections' type=kotlin.collections.Map<<root>.Visibility, kotlin.Int> origin=null
+          CALL 'public final fun buildMap <K, V> (builderAction: @[ExtensionFunctionType] kotlin.Function1<kotlin.collections.MutableMap<K of kotlin.collections.MapsKt.buildMap, V of kotlin.collections.MapsKt.buildMap>, kotlin.Unit>): kotlin.collections.Map<K of kotlin.collections.MapsKt.buildMap, V of kotlin.collections.MapsKt.buildMap> [inline] declared in kotlin.collections.MapsKt' type=kotlin.collections.Map<<root>.Visibility, kotlin.Int> origin=null
             <K>: <root>.Visibility
             <V>: kotlin.Int
             builderAction: FUN_EXPR type=kotlin.Function1<kotlin.collections.MutableMap<<root>.Visibility, kotlin.Int>, kotlin.Unit> origin=LAMBDA

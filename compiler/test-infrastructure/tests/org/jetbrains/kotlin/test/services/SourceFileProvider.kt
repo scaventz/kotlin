@@ -18,16 +18,19 @@ abstract class SourceFilePreprocessor(val testServices: TestServices) {
 abstract class SourceFileProvider : TestService {
     abstract val kotlinSourceDirectory: File
     abstract val javaSourceDirectory: File
+    abstract val javaBinaryDirectory: File
 
     abstract fun getContentOfSourceFile(testFile: TestFile): String
     abstract fun getRealFileForSourceFile(testFile: TestFile): File
+    abstract fun getRealFileForBinaryFile(testFile: TestFile): File
 }
 
 val TestServices.sourceFileProvider: SourceFileProvider by TestServices.testServiceAccessor()
 
-class SourceFileProviderImpl(val preprocessors: List<SourceFilePreprocessor>) : SourceFileProvider() {
-    override val kotlinSourceDirectory: File = KtTestUtil.tmpDir("kotlin-files")
-    override val javaSourceDirectory: File = KtTestUtil.tmpDir("java-files")
+class SourceFileProviderImpl(val testServices: TestServices, val preprocessors: List<SourceFilePreprocessor>) : SourceFileProvider() {
+    override val kotlinSourceDirectory: File = testServices.getOrCreateTempDirectory("kotlin-files")
+    override val javaSourceDirectory: File = testServices.getOrCreateTempDirectory("java-files")
+    override val javaBinaryDirectory: File = testServices.getOrCreateTempDirectory("java-binary-files")
 
     private val contentOfFiles = mutableMapOf<TestFile, String>()
     private val realFileMap = mutableMapOf<TestFile, File>()
@@ -43,6 +46,19 @@ class SourceFileProviderImpl(val preprocessors: List<SourceFilePreprocessor>) : 
             val directory = when {
                 testFile.isKtFile -> kotlinSourceDirectory
                 testFile.isJavaFile -> javaSourceDirectory
+                else -> error("Unknown file type: ${testFile.name}")
+            }
+            directory.resolve(testFile.relativePath).also {
+                it.parentFile.mkdirs()
+                it.writeText(getContentOfSourceFile(testFile))
+            }
+        }
+    }
+
+    override fun getRealFileForBinaryFile(testFile: TestFile): File {
+        return realFileMap.getOrPut(testFile) {
+            val directory = when {
+                testFile.isJavaFile -> javaBinaryDirectory
                 else -> error("Unknown file type: ${testFile.name}")
             }
             directory.resolve(testFile.relativePath).also {

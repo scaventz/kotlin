@@ -14,12 +14,7 @@ fun main(args: Array<String>) {
 @BuilderInference
 suspend fun SequenceScope<Int>.awaitSeq(): Int = 42
 
-
-// 1 LOCALVARIABLE a I L[0-9]+ L18
-
-/* TODO: JVM_IR does not generate LINENUMBER at the end of the lambda */
-// JVM_TEMPLATES
 // 1 LINENUMBER 9 L19
-
+// 1 LOCALVARIABLE a I L[0-9]+ L18
 
 // IGNORE_BACKEND_FIR: JVM_IR

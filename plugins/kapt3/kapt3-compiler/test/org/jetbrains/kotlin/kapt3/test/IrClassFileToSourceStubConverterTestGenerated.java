@@ -65,14 +65,29 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/annotations3.kt");
     }
 
+    @TestMetadata("annotationsWithConstants.kt")
+    public void testAnnotationsWithConstants() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/annotationsWithConstants.kt");
+    }
+
     @TestMetadata("annotationsWithTargets.kt")
     public void testAnnotationsWithTargets() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/annotationsWithTargets.kt");
     }
 
+    @TestMetadata("anonymousDelegate.kt")
+    public void testAnonymousDelegate() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/anonymousDelegate.kt");
+    }
+
     @TestMetadata("comments.kt")
     public void testComments() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/comments.kt");
+    }
+
+    @TestMetadata("commentsRemoved.kt")
+    public void testCommentsRemoved() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/commentsRemoved.kt");
     }
 
     @TestMetadata("cyrillicClassName.kt")
@@ -90,6 +105,16 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultImpls.kt");
     }
 
+    @TestMetadata("defaultPackage.kt")
+    public void testDefaultPackage() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultPackage.kt");
+    }
+
+    @TestMetadata("defaultPackageCorrectErrorTypes.kt")
+    public void testDefaultPackageCorrectErrorTypes() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultPackageCorrectErrorTypes.kt");
+    }
+
     @TestMetadata("defaultParameterValueOff.kt")
     public void testDefaultParameterValueOff() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultParameterValueOff.kt");
@@ -98,6 +123,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
     @TestMetadata("defaultParameterValueOn.kt")
     public void testDefaultParameterValueOn() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/defaultParameterValueOn.kt");
+    }
+
+    @TestMetadata("delegateCorrectErrorTypes.kt")
+    public void testDelegateCorrectErrorTypes() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/delegateCorrectErrorTypes.kt");
     }
 
     @TestMetadata("deprecated.kt")
@@ -178,6 +208,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
     @TestMetadata("importsKt22083.kt")
     public void testImportsKt22083() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/importsKt22083.kt");
+    }
+
+    @TestMetadata("incorrectDelegate.kt")
+    public void testIncorrectDelegate() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/incorrectDelegate.kt");
     }
 
     @TestMetadata("inheritanceSimple.kt")
@@ -288,11 +323,6 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
     @TestMetadata("kt18682.kt")
     public void testKt18682() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/kt18682.kt");
-    }
-
-    @TestMetadata("kt18791.kt")
-    public void testKt18791() throws Exception {
-        runTest("plugins/kapt3/kapt3-compiler/testData/converter/kt18791.kt");
     }
 
     @TestMetadata("kt19700.kt")
@@ -410,6 +440,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/primitiveTypes.kt");
     }
 
+    @TestMetadata("properties.kt")
+    public void testProperties() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/properties.kt");
+    }
+
     @TestMetadata("propertyAnnotations.kt")
     public void testPropertyAnnotations() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/propertyAnnotations.kt");
@@ -448,6 +483,11 @@ public class IrClassFileToSourceStubConverterTestGenerated extends AbstractIrCla
     @TestMetadata("stripMetadata.kt")
     public void testStripMetadata() throws Exception {
         runTest("plugins/kapt3/kapt3-compiler/testData/converter/stripMetadata.kt");
+    }
+
+    @TestMetadata("suspendArgName.kt")
+    public void testSuspendArgName() throws Exception {
+        runTest("plugins/kapt3/kapt3-compiler/testData/converter/suspendArgName.kt");
     }
 
     @TestMetadata("suspendErrorTypes.kt")

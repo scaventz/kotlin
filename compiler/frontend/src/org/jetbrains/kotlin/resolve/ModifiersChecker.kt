@@ -357,6 +357,13 @@ object ModifierCheckerCore {
                 continue
             }
 
+            if (dependency == LanguageFeature.InlineClasses) {
+                if (languageVersionSettings.supportsFeature(LanguageFeature.JvmInlineValueClasses)) {
+                    trace.report(Errors.INLINE_CLASS_DEPRECATED.on(node.psi))
+                    continue
+                }
+            }
+
             val diagnosticData = dependency to languageVersionSettings
             when (featureSupport) {
                 LanguageFeature.State.ENABLED_WITH_WARNING -> {
@@ -388,7 +395,12 @@ object ModifierCheckerCore {
     ): Boolean {
         val modifier = node.elementType as KtModifierKeywordToken
         val actualParents: List<KotlinTarget> = when (parentDescriptor) {
-            is ClassDescriptor -> KotlinTarget.classActualTargets(parentDescriptor)
+            is ClassDescriptor -> KotlinTarget.classActualTargets(
+                parentDescriptor.kind,
+                isInnerClass = parentDescriptor.isInner,
+                isCompanionObject = parentDescriptor.isCompanionObject,
+                isLocalClass = DescriptorUtils.isLocal(parentDescriptor)
+            )
             is PropertySetterDescriptor -> listOf(PROPERTY_SETTER)
             is PropertyGetterDescriptor -> listOf(PROPERTY_GETTER)
             is FunctionDescriptor -> listOf(FUNCTION)

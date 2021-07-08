@@ -18,3 +18,9 @@ val KotlinBuildProperties.proguard: Boolean get() = postProcessing && getBoolean
 val KotlinBuildProperties.jarCompression: Boolean get() = getBoolean("kotlin.build.jar.compression", isTeamcityBuild)
 
 val KotlinBuildProperties.ignoreTestFailures: Boolean get() = getBoolean("ignoreTestFailures", isTeamcityBuild)
+
+val KotlinBuildProperties.disableWerror: Boolean get() = getBoolean("kotlin.build.disable.werror", false)
+
+val KotlinBuildProperties.isObsoleteJdkOverrideEnabled: Boolean
+    get() = !isTeamcityBuild &&
+            getBoolean("kotlin.build.isObsoleteJdkOverrideEnabled", false)

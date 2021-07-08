@@ -364,6 +364,7 @@ open class PodGenTask : DefaultTask() {
         }
     }
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFile
     internal lateinit var podspec: Provider<File>
 
@@ -443,7 +444,7 @@ open class PodSetupBuildTask : DefaultTask() {
     lateinit var pod: Provider<CocoapodsDependency>
 
     @get:OutputFile
-    internal val buildSettingsFile: Provider<File> = project.provider {
+    val buildSettingsFile: Provider<File> = project.provider {
         project.cocoapodsBuildDirs
             .buildSettings
             .resolve(getBuildSettingFileName(pod.get(), sdk.get()))
@@ -480,12 +481,15 @@ private fun getBuildSettingFileName(pod: CocoapodsDependency, sdk: String): Stri
  */
 open class PodBuildTask : DefaultTask() {
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFile
-    internal lateinit var buildSettingsFile: Provider<File>
+    lateinit var buildSettingsFile: Provider<File>
+        internal set
 
     @get:Nested
     internal lateinit var pod: Provider<CocoapodsDependency>
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFiles
     internal val srcDir: FileTree
         get() = project.fileTree(
@@ -530,10 +534,10 @@ open class PodBuildTask : DefaultTask() {
 }
 
 
-internal data class PodBuildSettingsProperties(
+data class PodBuildSettingsProperties(
     internal val buildDir: String,
     internal val configuration: String,
-    internal val configurationBuildDir: String,
+    val configurationBuildDir: String,
     internal val podsTargetSrcRoot: String,
     internal val cflags: String? = null,
     internal val headerPaths: String? = null,

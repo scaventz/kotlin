@@ -1,14 +1,13 @@
-// !WITH_NEW_INFERENCE
 //KT-2283 Bad diagnostics of failed type inference
 package a
 
 
 interface Foo<A>
 
-fun <A, B> Foo<A>.map(<!UNUSED_PARAMETER!>f<!>: (A) -> B): Foo<B> = object : Foo<B> {}
+fun <A, B> Foo<A>.map(f: (A) -> B): Foo<B> = object : Foo<B> {}
 
 
 fun foo() {
     val l: Foo<String> = object : Foo<String> {}
-    val <!UNUSED_VARIABLE!>m<!>: Foo<String> = l.<!TYPE_INFERENCE_EXPECTED_TYPE_MISMATCH{OI}!>map { <!UNUSED_ANONYMOUS_PARAMETER!>ppp<!> -> <!CONSTANT_EXPECTED_TYPE_MISMATCH{NI}, CONSTANT_EXPECTED_TYPE_MISMATCH{NI}!>1<!> }<!>
+    val m: Foo<String> = l.map { ppp -> <!CONSTANT_EXPECTED_TYPE_MISMATCH!>1<!> }
 }

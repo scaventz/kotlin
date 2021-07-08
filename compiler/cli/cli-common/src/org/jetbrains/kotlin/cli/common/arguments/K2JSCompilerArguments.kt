@@ -5,8 +5,7 @@
 
 package org.jetbrains.kotlin.cli.common.arguments
 
-import org.jetbrains.kotlin.cli.common.arguments.K2JsArgumentConstants.CALL
-import org.jetbrains.kotlin.cli.common.arguments.K2JsArgumentConstants.NO_CALL
+import org.jetbrains.kotlin.cli.common.arguments.K2JsArgumentConstants.*
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.ApiVersion
@@ -32,6 +31,13 @@ class K2JSCompilerArguments : CommonCompilerArguments() {
             description = "Paths to Kotlin libraries with .meta.js and .kjsm files, separated by system path separator"
     )
     var libraries: String? by NullableStringFreezableVar(null)
+
+    @Argument(
+        value = "-Xrepositories",
+        valueDescription = "<path>",
+        description = "Paths to additional places where libraries could be found"
+    )
+    var repositries: String? by NullableStringFreezableVar(null)
 
     @GradleOption(DefaultValues.BooleanFalseDefault::class)
     @Argument(value = "-source-map", description = "Generate source map")
@@ -119,6 +125,13 @@ class K2JSCompilerArguments : CommonCompilerArguments() {
     @Argument(value = "-Xir-dce", description = "Perform experimental dead code elimination")
     var irDce: Boolean by FreezableVar(false)
 
+    @Argument(
+        value = "-Xir-dce-runtime-diagnostic",
+        valueDescription = "{$RUNTIME_DIAGNOSTIC_LOG|$RUNTIME_DIAGNOSTIC_EXCEPTION}",
+        description = "Enable runtime diagnostics when performing DCE instead of removing declarations"
+    )
+    var irDceRuntimeDiagnostic: String? by NullableStringFreezableVar(null)
+
     @Argument(value = "-Xir-dce-driven", description = "Perform a more experimental faster dead code elimination")
     var irDceDriven: Boolean by FreezableVar(false)
 
@@ -138,8 +151,30 @@ class K2JSCompilerArguments : CommonCompilerArguments() {
     )
     var irModuleName: String? by NullableStringFreezableVar(null)
 
+    @Argument(value = "-Xir-legacy-property-access", description = "Force property access via JS properties (requires -Xir-export-all)")
+    var irLegacyPropertyAccess: Boolean by FreezableVar(false)
+
+    @Argument(value = "-Xir-base-class-in-metadata", description = "Write base class into metadata")
+    var irBaseClassInMetadata: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xir-safe-external-boolean",
+        description = "Safe access via Boolean() to Boolean properties in externals to safely cast falsy values."
+    )
+    var irSafeExternalBoolean: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xir-safe-external-boolean-diagnostic",
+        valueDescription = "{$RUNTIME_DIAGNOSTIC_LOG|$RUNTIME_DIAGNOSTIC_EXCEPTION}",
+        description = "Enable runtime diagnostics when access safely to boolean in external declarations"
+    )
+    var irSafeExternalBooleanDiagnostic: String? by NullableStringFreezableVar(null)
+
     @Argument(value = "-Xir-per-module", description = "Splits generated .js per-module")
     var irPerModule: Boolean by FreezableVar(false)
+
+    @Argument(value = "-Xir-per-module-output-name", description = "Adds a custom output name to the splitted js files")
+    var irPerModuleOutputName: String? by NullableStringFreezableVar(null)
 
     @Argument(
         value = "-Xinclude",
@@ -147,6 +182,16 @@ class K2JSCompilerArguments : CommonCompilerArguments() {
         description = "A path to an intermediate library that should be processed in the same manner as source files."
     )
     var includes: String? by NullableStringFreezableVar(null)
+
+    @Argument(
+        value = "-Xcache-directories",
+        valueDescription = "<path>",
+        description = "A path to cache directories"
+    )
+    var cacheDirectories: String? by NullableStringFreezableVar(null)
+
+    @Argument(value = "-Xir-build-cache", description = "Use compiler to build cache")
+    var irBuildCache: Boolean by FreezableVar(false)
 
     @Argument(
         value = "-Xgenerate-dts",
@@ -199,7 +244,7 @@ class K2JSCompilerArguments : CommonCompilerArguments() {
 }
 
 fun K2JSCompilerArguments.isPreIrBackendDisabled(): Boolean =
-    irOnly || irProduceJs || irProduceKlibFile
+    irOnly || irProduceJs || irProduceKlibFile || irBuildCache
 
 fun K2JSCompilerArguments.isIrBackendEnabled(): Boolean =
-    irProduceKlibDir || irProduceJs || irProduceKlibFile || wasm
+    irProduceKlibDir || irProduceJs || irProduceKlibFile || wasm || irBuildCache

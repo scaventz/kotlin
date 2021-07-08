@@ -14,6 +14,7 @@ object TestGeneratorUtil {
     @Language("RegExp") const val KT_OR_KTS_WITHOUT_DOTS_IN_NAME = """^([^.]+)\.(kt|kts)$"""
 
     @Language("RegExp") const val KT_WITHOUT_DOTS_IN_NAME = """^([^.]+)\.kt$"""
+    @Language("RegExp") const val KT_WITHOUT_FIR_PREFIX = """^(.+)(?<!\.fir)\.kt$"""
 
     @JvmStatic
     fun escapeForJavaIdentifier(fileName: String): String {
@@ -31,6 +32,18 @@ object TestGeneratorUtil {
 
     @JvmStatic
     fun fileNameToJavaIdentifier(file: File): String {
-        return escapeForJavaIdentifier(file.name).capitalize()
+        return escapeForJavaIdentifier(file.name).replaceFirstChar(Char::uppercaseChar)
     }
+}
+
+private val defaultPackages = listOf(
+    "java.lang",
+    "kotlin",
+    "kotlin.annotations",
+    "kotlin.collections"
+)
+
+fun Class<*>.isDefaultImportedClass(): Boolean {
+    val outerName = canonicalName.removeSuffix(".$simpleName")
+    return outerName in defaultPackages
 }

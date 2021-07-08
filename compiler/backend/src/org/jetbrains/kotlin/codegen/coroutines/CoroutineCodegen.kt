@@ -7,10 +7,7 @@ package org.jetbrains.kotlin.codegen.coroutines
 
 import com.intellij.util.ArrayUtil
 import org.jetbrains.kotlin.backend.common.CodegenUtil
-import org.jetbrains.kotlin.builtins.isSuspendFunctionTypeOrSubtype
-import org.jetbrains.kotlin.cfg.index
 import org.jetbrains.kotlin.codegen.*
-import org.jetbrains.kotlin.codegen.binding.CalculatedClosure
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding.CAPTURES_CROSSINLINE_LAMBDA
 import org.jetbrains.kotlin.codegen.binding.CodegenBinding.CLOSURE
@@ -35,6 +32,7 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.descriptorUtil.builtIns
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
+import org.jetbrains.kotlin.resolve.indexOrMinusOne
 import org.jetbrains.kotlin.resolve.isInlineClassType
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.ErrorsJvm
@@ -263,7 +261,7 @@ class CoroutineCodegenForLambda private constructor(
 
     private fun ParameterDescriptor.isUnused(): Boolean =
         originalSuspendFunctionDescriptor is AnonymousFunctionDescriptor &&
-                bindingContext[BindingContext.SUSPEND_LAMBDA_PARAMETER_USED, originalSuspendFunctionDescriptor to index()] != true
+                bindingContext[BindingContext.SUSPEND_LAMBDA_PARAMETER_USED, originalSuspendFunctionDescriptor to indexOrMinusOne()] != true
 
     private val generateErasedCreate: Boolean = allFunctionParameters().size <= 1
 
@@ -450,7 +448,7 @@ class CoroutineCodegenForLambda private constructor(
                             if (parameter.type.isInlineClassType()) {
                                 load(cloneIndex, fieldInfoForCoroutineLambdaParameter.ownerType)
                                 load(index, AsmTypes.OBJECT_TYPE)
-                                StackValue.unboxInlineClass(AsmTypes.OBJECT_TYPE, parameter.type, this)
+                                StackValue.unboxInlineClass(AsmTypes.OBJECT_TYPE, parameter.type, this, typeMapper)
                                 putfield(
                                     fieldInfoForCoroutineLambdaParameter.ownerInternalName,
                                     fieldInfoForCoroutineLambdaParameter.fieldName,
@@ -601,21 +599,6 @@ class CoroutineCodegenForLambda private constructor(
     }
 }
 
-fun isCapturedSuspendLambda(closure: CalculatedClosure, name: String, bindingContext: BindingContext): Boolean {
-    for ((param, value) in closure.captureVariables) {
-        if (param !is ValueParameterDescriptor) continue
-        if (value.fieldName != name) continue
-        return param.type.isSuspendFunctionTypeOrSubtype
-    }
-    val classDescriptor = closure.capturedOuterClassDescriptor ?: return false
-    return isCapturedSuspendLambda(classDescriptor, name, bindingContext)
-}
-
-fun isCapturedSuspendLambda(classDescriptor: ClassDescriptor, name: String, bindingContext: BindingContext): Boolean {
-    val closure = bindingContext[CLOSURE, classDescriptor] ?: return false
-    return isCapturedSuspendLambda(closure, name, bindingContext)
-}
-
 private class AddEndLabelMethodVisitor(
     delegate: MethodVisitor,
     access: Int,
@@ -721,9 +704,16 @@ class CoroutineCodegenForNamedFunction private constructor(
                     }
 
                     val isInterfaceMethod = DescriptorUtils.isInterface(suspendFunctionJvmView.containingDeclaration)
+                    val callableAccessorMethod =
+                        typeMapper.mapToCallableMethod(
+                            context.accessibleDescriptor(suspendFunctionJvmView.unwrapFrontendVersion(), null),
+                            // Obtain default impls method for interfaces
+                            isInterfaceMethod
+                        )
+
                     val callableMethod =
                         typeMapper.mapToCallableMethod(
-                            suspendFunctionJvmView,
+                            suspendFunctionJvmView.unwrapFrontendVersion(),
                             // Obtain default impls method for interfaces
                             isInterfaceMethod
                         )
@@ -736,10 +726,10 @@ class CoroutineCodegenForNamedFunction private constructor(
 
                     if (suspendFunctionJvmView.isOverridable && !isInterfaceMethod && captureThisType != null) {
                         val owner = captureThisType.internalName
-                        val impl = callableMethod.getAsmMethod().getImplForOpenMethod(owner)
+                        val impl = callableAccessorMethod.getAsmMethod().getImplForOpenMethod(owner)
                         codegen.v.invokestatic(owner, impl.name, impl.descriptor, false)
                     } else {
-                        callableMethod.genInvokeInstruction(codegen.v)
+                        callableAccessorMethod.genInvokeInstruction(codegen.v)
                     }
 
                     if (inlineClassToBoxInInvokeSuspend != null) {
@@ -749,7 +739,7 @@ class CoroutineCodegenForNamedFunction private constructor(
                             generateCoroutineSuspendedCheck(languageVersionSettings)
                             // Now we box the inline class
                             StackValue.coerce(AsmTypes.OBJECT_TYPE, typeMapper.mapType(inlineClassToBoxInInvokeSuspend), this)
-                            StackValue.boxInlineClass(inlineClassToBoxInInvokeSuspend, this)
+                            StackValue.boxInlineClass(inlineClassToBoxInInvokeSuspend, this, typeMapper)
                         }
                     }
 

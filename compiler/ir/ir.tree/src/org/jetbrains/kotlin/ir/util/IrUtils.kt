@@ -12,9 +12,7 @@ import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.expressions.*
-import org.jetbrains.kotlin.ir.expressions.impl.IrCallImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrConstructorCallImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
+import org.jetbrains.kotlin.ir.expressions.impl.*
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.name.FqName
@@ -156,12 +154,12 @@ fun IrExpression.isFalseConst() = this is IrConst<*> && this.kind == IrConstKind
 
 fun IrExpression.isIntegerConst(value: Int) = this is IrConst<*> && this.kind == IrConstKind.Int && this.value == value
 
-fun IrExpression.coerceToUnit(builtins: IrBuiltIns): IrExpression {
-    return coerceToUnitIfNeeded(type, builtins)
+fun IrExpression.coerceToUnit(builtins: IrBuiltIns, typeSystem: IrTypeSystemContext): IrExpression {
+    return coerceToUnitIfNeeded(type, builtins, typeSystem)
 }
 
-fun IrExpression.coerceToUnitIfNeeded(valueType: IrType, irBuiltIns: IrBuiltIns): IrExpression {
-    return if (valueType.isSubtypeOf(irBuiltIns.unitType, irBuiltIns))
+fun IrExpression.coerceToUnitIfNeeded(valueType: IrType, irBuiltIns: IrBuiltIns, typeSystem: IrTypeSystemContext): IrExpression {
+    return if (valueType.isSubtypeOf(irBuiltIns.unitType, typeSystem))
         this
     else
         IrTypeOperatorCallImpl(
@@ -250,8 +248,6 @@ fun IrSimpleFunction.findInterfaceImplementation(): IrSimpleFunction? {
     return resolveFakeOverride()?.run { if (parentAsClass.isInterface) this else null }
 }
 
-fun IrProperty.resolveFakeOverride(): IrProperty? = getter?.resolveFakeOverride()?.correspondingPropertySymbol?.owner
-
 val IrClass.isAnnotationClass get() = kind == ClassKind.ANNOTATION_CLASS
 val IrClass.isEnumClass get() = kind == ClassKind.ENUM_CLASS
 val IrClass.isEnumEntry get() = kind == ClassKind.ENUM_ENTRY
@@ -313,23 +309,12 @@ fun IrCall.isSuperToAny() = superQualifierSymbol?.let { this.symbol.owner.isFake
 fun IrDeclaration.hasInterfaceParent() =
     parent.safeAs<IrClass>()?.isInterface == true
 
-fun IrDeclaration.isEffectivelyExternal(): Boolean {
 
-    fun IrFunction.effectiveParentDeclaration(): IrDeclaration? =
-        when (this) {
-            is IrSimpleFunction -> correspondingPropertySymbol?.owner ?: parent as? IrDeclaration
-            else -> parent as? IrDeclaration
-        }
+fun IrPossiblyExternalDeclaration.isEffectivelyExternal(): Boolean =
+    this.isExternal
 
-    val parent = parent
-    return when (this) {
-        is IrFunction -> isExternal || (effectiveParentDeclaration()?.isEffectivelyExternal() ?: false)
-        is IrField -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
-        is IrProperty -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
-        is IrClass -> isExternal || parent is IrDeclaration && parent.isEffectivelyExternal()
-        else -> false
-    }
-}
+fun IrDeclaration.isEffectivelyExternal(): Boolean =
+    this is IrPossiblyExternalDeclaration && this.isExternal
 
 fun IrFunction.isExternalOrInheritedFromExternal(): Boolean {
     fun isExternalOrInheritedFromExternalImpl(f: IrSimpleFunction): Boolean =
@@ -351,6 +336,8 @@ fun ReferenceSymbolTable.referenceClassifier(classifier: ClassifierDescriptor): 
     when (classifier) {
         is TypeParameterDescriptor ->
             referenceTypeParameter(classifier)
+        is ScriptDescriptor ->
+            referenceScript(classifier)
         is ClassDescriptor ->
             referenceClass(classifier)
         else ->
@@ -559,6 +546,10 @@ val IrDeclaration.isFileClass: Boolean
                 origin == IrDeclarationOrigin.SYNTHETIC_FILE_CLASS ||
                 origin == IrDeclarationOrigin.JVM_MULTIFILE_CLASS
 
+fun IrDeclaration.isFromJava(): Boolean =
+    origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB ||
+            parent is IrDeclaration && (parent as IrDeclaration).isFromJava()
+
 val IrValueDeclaration.isImmutable: Boolean
     get() = this is IrValueParameter || this is IrVariable && !isVar
 
@@ -571,37 +562,48 @@ val IrFunction.originalFunction: IrFunction
 val IrProperty.originalProperty: IrProperty
     get() = attributeOwnerId as? IrProperty ?: this
 
-// TODO: support more cases like built-in operator call and so on
+fun IrExpression.isTrivial() =
+    this is IrConst<*> ||
+            this is IrGetValue ||
+            this is IrGetObjectValue ||
+            this is IrErrorExpressionImpl
 
-fun IrExpression?.isPure(anyVariable: Boolean, checkFields: Boolean = true): Boolean {
-    if (this == null) return true
+fun IrExpression.shallowCopy(): IrExpression =
+    shallowCopyOrNull()
+        ?: error("Not a copyable expression: ${render()}")
 
-    fun IrExpression.isPureImpl(): Boolean {
-        return when (this) {
-            is IrConst<*> -> true
-            is IrGetValue -> {
-                if (anyVariable) return true
-                val valueDeclaration = symbol.owner
-                if (valueDeclaration is IrVariable) !valueDeclaration.isVar
-                else true
-            }
-            is IrGetObjectValue -> type.isUnit()
-            else -> false
-        }
+fun IrExpression.shallowCopyOrNull(): IrExpression? =
+    when (this) {
+        is IrConst<*> -> shallowCopy()
+        is IrGetObjectValue ->
+            IrGetObjectValueImpl(
+                startOffset,
+                endOffset,
+                type,
+                symbol
+            )
+        is IrGetValueImpl ->
+            IrGetValueImpl(
+                startOffset,
+                endOffset,
+                type,
+                symbol,
+                origin
+            )
+        is IrErrorExpressionImpl ->
+            IrErrorExpressionImpl(
+                startOffset,
+                endOffset,
+                type,
+                description
+            )
+        else -> null
     }
 
-    if (isPureImpl()) return true
-
-    if (!checkFields) return false
-
-    if (this is IrGetField) {
-        if (!symbol.owner.isFinal) {
-            if (!anyVariable) {
-                return false
-            }
-        }
-        return receiver.isPure(anyVariable)
-    }
-
-    return false
-}
+internal fun <T> IrConst<T>.shallowCopy() = IrConstImpl(
+    startOffset,
+    endOffset,
+    type,
+    kind,
+    value
+)

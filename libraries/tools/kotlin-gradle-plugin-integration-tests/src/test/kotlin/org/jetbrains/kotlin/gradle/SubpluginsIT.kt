@@ -201,7 +201,13 @@ class SubpluginsIT : BaseGradleIT() {
     }
 
     @Test
-    fun testKotlinVersionDowngradeInSupbrojectKt39809() = with(Project("android-dagger", directoryPrefix = "kapt2")) {
+    fun testKotlinVersionDowngradeInSupbrojectKt39809() = with(
+        Project(
+            "android-dagger",
+            directoryPrefix = "kapt2",
+            gradleVersionRequirement = GradleVersionRequired.AtLeast("6.7.1")
+        )
+    ) {
         setupWorkingDir()
 
         gradleBuildScript("app").modify {
@@ -221,7 +227,7 @@ class SubpluginsIT : BaseGradleIT() {
         build(
             ":app:compileDebugKotlin",
             options = defaultBuildOptions().copy(
-                androidGradlePluginVersion = AGPVersion.v3_4_1,
+                androidGradlePluginVersion = AGPVersion.v4_2_0,
                 androidHome = KtTestUtil.findAndroidSdk()
             )
         ) {
@@ -262,5 +268,13 @@ class SubpluginsIT : BaseGradleIT() {
                 )
             }
         }
+    }
+
+    @Test
+    fun testLombokPlugin() {
+        Project("lombokProject").build("build") {
+            assertSuccessful()
+        }
+        
     }
 }

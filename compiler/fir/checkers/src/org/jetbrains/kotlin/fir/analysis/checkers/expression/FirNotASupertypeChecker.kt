@@ -5,12 +5,12 @@
 
 package org.jetbrains.kotlin.fir.analysis.checkers.expression
 
-import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.isSupertypeOf
 import org.jetbrains.kotlin.fir.analysis.checkers.toRegularClass
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
+import org.jetbrains.kotlin.fir.analysis.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.declarations.FirAnonymousObject
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
@@ -18,7 +18,7 @@ import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
 import org.jetbrains.kotlin.fir.references.FirSuperReference
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
-object FirNotASupertypeChecker : FirQualifiedAccessChecker() {
+object FirNotASupertypeChecker : FirQualifiedAccessExpressionChecker() {
     override fun check(expression: FirQualifiedAccessExpression, context: CheckerContext, reporter: DiagnosticReporter) {
         val superReference = expression.calleeReference.safeAs<FirSuperReference>()?.takeIf { it.hadExplicitTypeInSource() }
 
@@ -28,8 +28,8 @@ object FirNotASupertypeChecker : FirQualifiedAccessChecker() {
             ?: return
 
         val surrounding = context.findClosestClass(superReference.labelName) ?: return
-        if (!targetClass.isSupertypeOf(surrounding)) {
-            reporter.report(expression.source)
+        if (!targetClass.isSupertypeOf(surrounding, context.session)) {
+            reporter.reportOn(expression.source, FirErrors.NOT_A_SUPERTYPE, context)
         }
     }
 
@@ -38,10 +38,10 @@ object FirNotASupertypeChecker : FirQualifiedAccessChecker() {
      * item like FirRegularClass or FirAnonymousObject
      * or null if no such item could be found.
      */
-    private fun CheckerContext.findClosestClass(label: String?): FirClass<*>? {
+    private fun CheckerContext.findClosestClass(label: String?): FirClass? {
         for (it in containingDeclarations.reversed()) {
             if (it is FirRegularClass || it is FirAnonymousObject) {
-                val firClass = it as FirClass<*>
+                val firClass = it as FirClass
                 val className = firClass.symbol.classId.shortClassName
                 if (label == null || (!className.isSpecial && className.identifier == label)) {
                     return firClass
@@ -50,11 +50,5 @@ object FirNotASupertypeChecker : FirQualifiedAccessChecker() {
         }
 
         return null
-    }
-
-    private fun DiagnosticReporter.report(source: FirSourceElement?) {
-        source?.let {
-            report(FirErrors.NOT_A_SUPERTYPE.on(it))
-        }
     }
 }

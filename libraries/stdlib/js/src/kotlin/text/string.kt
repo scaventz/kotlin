@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -12,6 +12,7 @@ import kotlin.js.RegExp
  */
 @SinceKotlin("1.2")
 @Deprecated("Use CharArray.concatToString() instead", ReplaceWith("chars.concatToString()"))
+@DeprecatedSinceKotlin(warningSince = "1.4", errorSince = "1.5")
 public actual fun String(chars: CharArray): String {
     var result = ""
     for (char in chars) {
@@ -28,6 +29,7 @@ public actual fun String(chars: CharArray): String {
  */
 @SinceKotlin("1.2")
 @Deprecated("Use CharArray.concatToString(startIndex, endIndex) instead", ReplaceWith("chars.concatToString(offset, offset + length)"))
+@DeprecatedSinceKotlin(warningSince = "1.4", errorSince = "1.5")
 public actual fun String(chars: CharArray, offset: Int, length: Int): String {
     if (offset < 0 || length < 0 || chars.size - offset < length)
         throw IndexOutOfBoundsException("size: ${chars.size}; offset: $offset; length: $length")
@@ -169,6 +171,8 @@ public actual fun String.encodeToByteArray(
 /**
  * Returns a copy of this string converted to upper case using the rules of the default locale.
  */
+@Deprecated("Use uppercase() instead.", ReplaceWith("uppercase()"))
+@DeprecatedSinceKotlin(warningSince = "1.5")
 @kotlin.internal.InlineOnly
 public actual inline fun String.toUpperCase(): String = asDynamic().toUpperCase()
 
@@ -180,14 +184,16 @@ public actual inline fun String.toUpperCase(): String = asDynamic().toUpperCase(
  *
  * @sample samples.text.Strings.uppercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @kotlin.internal.InlineOnly
 public actual inline fun String.uppercase(): String = asDynamic().toUpperCase()
 
 /**
  * Returns a copy of this string converted to lower case using the rules of the default locale.
  */
+@Deprecated("Use lowercase() instead.", ReplaceWith("lowercase()"))
+@DeprecatedSinceKotlin(warningSince = "1.5")
 @kotlin.internal.InlineOnly
 public actual inline fun String.toLowerCase(): String = asDynamic().toLowerCase()
 
@@ -199,8 +205,8 @@ public actual inline fun String.toLowerCase(): String = asDynamic().toLowerCase(
  *
  * @sample samples.text.Strings.lowercase
  */
-@SinceKotlin("1.4")
-@ExperimentalStdlibApi
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @kotlin.internal.InlineOnly
 public actual inline fun String.lowercase(): String = asDynamic().toLowerCase()
 
@@ -234,7 +240,6 @@ public inline fun String.match(regex: String): Array<String>? = asDynamic().matc
 @kotlin.internal.InlineOnly
 internal inline fun String.nativeReplace(pattern: RegExp, replacement: String): String = asDynamic().replace(pattern, replacement)
 
-@OptIn(ExperimentalStdlibApi::class)
 @SinceKotlin("1.2")
 @Suppress("ACTUAL_FUNCTION_WITH_DEFAULT_ARGUMENTS")
 public actual fun String.compareTo(other: String, ignoreCase: Boolean = false): Int {
@@ -266,6 +271,30 @@ public actual fun String.compareTo(other: String, ignoreCase: Boolean = false): 
     } else {
         return compareTo(other)
     }
+}
+
+/**
+ * Returns `true` if the contents of this char sequence are equal to the contents of the specified [other],
+ * i.e. both char sequences contain the same number of the same characters in the same order.
+ *
+ * @sample samples.text.Strings.contentEquals
+ */
+@SinceKotlin("1.5")
+public actual infix fun CharSequence?.contentEquals(other: CharSequence?): Boolean = contentEqualsImpl(other)
+
+/**
+ * Returns `true` if the contents of this char sequence are equal to the contents of the specified [other], optionally ignoring case difference.
+ *
+ * @param ignoreCase `true` to ignore character case when comparing contents.
+ *
+ * @sample samples.text.Strings.contentEquals
+ */
+@SinceKotlin("1.5")
+public actual fun CharSequence?.contentEquals(other: CharSequence?, ignoreCase: Boolean): Boolean {
+    return if (ignoreCase)
+        this.contentEqualsIgnoreCaseImpl(other)
+    else
+        this.contentEqualsImpl(other)
 }
 
 

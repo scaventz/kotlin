@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.test.builders
 
 import org.jetbrains.kotlin.config.*
+import org.jetbrains.kotlin.test.TargetBackend
 import org.jetbrains.kotlin.test.directives.LanguageSettingsDirectives
 import org.jetbrains.kotlin.test.directives.model.RegisteredDirectives
 import org.jetbrains.kotlin.test.directives.model.singleOrZeroValue
@@ -49,7 +50,11 @@ class LanguageVersionSettingsBuilder {
         analysisFlags[flag] = value
     }
 
-    fun configureUsingDirectives(directives: RegisteredDirectives, environmentConfigurators: List<EnvironmentConfigurator>) {
+    fun configureUsingDirectives(
+        directives: RegisteredDirectives,
+        environmentConfigurators: List<EnvironmentConfigurator>,
+        targetBackend: TargetBackend?
+    ) {
         val apiVersion = directives.singleOrZeroValue(LanguageSettingsDirectives.API_VERSION)
         if (apiVersion != null) {
             this.apiVersion = apiVersion
@@ -64,11 +69,13 @@ class LanguageVersionSettingsBuilder {
             analysisFlag(AnalysisFlags.constraintSystemForOverloadResolution, directives.singleOrZeroValue(LanguageSettingsDirectives.CONSTRAINT_SYSTEM_FOR_OVERLOAD_RESOLUTION)),
             analysisFlag(AnalysisFlags.allowResultReturnType, trueOrNull(LanguageSettingsDirectives.ALLOW_RESULT_RETURN_TYPE in directives)),
             analysisFlag(AnalysisFlags.explicitApiMode, directives.singleOrZeroValue(LanguageSettingsDirectives.EXPLICIT_API_MODE)),
+            analysisFlag(AnalysisFlags.allowKotlinPackage, trueOrNull(LanguageSettingsDirectives.ALLOW_KOTLIN_PACKAGE in directives)),
 
             analysisFlag(JvmAnalysisFlags.jvmDefaultMode, directives.singleOrZeroValue(LanguageSettingsDirectives.JVM_DEFAULT_MODE)),
             analysisFlag(JvmAnalysisFlags.inheritMultifileParts, trueOrNull(LanguageSettingsDirectives.INHERIT_MULTIFILE_PARTS in directives)),
             analysisFlag(JvmAnalysisFlags.sanitizeParentheses, trueOrNull(LanguageSettingsDirectives.SANITIZE_PARENTHESES in directives)),
             analysisFlag(JvmAnalysisFlags.enableJvmPreview, trueOrNull(LanguageSettingsDirectives.ENABLE_JVM_PREVIEW in directives)),
+            analysisFlag(JvmAnalysisFlags.useIR, targetBackend?.isIR != false),
 
             analysisFlag(AnalysisFlags.explicitApiVersion, trueOrNull(apiVersion != null)),
         )
@@ -76,7 +83,7 @@ class LanguageVersionSettingsBuilder {
         analysisFlags.forEach { withFlag(it.first, it.second) }
 
         environmentConfigurators.forEach {
-            it.provideAdditionalAnalysisFlags(directives).entries.forEach { (flag, value) ->
+            it.provideAdditionalAnalysisFlags(directives, languageVersion).entries.forEach { (flag, value) ->
                 withFlag(flag, value)
             }
         }
@@ -106,7 +113,7 @@ class LanguageVersionSettingsBuilder {
         specificFeatures[feature] = mode
     }
 
-    @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
+    @Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE", "HIDDEN")
     private fun <T : Any> analysisFlag(flag: AnalysisFlag<T>, value: @kotlin.internal.NoInfer T?): Pair<AnalysisFlag<T>, T>? =
         value?.let(flag::to)
 

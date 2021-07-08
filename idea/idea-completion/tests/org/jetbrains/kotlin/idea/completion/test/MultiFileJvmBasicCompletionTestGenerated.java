@@ -224,6 +224,11 @@ public class MultiFileJvmBasicCompletionTestGenerated extends AbstractMultiFileJ
         runTest("idea/idea-completion/testData/basic/multifile/NoGenericFunDuplication/");
     }
 
+    @TestMetadata("NotImportedClass")
+    public void testNotImportedClass() throws Exception {
+        runTest("idea/idea-completion/testData/basic/multifile/NotImportedClass/");
+    }
+
     @TestMetadata("NotImportedExtensionForImplicitReceiver")
     public void testNotImportedExtensionForImplicitReceiver() throws Exception {
         runTest("idea/idea-completion/testData/basic/multifile/NotImportedExtensionForImplicitReceiver/");
@@ -267,6 +272,11 @@ public class MultiFileJvmBasicCompletionTestGenerated extends AbstractMultiFileJ
     @TestMetadata("NotImportedJavaClass")
     public void testNotImportedJavaClass() throws Exception {
         runTest("idea/idea-completion/testData/basic/multifile/NotImportedJavaClass/");
+    }
+
+    @TestMetadata("NotImportedNestedClassFromPrivateClass")
+    public void testNotImportedNestedClassFromPrivateClass() throws Exception {
+        runTest("idea/idea-completion/testData/basic/multifile/NotImportedNestedClassFromPrivateClass/");
     }
 
     @TestMetadata("NotImportedObject")
@@ -377,6 +387,11 @@ public class MultiFileJvmBasicCompletionTestGenerated extends AbstractMultiFileJ
     @TestMetadata("SyntheticExtensionNonVoidSetter")
     public void testSyntheticExtensionNonVoidSetter() throws Exception {
         runTest("idea/idea-completion/testData/basic/multifile/SyntheticExtensionNonVoidSetter/");
+    }
+
+    @TestMetadata("SyntheticPrimitiveJavaProperty")
+    public void testSyntheticPrimitiveJavaProperty() throws Exception {
+        runTest("idea/idea-completion/testData/basic/multifile/SyntheticPrimitiveJavaProperty/");
     }
 
     @TestMetadata("TopLevelFunction")

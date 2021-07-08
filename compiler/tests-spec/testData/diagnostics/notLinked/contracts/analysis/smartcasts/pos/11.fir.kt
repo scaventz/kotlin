@@ -1,3 +1,4 @@
+// FIR_IDE_IGNORE
 // !USE_EXPERIMENTAL: kotlin.contracts.ExperimentalContracts
 
 // FILE: contracts.kt
@@ -51,8 +52,8 @@ class case_3 {
     fun case_3(value_1: Any?, value_2: Number?) {
         val o = case_3()
         contracts.case_3(value_1, value_2, o.prop_1, this.prop_1)
-        <!AMBIGUITY!>println<!>(o.prop_1.<!NONE_APPLICABLE!>plus<!>(3))
-        <!AMBIGUITY!>println<!>(this.prop_1.<!NONE_APPLICABLE!>plus<!>(3))
+        println(o.prop_1.plus(3))
+        println(this.prop_1.plus(3))
     }
 }
 
@@ -62,8 +63,8 @@ class case_4 {
     fun case_4(value_1: Any?, value_2: Number?) {
         val o = case_4()
         if (contracts.case_4(value_1, value_2, o.prop_1, this.prop_1)) {
-            <!AMBIGUITY!>println<!>(o.prop_1.<!NONE_APPLICABLE!>plus<!>(3))
-            <!AMBIGUITY!>println<!>(this.prop_1.<!NONE_APPLICABLE!>plus<!>(3))
+            println(o.prop_1.plus(3))
+            println(this.prop_1.plus(3))
         }
     }
 }

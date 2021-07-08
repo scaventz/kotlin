@@ -5,11 +5,26 @@
 
 package org.jetbrains.kotlin.idea.frontend.api.components
 
-import org.jetbrains.kotlin.diagnostics.Diagnostic
+import org.jetbrains.kotlin.idea.frontend.api.diagnostics.KtDiagnostic
+import org.jetbrains.kotlin.idea.frontend.api.diagnostics.KtDiagnosticWithPsi
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
 
-abstract class KtDiagnosticProvider : KtAnalysisSessionComponent() {
-    abstract fun getDiagnosticsForElement(element: KtElement): Collection<Diagnostic>
-    abstract fun collectDiagnosticsForFile(ktFile: KtFile): Collection<Diagnostic>
+public abstract class KtDiagnosticProvider : KtAnalysisSessionComponent() {
+    public abstract fun getDiagnosticsForElement(element: KtElement, filter: KtDiagnosticCheckerFilter): Collection<KtDiagnosticWithPsi<*>>
+    public abstract fun collectDiagnosticsForFile(ktFile: KtFile, filter: KtDiagnosticCheckerFilter): Collection<KtDiagnosticWithPsi<*>>
+}
+
+public interface KtDiagnosticProviderMixIn : KtAnalysisSessionMixIn {
+    public fun KtElement.getDiagnostics(filter: KtDiagnosticCheckerFilter): Collection<KtDiagnostic> =
+        analysisSession.diagnosticProvider.getDiagnosticsForElement(this, filter)
+
+    public fun KtFile.collectDiagnosticsForFile(filter: KtDiagnosticCheckerFilter): Collection<KtDiagnosticWithPsi<*>> =
+        analysisSession.diagnosticProvider.collectDiagnosticsForFile(this, filter)
+}
+
+public enum class KtDiagnosticCheckerFilter {
+    ONLY_COMMON_CHECKERS,
+    ONLY_EXTENDED_CHECKERS,
+    EXTENDED_AND_COMMON_CHECKERS,
 }

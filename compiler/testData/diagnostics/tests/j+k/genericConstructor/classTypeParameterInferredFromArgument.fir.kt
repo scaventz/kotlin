@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !CHECK_TYPE
 // FILE: A.java
 
@@ -12,6 +11,6 @@ fun test(x: List<Int>, y: List<String>) {
     A("", x) checkType { <!INAPPLICABLE_CANDIDATE!>_<!><A<Any?>>() }
     A("", y) checkType { _<A<String?>>() }
 
-    <!INAPPLICABLE_CANDIDATE!>A<!><CharSequence, String>("", x)
+    A<CharSequence, String>("", <!ARGUMENT_TYPE_MISMATCH!>x<!>)
     A<CharSequence, String>("", y)
 }

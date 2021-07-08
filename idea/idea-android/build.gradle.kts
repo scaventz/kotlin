@@ -17,8 +17,6 @@ dependencies {
     compile(project(":idea:ide-common"))
     compile(project(":idea:idea-gradle"))
 
-    compile(androidDxJar())
-
     compileOnly(project(":kotlin-android-extensions-runtime"))
     compileOnly(intellijDep())
     compileOnly(intellijPluginDep("android"))
@@ -50,6 +48,7 @@ dependencies {
     testRuntime(project(":kotlin-scripting-idea"))
     testRuntime(project(":kotlinx-serialization-ide-plugin"))
     testRuntime(project(":plugins:parcelize:parcelize-ide"))
+    testRuntime(project(":plugins:lombok:lombok-ide-plugin"))
 
     testRuntime(intellijPluginDep("android"))
 
@@ -66,19 +65,13 @@ dependencies {
 
     Ide.IJ {
         testRuntime(intellijPluginDep("maven"))
-
-        if (Ide.IJ201.orHigher()) {
-            testRuntime(intellijPluginDep("repository-search"))
-        }
+        testRuntime(intellijPluginDep("repository-search"))
     }
 
     testRuntime(intellijPluginDep("testng"))
 
-    if (Ide.AS36.orHigher()) {
+    Ide.AS {
         testRuntime(intellijPluginDep("android-layoutlib"))
-    }
-
-    if (Ide.AS41.orHigher()) {
         testRuntime(intellijPluginDep("platform-images"))
     }
 }

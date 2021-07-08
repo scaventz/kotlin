@@ -20,8 +20,10 @@ import org.jetbrains.annotations.NotNull
 import org.jetbrains.annotations.Nullable
 import org.jetbrains.kotlin.backend.common.ir.ir2string
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
-import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensions
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
+import org.jetbrains.kotlin.backend.jvm.JvmSymbols
+import org.jetbrains.kotlin.backend.jvm.ir.isInlineClassType
+import org.jetbrains.kotlin.backend.jvm.ir.isWithFlexibleNullability
 import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.codegen.TypeAnnotationCollector
@@ -36,14 +38,16 @@ import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.*
 import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.load.java.JvmAnnotationNames
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker
+import org.jetbrains.kotlin.resolve.multiplatform.OptionalAnnotationUtil
 import org.jetbrains.kotlin.types.TypeSystemCommonBackendContext
 import org.jetbrains.kotlin.types.model.KotlinTypeMarker
 import org.jetbrains.org.objectweb.asm.AnnotationVisitor
 import org.jetbrains.org.objectweb.asm.Type
 import org.jetbrains.org.objectweb.asm.TypePath
+import org.jetbrains.org.objectweb.asm.TypeReference
 import java.lang.annotation.RetentionPolicy
 
 abstract class AnnotationCodegen(
@@ -105,10 +109,10 @@ abstract class AnnotationCodegen(
         generateTypeAnnotations(annotated, typeForTypeAnnotations)
     }
 
-    abstract fun visitAnnotation(descr: String?, visible: Boolean): AnnotationVisitor
+    abstract fun visitAnnotation(descr: String, visible: Boolean): AnnotationVisitor
 
     open fun visitTypeAnnotation(
-        descr: String?,
+        descr: String,
         path: TypePath?,
         visible: Boolean,
     ): AnnotationVisitor {
@@ -156,9 +160,7 @@ abstract class AnnotationCodegen(
         }
 
         // A flexible type whose lower bound in not-null and upper bound is nullable, should not be annotated
-        if (type.isNullabilityFlexible()) {
-            return
-        }
+        if (type.isWithFlexibleNullability()) return
 
         val annotationClass = if (type.isNullable()) Nullable::class.java else NotNull::class.java
 
@@ -274,7 +276,7 @@ abstract class AnnotationCodegen(
             is IrClassReference -> {
                 var classType = value.classType
                 classType.classOrNull?.owner?.let(innerClassConsumer::addInnerClassInfoFromAnnotation)
-                if (classType.isInlined()) {
+                if (classType.isInlineClassType()) {
                     classType = classType.makeNullable()
                 }
                 annotationVisitor.visit(name, typeMapper.mapType(classType))
@@ -285,6 +287,64 @@ abstract class AnnotationCodegen(
     }
 
     companion object {
+
+        fun genAnnotationsOnTypeParametersAndBounds(
+            context: JvmBackendContext,
+            typeParameterContainer: IrTypeParametersContainer,
+            classCodegen: ClassCodegen,
+            referenceType: Int,
+            boundType: Int,
+            visitor: (typeRef: Int, typePath: TypePath?, descriptor: String, visible: Boolean) -> AnnotationVisitor
+        ) {
+            if (context.state.target != JVM_1_6) {
+                typeParameterContainer.typeParameters.forEachIndexed { index, typeParameter ->
+                    object : AnnotationCodegen(classCodegen, context, true) {
+                        override fun visitAnnotation(descr: String, visible: Boolean): AnnotationVisitor {
+
+                            return visitor(
+                                TypeReference.newTypeParameterReference(referenceType, index).value,
+                                null,
+                                descr,
+                                visible
+                            )
+                        }
+
+                        override fun visitTypeAnnotation(descr: String, path: TypePath?, visible: Boolean): AnnotationVisitor {
+                            throw RuntimeException(
+                                "Error during generation: type annotation shouldn't be presented on type parameter: " +
+                                        "${ir2string(typeParameter)} in ${ir2string(typeParameterContainer)}"
+                            )
+                        }
+                    }.genAnnotations(typeParameter, null, null)
+
+                    if (context.state.configuration.getBoolean(JVMConfigurationKeys.EMIT_JVM_TYPE_ANNOTATIONS)) {
+                        var superInterfaceIndex = 1
+                        typeParameter.superTypes.forEach { superType ->
+                            val isClassOrTypeParameter = !superType.isInterface() && !superType.isAnnotation()
+                            val superIndex = if (isClassOrTypeParameter) 0 else superInterfaceIndex++
+                            object : AnnotationCodegen(classCodegen, context, true) {
+                                override fun visitAnnotation(descr: String, visible: Boolean): AnnotationVisitor {
+                                    throw RuntimeException(
+                                        "Error during generation: only type annotations should be presented on type parameters bounds: " +
+                                                "${ir2string(typeParameter)} in ${ir2string(typeParameter)}"
+                                    )
+                                }
+
+                                override fun visitTypeAnnotation(descr: String, path: TypePath?, visible: Boolean): AnnotationVisitor {
+                                    return visitor(
+                                        TypeReference.newTypeParameterBoundReference(boundType, index, superIndex).value,
+                                        path,
+                                        descr,
+                                        visible
+                                    )
+                                }
+                            }.generateTypeAnnotations(typeParameterContainer, superType)
+                        }
+                    }
+                }
+            }
+        }
+
         private fun isInvisibleForNullabilityAnalysis(declaration: IrDeclaration): Boolean =
             when {
                 declaration.origin.isSynthetic ->
@@ -303,9 +363,10 @@ abstract class AnnotationCodegen(
         )
 
         internal val internalAnnotations = setOf(
-            JvmGeneratorExtensions.FLEXIBLE_NULLABILITY_ANNOTATION_FQ_NAME,
-            JvmGeneratorExtensions.ENHANCED_NULLABILITY_ANNOTATION_FQ_NAME,
-            JvmGeneratorExtensions.RAW_TYPE_ANNOTATION_FQ_NAME
+            JvmSymbols.FLEXIBLE_NULLABILITY_ANNOTATION_FQ_NAME,
+            JvmSymbols.FLEXIBLE_MUTABILITY_ANNOTATION_FQ_NAME,
+            JvmAnnotationNames.ENHANCED_NULLABILITY_ANNOTATION,
+            JvmSymbols.RAW_TYPE_ANNOTATION_FQ_NAME
         )
 
         private fun getRetentionPolicy(irClass: IrClass): RetentionPolicy {
@@ -334,7 +395,7 @@ abstract class AnnotationCodegen(
         val IrConstructorCall.annotationClass get() = symbol.owner.parentAsClass
     }
 
-    private fun generateTypeAnnotations(
+    internal fun generateTypeAnnotations(
         annotated: IrAnnotationContainer,
         type: IrType?
     ) {
@@ -392,9 +453,6 @@ private fun IrClass.getAnnotationRetention(): KotlinRetention? {
     return KotlinRetention.valueOf(retentionArgumentValue.name.asString())
 }
 
-private fun IrType.isNullabilityFlexible(): Boolean =
-    hasAnnotation(JvmGeneratorExtensions.FLEXIBLE_NULLABILITY_ANNOTATION_FQ_NAME)
-
 // To be generalized to IrMemberAccessExpression as soon as properties get symbols.
 private fun IrConstructorCall.getValueArgument(name: Name): IrExpression? {
     val index = symbol.owner.valueParameters.find { it.name == name }?.index ?: return null
@@ -422,4 +480,4 @@ private fun loadAnnotationTargets(targetEntry: IrConstructorCall): Set<KotlinTar
 private val IrClass.isOptionalAnnotationClass: Boolean
     get() = kind == ClassKind.ANNOTATION_CLASS &&
             isExpect &&
-            hasAnnotation(ExpectedActualDeclarationChecker.OPTIONAL_EXPECTATION_FQ_NAME)
+            hasAnnotation(OptionalAnnotationUtil.OPTIONAL_EXPECTATION_FQ_NAME)

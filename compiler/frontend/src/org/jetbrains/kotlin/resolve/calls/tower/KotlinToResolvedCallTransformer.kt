@@ -48,6 +48,7 @@ import org.jetbrains.kotlin.resolve.constants.IntegerLiteralTypeConstructor
 import org.jetbrains.kotlin.resolve.constants.IntegerValueTypeConstant
 import org.jetbrains.kotlin.resolve.constants.evaluate.ConstantExpressionEvaluator
 import org.jetbrains.kotlin.resolve.deprecation.DeprecationResolver
+import org.jetbrains.kotlin.resolve.diagnostics.MutableDiagnosticsWithSuppression
 import org.jetbrains.kotlin.resolve.scopes.receivers.CastImplicitClassReceiver
 import org.jetbrains.kotlin.resolve.scopes.receivers.ImplicitClassReceiver
 import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
@@ -84,6 +85,7 @@ class KotlinToResolvedCallTransformer(
     private val smartCastManager: SmartCastManager,
     private val typeApproximator: TypeApproximator,
     private val missingSupertypesResolver: MissingSupertypesResolver,
+    private val upperBoundChecker: UpperBoundChecker,
 ) {
     companion object {
         private val REPORT_MISSING_NEW_INFERENCE_DIAGNOSTIC
@@ -205,10 +207,12 @@ class KotlinToResolvedCallTransformer(
     ): ResolvedCall<D> {
         val psiKotlinCall = completedCallAtom.atom.psiKotlinCall
         return if (psiKotlinCall is PSIKotlinCallForInvoke) {
+            val diagnosticsForVariableCall = if (completedCallAtom.candidateDescriptor is FunctionDescriptor) emptyList() else diagnostics
+            val diagnosticsForFunctionCall = if (completedCallAtom.candidateDescriptor is FunctionDescriptor) diagnostics else emptyList()
             @Suppress("UNCHECKED_CAST")
             NewVariableAsFunctionResolvedCallImpl(
-                createOrGet(psiKotlinCall.variableCall.resolvedCall, trace, resultSubstitutor, diagnostics),
-                createOrGet(completedCallAtom, trace, resultSubstitutor, diagnostics),
+                createOrGet(psiKotlinCall.variableCall.resolvedCall, trace, resultSubstitutor, diagnosticsForVariableCall),
+                createOrGet(completedCallAtom, trace, resultSubstitutor, diagnosticsForFunctionCall),
             ) as ResolvedCall<D>
         } else {
             createOrGet(completedCallAtom, trace, resultSubstitutor, diagnostics)
@@ -352,6 +356,7 @@ class KotlinToResolvedCallTransformer(
         } ?: return null
 
         val recordedType = context.trace.getType(deparenthesized)
+        val recordedTypeForParenthesized = context.trace.getType(expression)
 
         var updatedType = convertedArgumentType ?: getResolvedCallForArgumentExpression(deparenthesized, context)?.run {
             makeNullableTypeIfSafeReceiver(resultingDescriptor.returnType, context)
@@ -381,7 +386,7 @@ class KotlinToResolvedCallTransformer(
             context.trace.report(Errors.SIGNED_CONSTANT_CONVERTED_TO_UNSIGNED.on(deparenthesized))
         }
 
-        updatedType = updateRecordedTypeForArgument(updatedType, recordedType, expression, context)
+        updatedType = updateRecordedTypeForArgument(updatedType, recordedType, recordedTypeForParenthesized, expression, context)
 
         dataFlowAnalyzer.checkType(updatedType, deparenthesized, context, reportErrorDuringTypeCheck)
 
@@ -407,10 +412,12 @@ class KotlinToResolvedCallTransformer(
     private fun updateRecordedTypeForArgument(
         updatedType: KotlinType?,
         recordedType: KotlinType?,
+        recordedTypeForParenthesized: KotlinType?,
         argumentExpression: KtExpression,
         context: BasicCallResolutionContext,
     ): KotlinType? {
-        if ((!ErrorUtils.containsErrorType(recordedType) && recordedType == updatedType) || updatedType == null) return updatedType
+        if ((!ErrorUtils.containsErrorType(recordedType) && recordedType == updatedType && recordedType == recordedTypeForParenthesized) || updatedType == null)
+            return updatedType
 
         val expressions = ArrayList<KtExpression>().also { expressions ->
             var expression: KtExpression? = argumentExpression
@@ -548,6 +555,8 @@ class TrackingBindingTrace(val trace: BindingTrace) : BindingTrace by trace {
     var reported: Boolean = false
 
     override fun report(diagnostic: Diagnostic) {
+        if (bindingContext.diagnostics.noSuppression().forElement(diagnostic.psiElement).any { it == diagnostic }) return
+
         trace.report(diagnostic)
         reported = true
     }
@@ -951,6 +960,7 @@ fun CandidateApplicability.toResolutionStatus(): ResolutionStatus = when (this) 
     CandidateApplicability.RESOLVED_WITH_ERROR,
     CandidateApplicability.RESOLVED_NEED_PRESERVE_COMPATIBILITY -> ResolutionStatus.SUCCESS
     CandidateApplicability.INAPPLICABLE_WRONG_RECEIVER -> ResolutionStatus.RECEIVER_TYPE_ERROR
+    CandidateApplicability.UNSAFE_CALL -> ResolutionStatus.UNSAFE_CALL_ERROR
     else -> ResolutionStatus.OTHER_ERROR
 }
 
@@ -985,7 +995,7 @@ private fun CallableMemberDescriptor.isNotSimpleCall(): Boolean =
                     it is NewCapturedType ||
                             it.constructor is IntegerLiteralTypeConstructor ||
                             it is DefinitelyNotNullType ||
-                            it is StubType
+                            it is StubTypeForBuilderInference
                 }
             } ?: false)
 

@@ -10,6 +10,10 @@ import org.jetbrains.kotlin.fir.backend.*
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyGetter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
+import org.jetbrains.kotlin.fir.declarations.utils.isExpect
+import org.jetbrains.kotlin.fir.declarations.utils.isFromEnumClass
+import org.jetbrains.kotlin.fir.declarations.utils.primaryConstructor
+import org.jetbrains.kotlin.fir.declarations.utils.visibility
 import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.expressions.FirDelegatedConstructorCall
 import org.jetbrains.kotlin.fir.expressions.FirExpression
@@ -41,10 +45,10 @@ internal class ClassMemberGenerator(
 
     private fun <T : IrDeclaration> applyParentFromStackTo(declaration: T): T = conversionScope.applyParentFromStackTo(declaration)
 
-    fun convertClassContent(irClass: IrClass, klass: FirClass<*>) {
+    fun convertClassContent(irClass: IrClass, klass: FirClass) {
         declarationStorage.enterScope(irClass)
         conversionScope.withClass(irClass) {
-            val primaryConstructor = klass.getPrimaryConstructorIfAny()
+            val primaryConstructor = klass.primaryConstructor
             val irPrimaryConstructor = primaryConstructor?.let { declarationStorage.getCachedIrConstructor(it)!! }
             if (irPrimaryConstructor != null) {
                 with(declarationStorage) {
@@ -78,7 +82,7 @@ internal class ClassMemberGenerator(
         declarationStorage.leaveScope(irClass)
     }
 
-    fun <T : IrFunction> convertFunctionContent(irFunction: T, firFunction: FirFunction<*>?, containingClass: FirClass<*>?): T {
+    fun <T : IrFunction> convertFunctionContent(irFunction: T, firFunction: FirFunction?, containingClass: FirClass?): T {
         conversionScope.withParent(irFunction) {
             if (firFunction != null) {
                 if (irFunction !is IrConstructor || !irFunction.isPrimary) {
@@ -144,18 +148,23 @@ internal class ClassMemberGenerator(
             }
             if (irFunction is IrSimpleFunction && firFunction is FirSimpleFunction && containingClass != null) {
                 irFunction.overriddenSymbols = firFunction.generateOverriddenFunctionSymbols(
-                    containingClass, session, scopeSession, declarationStorage
+                    containingClass, session, scopeSession, declarationStorage, fakeOverrideGenerator
                 )
             }
         }
         return irFunction
     }
 
-    fun convertPropertyContent(irProperty: IrProperty, property: FirProperty, containingClass: FirClass<*>?): IrProperty {
+    fun convertPropertyContent(irProperty: IrProperty, property: FirProperty, containingClass: FirClass?): IrProperty {
         val initializer = property.initializer
         val delegate = property.delegate
         val propertyType = property.returnTypeRef.toIrType()
         irProperty.initializeBackingField(property, initializerExpression = initializer ?: delegate)
+        if (containingClass != null) {
+            irProperty.overriddenSymbols = property.generateOverriddenPropertySymbols(
+                containingClass, session, scopeSession, declarationStorage, fakeOverrideGenerator
+            )
+        }
         irProperty.getter?.setPropertyAccessorContent(
             property, property.getter, irProperty, propertyType,
             property.getter is FirDefaultPropertyGetter,
@@ -172,6 +181,18 @@ internal class ClassMemberGenerator(
         }
         annotationGenerator.generate(irProperty, property)
         return irProperty
+    }
+
+    fun convertFieldContent(irField: IrField, field: FirField): IrField {
+        conversionScope.withParent(irField) {
+            declarationStorage.enterScope(irField)
+            val initializerExpression = field.initializer
+            if (irField.initializer == null && initializerExpression != null) {
+                irField.initializer = irFactory.createExpressionBody(visitor.convertToIrExpression(initializerExpression))
+            }
+            declarationStorage.leaveScope(irField)
+        }
+        return irField
     }
 
     private fun IrProperty.initializeBackingField(
@@ -208,7 +229,7 @@ internal class ClassMemberGenerator(
         propertyType: IrType,
         isDefault: Boolean,
         isGetter: Boolean,
-        containingClass: FirClass<*>?
+        containingClass: FirClass?
     ) {
         conversionScope.withFunction(this) {
             applyParentFromStackTo(this)
@@ -242,7 +263,7 @@ internal class ClassMemberGenerator(
             }
             if (containingClass != null) {
                 this.overriddenSymbols = property.generateOverriddenAccessorSymbols(
-                    containingClass, isGetter, session, scopeSession, declarationStorage
+                    containingClass, isGetter, session, scopeSession, declarationStorage, fakeOverrideGenerator
                 )
             }
 

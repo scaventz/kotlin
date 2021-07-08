@@ -6,14 +6,11 @@
 package org.jetbrains.kotlin.test.frontend.fir.handlers
 
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.codeMetaInfo.model.CodeMetaInfo
 import org.jetbrains.kotlin.codeMetaInfo.renderConfigurations.AbstractCodeMetaInfoRenderConfiguration
-import org.jetbrains.kotlin.diagnostics.PositioningStrategy
+import org.jetbrains.kotlin.fir.analysis.diagnostics.AbstractFirDiagnosticWithParametersRenderer
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDefaultErrorMessages
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnostic
-import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnosticRenderer
-import org.jetbrains.kotlin.fir.psi
 
 object FirMetaInfoUtils {
     val renderDiagnosticNoArgs = FirDiagnosticCodeMetaRenderConfiguration().apply { renderParams = false }
@@ -21,26 +18,21 @@ object FirMetaInfoUtils {
 }
 
 class FirDiagnosticCodeMetaInfo(
-    val diagnostic: FirDiagnostic<*>,
+    val diagnostic: FirDiagnostic,
     renderConfiguration: FirDiagnosticCodeMetaRenderConfiguration
 ) : CodeMetaInfo {
-    // TODO: this implementation is hacky and doesn't support proper ranges for light tree diagnostics
-    private val textRangeFromClassicDiagnostic: TextRange? = run {
-        val psi = diagnostic.element.psi ?: return@run null
-
-        @Suppress("UNCHECKED_CAST")
-        val positioningStrategy = diagnostic.factory.positioningStrategy.psiStrategy as PositioningStrategy<PsiElement>
-        positioningStrategy.mark(psi).first()
+    private val textRangeFromClassicDiagnostic: TextRange = run {
+        diagnostic.factory.defaultPositioningStrategy.markDiagnostic(diagnostic).first()
     }
 
     override var renderConfiguration: FirDiagnosticCodeMetaRenderConfiguration = renderConfiguration
         private set
 
     override val start: Int
-        get() = textRangeFromClassicDiagnostic?.startOffset ?: diagnostic.element.startOffset
+        get() = textRangeFromClassicDiagnostic.startOffset
 
     override val end: Int
-        get() = textRangeFromClassicDiagnostic?.endOffset ?: diagnostic.element.endOffset
+        get() = textRangeFromClassicDiagnostic.endOffset
 
     override val tag: String
         get() = renderConfiguration.getTag(this)
@@ -73,8 +65,11 @@ class FirDiagnosticCodeMetaRenderConfiguration(
 
         val diagnostic = codeMetaInfo.diagnostic
 
-        val renderer = FirDefaultErrorMessages.getRendererForDiagnostic(diagnostic) as FirDiagnosticRenderer<FirDiagnostic<*>>
-        params.add(renderer.render(diagnostic))
+        @Suppress("UNCHECKED_CAST")
+        val renderer = FirDefaultErrorMessages.getRendererForDiagnostic(diagnostic)
+        if (renderer is AbstractFirDiagnosticWithParametersRenderer) {
+            renderer.renderParameters(diagnostic).mapTo(params, Any?::toString)
+        }
 
         if (renderSeverity)
             params.add("severity='${diagnostic.severity}'")

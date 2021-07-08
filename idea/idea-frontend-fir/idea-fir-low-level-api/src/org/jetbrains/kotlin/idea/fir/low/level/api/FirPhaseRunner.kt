@@ -5,11 +5,7 @@
 
 package org.jetbrains.kotlin.idea.fir.low.level.api
 
-import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.resolve.transformers.createTransformerBasedProcessorByPhase
-import org.jetbrains.kotlin.idea.fir.low.level.api.lazy.resolve.FirLazyBodiesCalculator
 import org.jetbrains.kotlin.idea.fir.low.level.api.util.executeWithoutPCE
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -18,21 +14,6 @@ internal class FirPhaseRunner {
     private val superTypesBodyResolveLock = ReentrantLock()
     private val statusResolveLock = ReentrantLock()
     private val implicitTypesResolveLock = ReentrantLock()
-
-    fun runPhase(firFile: FirFile, phase: FirResolvePhase, scopeSession: ScopeSession) = when (phase) {
-        FirResolvePhase.SUPER_TYPES -> superTypesBodyResolveLock.withLock {
-            runPhaseWithoutLock(firFile, phase, scopeSession)
-        }
-        FirResolvePhase.STATUS -> statusResolveLock.withLock {
-            runPhaseWithoutLock(firFile, phase, scopeSession)
-        }
-        FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE -> implicitTypesResolveLock.withLock {
-            runPhaseWithoutLock(firFile, phase, scopeSession)
-        }
-        else -> {
-            runPhaseWithoutLock(firFile, phase, scopeSession)
-        }
-    }
 
     inline fun runPhaseWithCustomResolve(phase: FirResolvePhase, crossinline resolve: () -> Unit) = when (phase) {
         FirResolvePhase.SUPER_TYPES -> superTypesBodyResolveLock.withLock {
@@ -52,15 +33,6 @@ internal class FirPhaseRunner {
     private inline fun runPhaseWithCustomResolveWithoutLock(crossinline resolve: () -> Unit) {
         executeWithoutPCE {
             resolve()
-        }
-    }
-
-
-    private fun runPhaseWithoutLock(firFile: FirFile, phase: FirResolvePhase, scopeSession: ScopeSession) {
-        val phaseProcessor = phase.createTransformerBasedProcessorByPhase(firFile.session, scopeSession)
-        executeWithoutPCE {
-            FirLazyBodiesCalculator.calculateLazyBodiesIfPhaseRequires(firFile, phase)
-            phaseProcessor.processFile(firFile)
         }
     }
 }

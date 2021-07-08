@@ -23,13 +23,13 @@ fun foo() {
                 10
             }
             fun bar(x: Exception = `_`) {}
-            class Bar(`_`: Exception = `_`) {
+            class Bar(`_`: Exception = <!UNINITIALIZED_PARAMETER!>`_`<!>) {
                 inner class Bar2(x: Exception = `_`) { }
             }
         }
     } catch (_: Exception) {
         `_`.stackTrace
-        val y1 = _
+        val y1 = <!UNDERSCORE_USAGE_WITHOUT_BACKTICKS!>_<!>
         val y2 = (`_`)
     }
     try {

@@ -7,7 +7,9 @@ package org.jetbrains.kotlin.ir.backend.js
 
 import org.jetbrains.kotlin.backend.common.ir.isMemberOfOpenClass
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.backend.js.export.isExported
+import org.jetbrains.kotlin.ir.backend.js.ir.JsIrBuilder
 import org.jetbrains.kotlin.ir.backend.js.utils.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
@@ -20,6 +22,7 @@ import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
+import org.jetbrains.kotlin.js.config.RuntimeDiagnostic
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
 import org.jetbrains.kotlin.utils.addIfNotNull
 import java.util.*
@@ -29,12 +32,16 @@ fun eliminateDeadDeclarations(
     context: JsIrBackendContext
 ) {
 
-    val allRoots = stageController.withInitialIr { buildRoots(modules, context) }
+    val allRoots = context.irFactory.stageController.withInitialIr { buildRoots(modules, context) }
 
     val usefulDeclarations = usefulDeclarations(allRoots, context)
 
-    stageController.unrestrictDeclarationListsAccess {
-        removeUselessDeclarations(modules, usefulDeclarations)
+    context.irFactory.stageController.unrestrictDeclarationListsAccess {
+        processUselessDeclarations(
+            modules,
+            usefulDeclarations,
+            context
+        )
     }
 }
 
@@ -42,20 +49,53 @@ private fun IrField.isConstant(): Boolean {
     return correspondingPropertySymbol?.owner?.isConst ?: false
 }
 
-private fun buildRoots(modules: Iterable<IrModuleFragment>, context: JsIrBackendContext): Iterable<IrDeclaration> {
-    val rootDeclarations =
-        (modules.flatMap { it.files } + context.packageLevelJsModules + context.externalPackageFragment.values).flatMapTo(mutableListOf()) { file ->
-            file.declarations.flatMap { if (it is IrProperty) listOfNotNull(it.backingField, it.getter, it.setter) else listOf(it) }
-                .filter {
-                    it is IrField && it.initializer != null && it.fqNameWhenAvailable?.asString()?.startsWith("kotlin") != true
-                            || it.isExported(context)
-                            || it.isEffectivelyExternal()
-                            || it is IrField && it.correspondingPropertySymbol?.owner?.isExported(context) == true
-                            || it is IrSimpleFunction && it.correspondingPropertySymbol?.owner?.isExported(context) == true
-                }.filter { !(it is IrField && it.isConstant() && !it.isExported(context)) }
+private fun IrDeclaration.addRootsTo(to: MutableCollection<IrDeclaration>, context: JsIrBackendContext) {
+    when {
+        this is IrProperty -> {
+            backingField?.addRootsTo(to, context)
+            getter?.addRootsTo(to, context)
+            setter?.addRootsTo(to, context)
         }
+        isEffectivelyExternal() -> {
+            to += this
+        }
+        isExported(context) -> {
+            to += this
+        }
+        this is IrField -> {
+            // TODO: simplify
+            if ((initializer != null && !isKotlinPackage() || correspondingPropertySymbol?.owner?.isExported(context) == true) && !isConstant()) {
+                to += this
+            }
+        }
+        this is IrSimpleFunction -> {
+            if (correspondingPropertySymbol?.owner?.isExported(context) == true) {
+                to += this
+            }
+        }
+    }
+}
+
+private fun buildRoots(modules: Iterable<IrModuleFragment>, context: JsIrBackendContext): Iterable<IrDeclaration> {
+    val rootDeclarations = mutableListOf<IrDeclaration>()
+    val allFiles = (modules.flatMap { it.files } + context.packageLevelJsModules + context.externalPackageFragment.values)
+    allFiles.forEach {
+        it.declarations.forEach {
+            it.addRootsTo(rootDeclarations, context)
+        }
+    }
 
     rootDeclarations += context.testRoots.values
+
+    val dceRuntimeDiagnostic = context.dceRuntimeDiagnostic
+    if (dceRuntimeDiagnostic != null) {
+        rootDeclarations += dceRuntimeDiagnostic.unreachableDeclarationMethod(context).owner
+    }
+
+    if (context.legacyPropertyAccess) {
+        rootDeclarations += context.intrinsics.safePropertyGet.owner
+        rootDeclarations += context.intrinsics.safePropertySet.owner
+    }
 
     JsMainFunctionDetector.getMainFunctionOrNull(modules.last())?.let { mainFunction ->
         rootDeclarations += mainFunction
@@ -67,7 +107,12 @@ private fun buildRoots(modules: Iterable<IrModuleFragment>, context: JsIrBackend
     return rootDeclarations
 }
 
-private fun removeUselessDeclarations(modules: Iterable<IrModuleFragment>, usefulDeclarations: Set<IrDeclaration>) {
+
+private fun processUselessDeclarations(
+    modules: Iterable<IrModuleFragment>,
+    usefulDeclarations: Set<IrDeclaration>,
+    context: JsIrBackendContext
+) {
     modules.forEach { module ->
         module.files.forEach {
             it.acceptVoid(object : IrElementVisitorVoid {
@@ -99,7 +144,7 @@ private fun removeUselessDeclarations(modules: Iterable<IrModuleFragment>, usefu
                 private fun process(container: IrDeclarationContainer) {
                     container.declarations.transformFlat { member ->
                         if (member !in usefulDeclarations) {
-                            emptyList()
+                            member.processUselessDeclaration(context)
                         } else {
                             member.acceptVoid(this)
                             null
@@ -110,6 +155,63 @@ private fun removeUselessDeclarations(modules: Iterable<IrModuleFragment>, usefu
         }
     }
 }
+
+private fun IrDeclaration.processUselessDeclaration(context: JsIrBackendContext): List<IrDeclaration>? {
+    return when {
+        context.dceRuntimeDiagnostic != null -> {
+            processWithDiagnostic(context)
+            return null
+        }
+        else -> emptyList()
+    }
+}
+
+private fun RuntimeDiagnostic.unreachableDeclarationMethod(context: JsIrBackendContext) =
+    when (this) {
+        RuntimeDiagnostic.LOG -> context.intrinsics.jsUnreachableDeclarationLog
+        RuntimeDiagnostic.EXCEPTION -> context.intrinsics.jsUnreachableDeclarationException
+    }
+
+private fun RuntimeDiagnostic.removingBody(): Boolean {
+    return this != RuntimeDiagnostic.LOG
+}
+
+private fun IrDeclaration.processWithDiagnostic(context: JsIrBackendContext) {
+    when (this) {
+        is IrFunction -> processFunctionWithDiagnostic(context)
+        is IrField -> processFieldWithDiagnostic()
+        is IrDeclarationContainer -> declarations.forEach { it.processWithDiagnostic(context) }
+    }
+}
+
+private fun IrFunction.processFunctionWithDiagnostic(context: JsIrBackendContext) {
+    val dceRuntimeDiagnostic = context.dceRuntimeDiagnostic!!
+
+    val isRemovingBody = dceRuntimeDiagnostic.removingBody()
+    val targetMethod = dceRuntimeDiagnostic.unreachableDeclarationMethod(context)
+    val call = JsIrBuilder.buildCall(
+        target = targetMethod,
+        type = targetMethod.owner.returnType
+    )
+
+    if (isRemovingBody) {
+        body = context.irFactory.createBlockBody(
+            UNDEFINED_OFFSET,
+            UNDEFINED_OFFSET
+        )
+    }
+
+    body?.prependFunctionCall(call)
+}
+
+private fun IrField.processFieldWithDiagnostic() {
+    if (initializer != null && isKotlinPackage()) {
+        initializer = null
+    }
+}
+
+private fun IrField.isKotlinPackage() =
+    fqNameWhenAvailable?.asString()?.startsWith("kotlin") == true
 
 // TODO refactor it, the function became too big. Please contact me (Zalim) before doing it.
 fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendContext): Set<IrDeclaration> {
@@ -169,7 +271,7 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
     }
 
     // use withInitialIr to avoid ConcurrentModificationException in dce-driven lowering when adding roots' nested declarations (members)
-    stageController.withInitialIr {
+    context.irFactory.stageController.withInitialIr {
         // Add roots
         roots.forEach {
             it.enqueue(null, null, altFromFqn = "<ROOT>")
@@ -292,12 +394,27 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                             val ref = expression.getTypeArgument(0)!!.classifierOrFail.owner as IrDeclaration
                             ref.enqueue("intrinsic: jsClass")
                             referencedJsClasses += ref
+                            // When class reference provided as parameter to external function
+                            // It can be instantiated by external JS script
+                            // Need to leave constructor for this
+                            // https://youtrack.jetbrains.com/issue/KT-46672
+                            // TODO: Possibly solution with origin is not so good
+                            //  There is option with applying this hack to jsGetKClass
+                            if (expression.origin == JsLoweredDeclarationOrigin.CLASS_REFERENCE) {
+                                // Maybe we need to filter primary constructor
+                                // Although at this time, we should have only primary constructor
+                                (ref as IrClass)
+                                    .constructors
+                                    .forEach {
+                                        it.enqueue("intrinsic: jsClass (constructor)")
+                                    }
+                            }
                         }
                         context.intrinsics.jsGetKClassFromExpression -> {
                             val ref = expression.getTypeArgument(0)?.classOrNull ?: context.irBuiltIns.anyClass
                             referencedJsClassesFromExpressions += ref.owner
                         }
-                        context.intrinsics.jsObjectCreate.symbol -> {
+                        context.intrinsics.jsObjectCreate -> {
                             val classToCreate = expression.getTypeArgument(0)!!.classifierOrFail.owner as IrClass
                             classToCreate.enqueue("intrinsic: jsObjectCreate")
                             constructedClasses += classToCreate
@@ -407,6 +524,9 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                 }
             }
         }
+
+        context.additionalExportedDeclarations
+            .forEach { it.enqueue(null, "from additionalExportedDeclarations", altFromFqn = "<ROOT>") }
     }
 
     if (printReachabilityInfo) {

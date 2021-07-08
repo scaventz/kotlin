@@ -68,6 +68,29 @@ public class TypeSubstitutor implements TypeSubstitutorMarker {
     }
 
     @NotNull
+    public TypeSubstitutor replaceWithContravariantApproximatingSubstitution() {
+        if (substitution instanceof SubstitutionWithCapturedTypeApproximation) {
+            return new TypeSubstitutor(
+                    new SubstitutionWithContravariantCapturedTypeApproximation(
+                            ((SubstitutionWithCapturedTypeApproximation) substitution).getSubstitution()
+                    )
+            );
+        }
+
+        if (substitution instanceof IndexedParametersSubstitution && !substitution.approximateContravariantCapturedTypes()) {
+            return new TypeSubstitutor(
+                    new IndexedParametersSubstitution(
+                            ((IndexedParametersSubstitution) substitution).getParameters(),
+                            ((IndexedParametersSubstitution) substitution).getArguments(),
+                            true
+                    )
+            );
+        }
+
+        return this;
+    }
+
+    @NotNull
     public static TypeSubstitutor createChainedSubstitutor(@NotNull TypeSubstitution first, @NotNull TypeSubstitution second) {
         return create(DisjointKeysUnionTypeSubstitution.create(first, second));
     }
@@ -165,7 +188,10 @@ public class TypeSubstitutor implements TypeSubstitutorMarker {
             );
 
             KotlinType substitutedEnhancement = substitute(enhancement, originalProjection.getProjectionKind());
-            KotlinType resultingType = TypeWithEnhancementKt.wrapEnhancement(substitution.getType().unwrap(), substitutedEnhancement);
+            KotlinType resultingType = TypeWithEnhancementKt.wrapEnhancement(
+                    substitution.getType().unwrap(),
+                    substitutedEnhancement instanceof TypeWithEnhancement ? ((TypeWithEnhancement) substitutedEnhancement).getEnhancement() : substitutedEnhancement
+            );
 
             return new TypeProjectionImpl(substitution.getProjectionKind(), resultingType);
         }

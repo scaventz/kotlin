@@ -116,6 +116,11 @@ public class IncrementalJsCompilerRunnerTestGenerated extends AbstractIncrementa
             runTest("jps-plugin/testData/incremental/pureKotlin/classSignatureUnchanged/");
         }
 
+        @TestMetadata("companionConstantChanged")
+        public void testCompanionConstantChanged() throws Exception {
+            runTest("jps-plugin/testData/incremental/pureKotlin/companionConstantChanged/");
+        }
+
         @TestMetadata("compilationErrorThenFixedOtherPackage")
         public void testCompilationErrorThenFixedOtherPackage() throws Exception {
             runTest("jps-plugin/testData/incremental/pureKotlin/compilationErrorThenFixedOtherPackage/");
@@ -439,6 +444,16 @@ public class IncrementalJsCompilerRunnerTestGenerated extends AbstractIncrementa
         @TestMetadata("packageRemoved")
         public void testPackageRemoved() throws Exception {
             runTest("jps-plugin/testData/incremental/pureKotlin/packageRemoved/");
+        }
+
+        @TestMetadata("parameterWithDefaultValueAdded")
+        public void testParameterWithDefaultValueAdded() throws Exception {
+            runTest("jps-plugin/testData/incremental/pureKotlin/parameterWithDefaultValueAdded/");
+        }
+
+        @TestMetadata("parameterWithDefaultValueRemoved")
+        public void testParameterWithDefaultValueRemoved() throws Exception {
+            runTest("jps-plugin/testData/incremental/pureKotlin/parameterWithDefaultValueRemoved/");
         }
 
         @TestMetadata("privateConstantsChanged")

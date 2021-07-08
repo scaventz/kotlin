@@ -10,11 +10,12 @@ import org.jetbrains.kotlin.asJava.builder.LightMemberOrigin
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
 import org.jetbrains.kotlin.asJava.classes.lazyPub
 import org.jetbrains.kotlin.asJava.elements.FirLightIdentifier
-import org.jetbrains.kotlin.idea.frontend.api.symbols.KtClassOrObjectSymbol
+import org.jetbrains.kotlin.idea.frontend.api.isValid
+import org.jetbrains.kotlin.idea.frontend.api.symbols.KtNamedClassOrObjectSymbol
 import org.jetbrains.kotlin.psi.KtDeclaration
 
 internal class FirLightFieldForObjectSymbol(
-    private val objectSymbol: KtClassOrObjectSymbol,
+    private val objectSymbol: KtNamedClassOrObjectSymbol,
     containingClass: KtLightClass,
     private val name: String,
     lightMemberOrigin: LightMemberOrigin?,
@@ -60,4 +61,6 @@ internal class FirLightFieldForObjectSymbol(
                         objectSymbol == other.objectSymbol)
 
     override fun hashCode(): Int = kotlinOrigin.hashCode()
+
+    override fun isValid(): Boolean = super.isValid() && objectSymbol.isValid()
 }

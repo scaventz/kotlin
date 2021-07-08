@@ -7,8 +7,7 @@ plugins {
     `maven-publish`
 }
 
-jvmTarget = "1.6"
-javaHome = rootProject.extra["JDK_16"] as String
+project.configureJvmToolchain(JdkMajorVersion.JDK_1_6)
 
 val builtins by configurations.creating {
     isCanBeResolved = true
@@ -54,17 +53,13 @@ val copySources by task<Sync> {
     into(File(buildDir, "src"))
 }
 
-tasks.withType<JavaCompile> {
-    sourceCompatibility = "1.6"
-    targetCompatibility = "1.6"
-}
-
 tasks.withType<KotlinCompile> {
     dependsOn(copySources)
     kotlinOptions {
         freeCompilerArgs += listOf(
             "-Xallow-kotlin-package",
             "-Xmulti-platform",
+            "-Xsuppress-deprecated-jvm-target-warning",
             "-Xopt-in=kotlin.RequiresOptIn",
             "-Xopt-in=kotlin.contracts.ExperimentalContracts"
         )
@@ -73,7 +68,6 @@ tasks.withType<KotlinCompile> {
 }
 
 val jar = runtimeJar {
-    archiveFileName.set("kotlin-stdlib-minimal-for-test.jar")
     dependsOn(builtins)
     from(provider { zipTree(builtins.singleFile) }) { include("kotlin/**") }
 }
@@ -81,7 +75,6 @@ val jar = runtimeJar {
 publishing {
     publications {
         create<MavenPublication>("internal") {
-            artifactId = "kotlin-stdlib-minimal-for-test"
             artifact(jar.get())
         }
     }
@@ -90,4 +83,3 @@ publishing {
         maven("${rootProject.buildDir}/internal/repo")
     }
 }
-

@@ -50,10 +50,7 @@ import org.jetbrains.kotlin.resolve.calls.components.isVararg
 import org.jetbrains.kotlin.resolve.calls.model.*
 import org.jetbrains.kotlin.resolve.calls.tower.NewResolvedCallImpl
 import org.jetbrains.kotlin.resolve.scopes.receivers.*
-import org.jetbrains.kotlin.types.KotlinType
-import org.jetbrains.kotlin.types.TypeProjectionImpl
-import org.jetbrains.kotlin.types.TypeSubstitutor
-import org.jetbrains.kotlin.types.Variance
+import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.typeUtil.isUnit
 import org.jetbrains.kotlin.util.OperatorNameConventions
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
@@ -77,42 +74,33 @@ fun StatementGenerator.generateReceiver(defaultStartOffset: Int, defaultEndOffse
 
     if (receiver is TransientReceiver) return TransientReceiverValue(irReceiverType)
 
-    return generateDelegatedValue(irReceiverType) {
-        val receiverExpression: IrExpression = when (receiver) {
-            is ImplicitClassReceiver -> {
-                val receiverClassDescriptor = receiver.classDescriptor
-                if (shouldGenerateReceiverAsSingletonReference(receiverClassDescriptor))
-                    generateSingletonReference(receiverClassDescriptor, defaultStartOffset, defaultEndOffset, receiver.type)
-                else
+    return object : ExpressionValue(irReceiverType) {
+        override fun load(): IrExpression =
+            when (receiver) {
+                is ImplicitClassReceiver -> {
+                    val receiverClassDescriptor = receiver.classDescriptor
+                    if (shouldGenerateReceiverAsSingletonReference(receiverClassDescriptor))
+                        generateSingletonReference(receiverClassDescriptor, defaultStartOffset, defaultEndOffset, receiver.type)
+                    else
+                        IrGetValueImpl(
+                            defaultStartOffset, defaultEndOffset, irReceiverType,
+                            context.symbolTable.referenceValueParameter(receiverClassDescriptor.thisAsReceiverParameter)
+                        )
+                }
+                is ThisClassReceiver ->
+                    generateThisOrSuperReceiver(receiver, receiver.classDescriptor)
+                is SuperCallReceiverValue ->
+                    generateThisOrSuperReceiver(receiver, receiver.thisType.constructor.declarationDescriptor as ClassDescriptor)
+                is ExpressionReceiver ->
+                    generateExpression(receiver.expression)
+                is ExtensionReceiver ->
                     IrGetValueImpl(
-                        defaultStartOffset, defaultEndOffset, irReceiverType,
-                        context.symbolTable.referenceValueParameter(receiverClassDescriptor.thisAsReceiverParameter)
+                        defaultStartOffset, defaultStartOffset, irReceiverType,
+                        context.symbolTable.referenceValueParameter(receiver.declarationDescriptor.extensionReceiverParameter!!)
                     )
+                else ->
+                    throw AssertionError("Unexpected receiver: ${receiver::class.java.simpleName}")
             }
-            is ThisClassReceiver ->
-                generateThisOrSuperReceiver(receiver, receiver.classDescriptor)
-            is SuperCallReceiverValue ->
-                generateThisOrSuperReceiver(receiver, receiver.thisType.constructor.declarationDescriptor as ClassDescriptor)
-            is ExpressionReceiver ->
-                generateExpression(receiver.expression)
-            is ClassValueReceiver ->
-                IrGetObjectValueImpl(
-                    receiver.expression.startOffsetSkippingComments, receiver.expression.endOffset, irReceiverType,
-                    context.symbolTable.referenceClass(receiver.classQualifier.descriptor as ClassDescriptor)
-                )
-            is ExtensionReceiver ->
-                IrGetValueImpl(
-                    defaultStartOffset, defaultStartOffset, irReceiverType,
-                    context.symbolTable.referenceValueParameter(receiver.declarationDescriptor.extensionReceiverParameter!!)
-                )
-            else ->
-                TODO("Receiver: ${receiver::class.java.simpleName}")
-        }
-
-        if (receiverExpression is IrExpressionWithCopy)
-            RematerializableValue(receiverExpression.type, receiverExpression)
-        else
-            OnceExpressionValue(receiverExpression)
     }
 }
 
@@ -571,7 +559,7 @@ fun StatementGenerator.generateSamConversionForValueArgumentsIfRequired(call: Ca
     val typeSubstitutor = TypeSubstitutor.create(substitutionContext)
 
     for (i in underlyingValueParameters.indices) {
-        val underlyingValueParameter = underlyingValueParameters[i]
+        val underlyingValueParameter: ValueParameterDescriptor = underlyingValueParameters[i]
 
         val expectedSamConversionTypesForVararg =
             if (expectSamConvertedArgumentToBeAvailableInResolvedCall && resolvedCall is NewResolvedCallImpl<*>) {
@@ -589,7 +577,7 @@ fun StatementGenerator.generateSamConversionForValueArgumentsIfRequired(call: Ca
             if (!originalValueParameters[i].type.isFunctionTypeOrSubtype) continue
         }
 
-        val samKotlinType = samConversion.getSamTypeForValueParameter(underlyingValueParameter)
+        val samKotlinType = getSamTypeForValueParameter(underlyingValueParameter)
             ?: underlyingValueParameter.varargElementType // If we have a vararg, vararg element type will be taken
             ?: underlyingValueParameter.type
 
@@ -647,6 +635,23 @@ fun StatementGenerator.generateSamConversionForValueArgumentsIfRequired(call: Ca
                 }
             }
     }
+}
+
+private fun StatementGenerator.getSamTypeForValueParameter(valueParameter: ValueParameterDescriptor): KotlinType? {
+    val approximatedSamType = context.samTypeApproximator.getSamTypeForValueParameter(valueParameter)
+        ?: return null
+    if (!context.extensions.samConversion.isSamType(approximatedSamType))
+        return null
+    val classDescriptor = approximatedSamType.constructor.declarationDescriptor
+        ?: throw AssertionError("SAM type is expected to be a class type: $approximatedSamType")
+    return approximatedSamType.replace(
+        approximatedSamType.arguments.mapIndexed { index: Int, typeProjection: TypeProjection ->
+            if (typeProjection.type.constructor.isDenotable)
+                typeProjection
+            else
+                StarProjectionImpl(classDescriptor.typeConstructor.parameters[index])
+        }
+    )
 }
 
 fun StatementGenerator.pregenerateValueArgumentsUsing(

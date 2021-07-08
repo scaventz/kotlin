@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !DIAGNOSTICS: -UNUSED_PARAMETER
 
 class Example {
@@ -16,7 +15,7 @@ operator fun String.unaryPlus(): Int = 0
 fun test() {
     requireInt(+ "")
     requireInt(+ Example())
-    <!INAPPLICABLE_CANDIDATE!>requireString<!>(<!INAPPLICABLE_CANDIDATE!>+<!> ExampleDeprecated())
+    requireString(<!ARGUMENT_TYPE_MISMATCH!><!INAPPLICABLE_CANDIDATE!>+<!> ExampleDeprecated()<!>)
 }
 
 fun requireInt(n: Int) {}

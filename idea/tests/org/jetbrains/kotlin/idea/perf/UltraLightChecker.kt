@@ -21,8 +21,9 @@ import junit.framework.TestCase
 import org.jetbrains.kotlin.asJava.KotlinAsJavaSupport
 import org.jetbrains.kotlin.asJava.LightClassGenerationSupport
 import org.jetbrains.kotlin.asJava.PsiClassRenderer
-import org.jetbrains.kotlin.asJava.PsiClassRenderer.renderClass
 import org.jetbrains.kotlin.asJava.classes.*
+import org.jetbrains.kotlin.asJava.renderClass
+import org.jetbrains.kotlin.config.JvmAnalysisFlags
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.idea.project.languageVersionSettings
@@ -70,9 +71,9 @@ object UltraLightChecker {
 
         val oldForceFlag = KtUltraLightSupport.forceUsingOldLightClasses
         KtUltraLightSupport.forceUsingOldLightClasses = true
-        val gold = KtLightClassForFacade.createForFacadeNoCache(fqName, searchScope, project)
+        val gold = KtLightClassForFacadeImpl.createForFacadeNoCache(fqName, searchScope, project)
         KtUltraLightSupport.forceUsingOldLightClasses = false
-        val ultraLightClass = KtLightClassForFacade.createForFacadeNoCache(fqName, searchScope, project) ?: return null
+        val ultraLightClass = KtLightClassForFacadeImpl.createForFacadeNoCache(fqName, searchScope, project) ?: return null
         KtUltraLightSupport.forceUsingOldLightClasses = oldForceFlag
 
         checkClassEquivalenceByRendering(gold, ultraLightClass)
@@ -104,7 +105,9 @@ object UltraLightChecker {
     }
 
     fun checkClassEquivalence(ktClass: KtClassOrObject): KtUltraLightClass? {
-        val gold = KtLightClassForSourceDeclaration.createNoCache(ktClass, forceUsingOldLightClasses = true)
+        val gold = KtLightClassForSourceDeclaration.createNoCache(
+            ktClass, ktClass.languageVersionSettings.getFlag(JvmAnalysisFlags.jvmDefaultMode), forceUsingOldLightClasses = true
+        )
         val ultraLightClass = LightClassGenerationSupport.getInstance(ktClass.project).createUltraLightClass(ktClass) ?: return null
 
         val secondULInstance = LightClassGenerationSupport.getInstance(ktClass.project).createUltraLightClass(ktClass)

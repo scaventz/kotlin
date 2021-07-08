@@ -4,7 +4,6 @@
  */
 package org.jetbrains.kotlin.checkers
 
-import org.jetbrains.kotlin.builtins.StandardNames
 import org.jetbrains.kotlin.cli.common.config.addKotlinSourceRoot
 import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
@@ -20,7 +19,6 @@ import org.jetbrains.kotlin.test.TestFiles
 import org.jetbrains.kotlin.test.TestFiles.TestFileFactory
 import org.jetbrains.kotlin.test.util.KtTestUtil
 import java.io.File
-import java.util.*
 
 abstract class KotlinMultiFileTestWithJava<M : KotlinBaseTest.TestModule, F : KotlinBaseTest.TestFile> :
     KotlinBaseTest<F>() {
@@ -91,9 +89,6 @@ abstract class KotlinMultiFileTestWithJava<M : KotlinBaseTest.TestModule, F : Ko
         }
         result.addAll(getExtraClasspath())
         val fileText = file.readText(Charsets.UTF_8)
-        if (InTextDirectivesUtils.isDirectiveDefined(fileText, "ANDROID_ANNOTATIONS")) {
-            result.add(ForTestCompileRuntime.androidAnnotationsForTests())
-        }
         if (InTextDirectivesUtils.isDirectiveDefined(fileText, "STDLIB_JDK8")) {
             result.add(ForTestCompileRuntime.runtimeJarForTestsWithJdk8())
         }
@@ -144,7 +139,7 @@ abstract class KotlinMultiFileTestWithJava<M : KotlinBaseTest.TestModule, F : Ko
                 return createTestFile(module, fileName, text, directives)
             }
 
-            override fun createModule(name: String, dependencies: List<String>, friends: List<String>): M? {
+            override fun createModule(name: String, dependencies: List<String>, friends: List<String>, abiVersions: List<Int>): M? {
                 val module = createTestModule(name, dependencies, friends)
                 val oldValue = modules.put(name, ModuleAndDependencies(module, dependencies, friends))
                 assert(oldValue == null) { "Module $name declared more than once" }

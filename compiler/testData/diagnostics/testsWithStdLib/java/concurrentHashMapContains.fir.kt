@@ -1,5 +1,4 @@
-// !LANGUAGE: -ProhibitConcurrentHashMapContains -NonStrictOnlyInputTypesChecks
-// !WITH_NEW_INFERENCE
+// !LANGUAGE: -ProhibitConcurrentHashMapContains
 // FULL_JDK
 
 class A : java.util.concurrent.ConcurrentHashMap<String, Int>() {

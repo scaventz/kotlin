@@ -41,23 +41,25 @@ fun makeJsIncrementally(
     cachesDir: File,
     sourceRoots: Iterable<File>,
     args: K2JSCompilerArguments,
+    buildHistoryFile: File,
     messageCollector: MessageCollector = MessageCollector.NONE,
     reporter: ICReporter = EmptyICReporter,
-    scopeExpansion: CompileScopeExpansionMode = CompileScopeExpansionMode.NEVER
+    scopeExpansion: CompileScopeExpansionMode = CompileScopeExpansionMode.NEVER,
+    modulesApiHistory: ModulesApiHistory = EmptyModulesApiHistory,
+    providedChangedFiles: ChangedFiles? = null
 ) {
     val allKotlinFiles = sourceRoots.asSequence().flatMap { it.walk() }
         .filter { it.isFile && it.extension.equals("kt", ignoreCase = true) }.toList()
-    val buildHistoryFile = File(cachesDir, "build-history.bin")
 
     val buildReporter = BuildReporter(icReporter = reporter, buildMetricsReporter = DoNothingBuildMetricsReporter)
     withJsIC {
         val compiler = IncrementalJsCompilerRunner(
             cachesDir, buildReporter,
             buildHistoryFile = buildHistoryFile,
-            modulesApiHistory = EmptyModulesApiHistory,
+            modulesApiHistory = modulesApiHistory,
             scopeExpansion = scopeExpansion
         )
-        compiler.compile(allKotlinFiles, args, messageCollector, providedChangedFiles = null)
+        compiler.compile(allKotlinFiles, args, messageCollector, providedChangedFiles)
     }
 }
 
@@ -73,7 +75,7 @@ inline fun <R> withJsIC(fn: () -> R): R {
 }
 
 class IncrementalJsCompilerRunner(
-    private val workingDir: File,
+    workingDir: File,
     reporter: BuildReporter,
     buildHistoryFile: File,
     private val modulesApiHistory: ModulesApiHistory,
@@ -89,7 +91,7 @@ class IncrementalJsCompilerRunner(
 
     override fun createCacheManager(args: K2JSCompilerArguments, projectDir: File?): IncrementalJsCachesManager {
         val serializerProtocol = if (!args.isIrBackendEnabled()) JsSerializerProtocol else KlibMetadataSerializerProtocol
-        return IncrementalJsCachesManager(cacheDirectory, workingDir, reporter, serializerProtocol)
+        return IncrementalJsCachesManager(cacheDirectory, projectDir, reporter, serializerProtocol)
     }
 
     override fun destinationDir(args: K2JSCompilerArguments): File =
@@ -99,7 +101,8 @@ class IncrementalJsCompilerRunner(
         caches: IncrementalJsCachesManager,
         changedFiles: ChangedFiles.Known,
         args: K2JSCompilerArguments,
-        messageCollector: MessageCollector
+        messageCollector: MessageCollector,
+        classpathAbiSnapshots: Map<String, AbiSnapshot> //Ignore for now
     ): CompilationMode {
         val lastBuildInfo = BuildInfo.read(lastBuildInfoFile)
             ?: return CompilationMode.Rebuild(BuildAttribute.NO_BUILD_HISTORY)
@@ -108,7 +111,12 @@ class IncrementalJsCompilerRunner(
         initDirtyFiles(dirtyFiles, changedFiles)
 
         val libs = (args.libraries ?: "").split(File.pathSeparator).map { File(it) }
-        val classpathChanges = getClasspathChanges(libs, changedFiles, lastBuildInfo, modulesApiHistory, reporter)
+        //TODO(valtman) check for JS
+        val classpathChanges = getClasspathChanges(
+            libs, changedFiles, lastBuildInfo, modulesApiHistory, reporter,
+            mapOf(), false, caches.platformCache,
+            caches.lookupCache.lookupMap.keys.map { if (it.scope.isBlank()) it.name else it.scope }.distinct()
+        )
 
         @Suppress("UNUSED_VARIABLE") // for sealed when
         val unused = when (classpathChanges) {

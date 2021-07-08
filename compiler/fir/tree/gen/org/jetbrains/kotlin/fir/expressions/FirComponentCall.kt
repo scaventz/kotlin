@@ -5,12 +5,14 @@
 
 package org.jetbrains.kotlin.fir.expressions
 
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.*
+import org.jetbrains.kotlin.fir.FirImplementationDetail
 
 /*
  * This file was generated automatically
@@ -26,10 +28,18 @@ abstract class FirComponentCall : FirFunctionCall() {
     abstract override val extensionReceiver: FirExpression
     abstract override val argumentList: FirArgumentList
     abstract override val calleeReference: FirNamedReference
+    abstract override val origin: FirFunctionCallOrigin
     abstract override val explicitReceiver: FirExpression
     abstract val componentIndex: Int
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitComponentCall(this, data)
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformComponentCall(this, data) as E
+
+    @FirImplementationDetail
+    abstract override fun replaceSource(newSource: FirSourceElement?)
 
     abstract override fun replaceTypeRef(newTypeRef: FirTypeRef)
 

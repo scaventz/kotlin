@@ -1486,24 +1486,6 @@ public class LoadJavaUsingJavacTestGenerated extends AbstractLoadJavaUsingJavacT
             }
         }
 
-        @TestMetadata("compiler/testData/loadJava/compiledJava/signatureAnnotations")
-        @TestDataPath("$PROJECT_ROOT")
-        @RunWith(JUnit3RunnerWithInners.class)
-        public static class SignatureAnnotations extends AbstractLoadJavaUsingJavacTest {
-            private void runTest(String testDataFilePath) throws Exception {
-                KotlinTestUtils.runTest(this::doTestCompiledJava, this, testDataFilePath);
-            }
-
-            public void testAllFilesPresentInSignatureAnnotations() throws Exception {
-                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/loadJava/compiledJava/signatureAnnotations"), Pattern.compile("^(.+)\\.java$"), null, true);
-            }
-
-            @TestMetadata("StableName.java")
-            public void testStableName() throws Exception {
-                runTest("compiler/testData/loadJava/compiledJava/signatureAnnotations/StableName.java");
-            }
-        }
-
         @TestMetadata("compiler/testData/loadJava/compiledJava/signaturePropagation")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -1750,6 +1732,11 @@ public class LoadJavaUsingJavacTestGenerated extends AbstractLoadJavaUsingJavacT
             @TestMetadata("AnnotationInAnnotationArguments.kt")
             public void testAnnotationInAnnotationArguments() throws Exception {
                 runTest("compiler/testData/loadJava/compiledKotlin/annotations/AnnotationInAnnotationArguments.kt");
+            }
+
+            @TestMetadata("AnnotationInArray.kt")
+            public void testAnnotationInArray() throws Exception {
+                runTest("compiler/testData/loadJava/compiledKotlin/annotations/AnnotationInArray.kt");
             }
 
             @TestMetadata("ClassLiteralArguments.kt")
@@ -2132,6 +2119,11 @@ public class LoadJavaUsingJavacTestGenerated extends AbstractLoadJavaUsingJavacT
                 @TestMetadata("ClassLiteralArgument.kt")
                 public void testClassLiteralArgument() throws Exception {
                     runTest("compiler/testData/loadJava/compiledKotlin/annotations/types/ClassLiteralArgument.kt");
+                }
+
+                @TestMetadata("DefinitelyNotNull.kt")
+                public void testDefinitelyNotNull() throws Exception {
+                    runTest("compiler/testData/loadJava/compiledKotlin/annotations/types/DefinitelyNotNull.kt");
                 }
 
                 @TestMetadata("ReceiverParameter.kt")

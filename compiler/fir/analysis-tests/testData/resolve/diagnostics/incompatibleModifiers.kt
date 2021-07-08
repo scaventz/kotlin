@@ -1,5 +1,3 @@
-class A<<!INCOMPATIBLE_MODIFIERS!>in<!> <!INCOMPATIBLE_MODIFIERS!>out<!> T> {  }
-
 <!INCOMPATIBLE_MODIFIERS!>private<!> <!INCOMPATIBLE_MODIFIERS!>public<!> class B
 <!INCOMPATIBLE_MODIFIERS!>protected<!> <!INCOMPATIBLE_MODIFIERS!>internal<!> class C
 
@@ -22,7 +20,7 @@ abstract class K {
     <!INCOMPATIBLE_MODIFIERS!>private<!> <!INCOMPATIBLE_MODIFIERS!>abstract<!> val i2: Int
 }
 
-private open class L : K()
+private open <!INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER!>class L<!> : K()
 private abstract class M : K()
 
 class X {

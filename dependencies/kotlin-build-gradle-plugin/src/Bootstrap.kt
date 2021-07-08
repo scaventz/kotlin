@@ -19,7 +19,7 @@ var Project.bootstrapKotlinRepo: String?
 
 @Deprecated("Obsolete, use internalBootstrapRepo instead.")
 val Project.internalKotlinRepo: String?
-    get() = "https://teamcity.jetbrains.com/guestAuth/app/rest/builds/buildType:(id:Kotlin_KotlinPublic_Compiler),number:$bootstrapKotlinVersion," +
+    get() = "https://teamcity.jetbrains.com/guestAuth/app/rest/builds/buildType:(id:Kotlin_KotlinPublic_Aggregate),number:$bootstrapKotlinVersion," +
             "branch:default:any/artifacts/content/internal/repo"
 
 fun Project.kotlinBootstrapFrom(defaultSource: BootstrapOption) {
@@ -64,14 +64,6 @@ sealed class BootstrapOption {
                 repo
         }
     }
-
-    /** Get bootstrap from kotlin-dev bintray repo */
-    class BintrayDev(kotlinVersion: String, cacheRedirector: Boolean = false) :
-        Custom(kotlinVersion, "https://dl.bintray.com/kotlin/kotlin-dev", cacheRedirector)
-
-    /** Get bootstrap from kotlin-bootstrap bintray repo, where bootstraps are published */
-    class BintrayBootstrap(kotlinVersion: String, cacheRedirector: Boolean = false) :
-        Custom(kotlinVersion, "https://dl.bintray.com/kotlin/kotlin-bootstrap", cacheRedirector)
 
     /** Get bootstrap from kotlin bootstrap space repo, where bootstraps are published */
     class SpaceBootstrap(kotlinVersion: String, cacheRedirector: Boolean = false) :

@@ -11,5 +11,5 @@ public interface SLRUMap<V> {
 // FILE: main.kt
 
 fun <V> SLRUMap<V>.getOrPut(value: V) {
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>takeV<!>(value)<!>
+    takeV(<!ARGUMENT_TYPE_MISMATCH!>value<!>)
 }

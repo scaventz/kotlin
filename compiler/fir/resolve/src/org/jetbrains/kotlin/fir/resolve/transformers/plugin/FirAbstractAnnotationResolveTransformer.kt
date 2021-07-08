@@ -16,100 +16,94 @@ import org.jetbrains.kotlin.fir.scopes.FirCompositeScope
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.createImportingScopes
 import org.jetbrains.kotlin.fir.types.FirTypeRef
-import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirDefaultTransformer
-import org.jetbrains.kotlin.fir.visitors.compose
 
 internal abstract class FirAbstractAnnotationResolveTransformer<D, S>(
     protected val session: FirSession,
     protected val scopeSession: ScopeSession
 ) : FirDefaultTransformer<D>() {
-    abstract override fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: D): CompositeTransformResult<FirStatement>
+    abstract override fun transformAnnotationCall(annotationCall: FirAnnotationCall, data: D): FirStatement
 
     protected lateinit var scope: FirScope
 
-    override fun transformFile(file: FirFile, data: D): CompositeTransformResult<FirDeclaration> {
+    override fun transformFile(file: FirFile, data: D): FirFile {
         scope = FirCompositeScope(createImportingScopes(file, session, scopeSession, useCaching = false))
         val state = beforeChildren(file)
         file.transformDeclarations(this, data)
         afterChildren(state)
-        return transformAnnotatedDeclaration(file, data)
+        return transformAnnotatedDeclaration(file, data) as FirFile
     }
 
-    override fun transformProperty(property: FirProperty, data: D): CompositeTransformResult<FirDeclaration> {
-        return transformAnnotatedDeclaration(property, data)
+    override fun transformProperty(property: FirProperty, data: D): FirProperty {
+        return transformAnnotatedDeclaration(property, data) as FirProperty
     }
 
     override fun transformRegularClass(
         regularClass: FirRegularClass,
         data: D
-    ): CompositeTransformResult<FirStatement> {
-        @Suppress("UNCHECKED_CAST")
+    ): FirStatement {
         return transformAnnotatedDeclaration(regularClass, data).also {
             val state = beforeChildren(regularClass)
             regularClass.transformDeclarations(this, data)
             regularClass.transformCompanionObject(this, data)
             regularClass.transformSuperTypeRefs(this, data)
             afterChildren(state)
-        } as CompositeTransformResult<FirStatement>
+        } as FirStatement
     }
 
     override fun transformSimpleFunction(
         simpleFunction: FirSimpleFunction,
         data: D
-    ): CompositeTransformResult<FirDeclaration> {
+    ): FirSimpleFunction {
         return transformAnnotatedDeclaration(simpleFunction, data).also {
             val state = beforeChildren(simpleFunction)
             simpleFunction.transformValueParameters(this, data)
             afterChildren(state)
-        }
+        } as FirSimpleFunction
     }
 
     override fun transformConstructor(
         constructor: FirConstructor,
         data: D
-    ): CompositeTransformResult<FirDeclaration> {
+    ): FirConstructor {
         return transformAnnotatedDeclaration(constructor, data).also {
             val state = beforeChildren(constructor)
             constructor.transformValueParameters(this, data)
             afterChildren(state)
-        }
+        } as FirConstructor
     }
 
     override fun transformValueParameter(
         valueParameter: FirValueParameter,
         data: D
-    ): CompositeTransformResult<FirStatement> {
-        @Suppress("UNCHECKED_CAST")
-        return transformAnnotatedDeclaration(valueParameter, data) as CompositeTransformResult<FirStatement>
+    ): FirStatement {
+        return transformAnnotatedDeclaration(valueParameter, data) as FirStatement
     }
 
-    override fun transformTypeAlias(typeAlias: FirTypeAlias, data: D): CompositeTransformResult<FirDeclaration> {
-        return transformAnnotatedDeclaration(typeAlias, data)
+    override fun transformTypeAlias(typeAlias: FirTypeAlias, data: D): FirTypeAlias {
+        return transformAnnotatedDeclaration(typeAlias, data) as FirTypeAlias
     }
 
-    override fun transformTypeRef(typeRef: FirTypeRef, data: D): CompositeTransformResult<FirTypeRef> {
-        @Suppress("UNCHECKED_CAST")
-        return transformAnnotationContainer(typeRef, data) as CompositeTransformResult<FirTypeRef>
+    override fun transformTypeRef(typeRef: FirTypeRef, data: D): FirTypeRef {
+        return transformAnnotationContainer(typeRef, data) as FirTypeRef
     }
 
     override fun transformAnnotatedDeclaration(
         annotatedDeclaration: FirAnnotatedDeclaration,
         data: D
-    ): CompositeTransformResult<FirDeclaration> {
-        @Suppress("UNCHECKED_CAST")
-        return transformAnnotationContainer(annotatedDeclaration, data) as CompositeTransformResult<FirDeclaration>
+    ): FirAnnotatedDeclaration {
+        return transformAnnotationContainer(annotatedDeclaration, data) as FirAnnotatedDeclaration
     }
 
     override fun transformAnnotationContainer(
         annotationContainer: FirAnnotationContainer,
         data: D
-    ): CompositeTransformResult<FirAnnotationContainer> {
-        return annotationContainer.transformAnnotations(this, data).compose()
+    ): FirAnnotationContainer {
+        return annotationContainer.transformAnnotations(this, data)
     }
 
-    override fun <E : FirElement> transformElement(element: E, data: D): CompositeTransformResult<E> {
-        return element.compose()
+    override fun <E : FirElement> transformElement(element: E, data: D): E {
+        return element
     }
 
     protected open fun beforeChildren(declaration: FirAnnotatedDeclaration): S? {

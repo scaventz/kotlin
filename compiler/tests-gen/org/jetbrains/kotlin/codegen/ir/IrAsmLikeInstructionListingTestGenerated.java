@@ -115,6 +115,11 @@ public class IrAsmLikeInstructionListingTestGenerated extends AbstractIrAsmLikeI
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/asmLike/typeAnnotations"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JVM_IR, true);
         }
 
+        @TestMetadata("classTypeParameter.kt")
+        public void testClassTypeParameter() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/classTypeParameter.kt");
+        }
+
         @TestMetadata("complex.kt")
         public void testComplex() throws Exception {
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/complex.kt");
@@ -130,9 +135,19 @@ public class IrAsmLikeInstructionListingTestGenerated extends AbstractIrAsmLikeI
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/defaultArgs.kt");
         }
 
+        @TestMetadata("dontEmit.kt")
+        public void testDontEmit() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/dontEmit.kt");
+        }
+
         @TestMetadata("enumClassConstructor.kt")
         public void testEnumClassConstructor() throws Exception {
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/enumClassConstructor.kt");
+        }
+
+        @TestMetadata("enumClassConstructor_ir.kt")
+        public void testEnumClassConstructor_ir() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/enumClassConstructor_ir.kt");
         }
 
         @TestMetadata("extension.kt")
@@ -140,9 +155,19 @@ public class IrAsmLikeInstructionListingTestGenerated extends AbstractIrAsmLikeI
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/extension.kt");
         }
 
+        @TestMetadata("functionTypeParameter.kt")
+        public void testFunctionTypeParameter() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/functionTypeParameter.kt");
+        }
+
         @TestMetadata("implicit.kt")
         public void testImplicit() throws Exception {
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/implicit.kt");
+        }
+
+        @TestMetadata("implicit_ir.kt")
+        public void testImplicit_ir() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/implicit_ir.kt");
         }
 
         @TestMetadata("innerClassConstructor.kt")
@@ -170,6 +195,11 @@ public class IrAsmLikeInstructionListingTestGenerated extends AbstractIrAsmLikeI
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/property.kt");
         }
 
+        @TestMetadata("propertyTypeParameter.kt")
+        public void testPropertyTypeParameter() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/propertyTypeParameter.kt");
+        }
+
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/simple.kt");
@@ -188,6 +218,16 @@ public class IrAsmLikeInstructionListingTestGenerated extends AbstractIrAsmLikeI
         @TestMetadata("syntheticAccessors.kt")
         public void testSyntheticAccessors() throws Exception {
             runTest("compiler/testData/codegen/asmLike/typeAnnotations/syntheticAccessors.kt");
+        }
+
+        @TestMetadata("typeParameter.kt")
+        public void testTypeParameter() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/typeParameter.kt");
+        }
+
+        @TestMetadata("typeParameter16.kt")
+        public void testTypeParameter16() throws Exception {
+            runTest("compiler/testData/codegen/asmLike/typeAnnotations/typeParameter16.kt");
         }
     }
 }

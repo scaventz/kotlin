@@ -1,5 +1,6 @@
-// FILE: enhancedNullabilityInDestructuringAssignment.kt
+// TARGET_BACKEND: JVM
 // WITH_RUNTIME
+// FILE: enhancedNullabilityInDestructuringAssignment.kt
 
 fun use(x: Any, y: Any) {}
 

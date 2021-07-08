@@ -5,25 +5,28 @@
 
 package org.jetbrains.kotlin.fir.resolve.calls
 
-import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
-import org.jetbrains.kotlin.fir.declarations.isStatic
+import org.jetbrains.kotlin.fir.declarations.getDeprecationsFromAccessors
+import org.jetbrains.kotlin.fir.declarations.utils.isStatic
 import org.jetbrains.kotlin.fir.declarations.synthetic.buildSyntheticProperty
-import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
 import org.jetbrains.kotlin.fir.scopes.*
-import org.jetbrains.kotlin.fir.symbols.CallableId
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.SyntheticSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.typeContext
-import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.symbols.impl.FirAccessorSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.types.ConeClassLikeType
 import org.jetbrains.kotlin.fir.types.ConeNullability.NOT_NULL
-import org.jetbrains.kotlin.fir.unwrapFakeOverrides
+import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
+import org.jetbrains.kotlin.fir.types.withNullability
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.types.AbstractTypeChecker
 
-class SyntheticPropertySymbol(
+class FirSyntheticPropertySymbol(
     callableId: CallableId,
     override val accessorId: CallableId
 ) : FirAccessorSymbol(callableId, accessorId), SyntheticSymbol
@@ -91,8 +94,8 @@ class FirSyntheticPropertiesScope(
                     // I think details here are worth designing
                     if (!AbstractTypeChecker.isSubtypeOf(
                             session.typeContext,
-                            getterReturnType.withNullability(NOT_NULL),
-                            parameterType.withNullability(NOT_NULL)
+                            getterReturnType.withNullability(NOT_NULL, session.typeContext),
+                            parameterType.withNullability(NOT_NULL, session.typeContext)
                         )
                     ) {
                         return
@@ -107,16 +110,23 @@ class FirSyntheticPropertiesScope(
         val className = classLookupTag?.classId?.relativeClassName
 
         val property = buildSyntheticProperty {
-            session = this@FirSyntheticPropertiesScope.session
+            moduleData = session.moduleData
             name = propertyName
-            symbol = SyntheticPropertySymbol(
+            symbol = FirSyntheticPropertySymbol(
                 accessorId = getterSymbol.callableId,
                 callableId = CallableId(packageName, className, propertyName)
             )
             delegateGetter = getter
             delegateSetter = matchingSetter
+            deprecation = getDeprecationsFromAccessors(getter, matchingSetter, session.languageVersionSettings.apiVersion)
         }
-        processor(property.symbol)
+        val syntheticSymbol = property.symbol
+        (baseScope as? FirUnstableSmartcastTypeScope)?.apply {
+            if (isSymbolFromUnstableSmartcast(getterSymbol)) {
+                markSymbolFromUnstableSmartcast(syntheticSymbol)
+            }
+        }
+        processor(syntheticSymbol)
     }
 
     private fun FirNamedFunctionSymbol.hasJavaOverridden(): Boolean {

@@ -18,6 +18,36 @@ import kotlin.ranges.contains
 import kotlin.ranges.reversed
 
 /**
+ * Returns the first non-null value produced by [transform] function being applied to entries of this map in iteration order,
+ * or throws [NoSuchElementException] if no non-null value was produced.
+ * 
+ * @sample samples.collections.Collections.Transformations.firstNotNullOf
+ */
+@SinceKotlin("1.5")
+@kotlin.internal.InlineOnly
+public inline fun <K, V, R : Any> Map<out K, V>.firstNotNullOf(transform: (Map.Entry<K, V>) -> R?): R {
+    return firstNotNullOfOrNull(transform) ?: throw NoSuchElementException("No element of the map was transformed to a non-null value.")
+}
+
+/**
+ * Returns the first non-null value produced by [transform] function being applied to entries of this map in iteration order,
+ * or `null` if no non-null value was produced.
+ * 
+ * @sample samples.collections.Collections.Transformations.firstNotNullOf
+ */
+@SinceKotlin("1.5")
+@kotlin.internal.InlineOnly
+public inline fun <K, V, R : Any> Map<out K, V>.firstNotNullOfOrNull(transform: (Map.Entry<K, V>) -> R?): R? {
+    for (element in this) {
+        val result = transform(element)
+        if (result != null) {
+            return result
+        }
+    }
+    return null
+}
+
+/**
  * Returns a [List] containing all key-value pairs.
  */
 public fun <K, V> Map<out K, V>.toList(): List<Pair<K, V>> {
@@ -182,7 +212,7 @@ public inline fun <K, V> Map<out K, V>.forEach(action: (Map.Entry<K, V>) -> Unit
 }
 
 @Deprecated("Use maxByOrNull instead.", ReplaceWith("this.maxByOrNull(selector)"))
-@DeprecatedSinceKotlin(warningSince = "1.4")
+@DeprecatedSinceKotlin(warningSince = "1.4", errorSince = "1.5")
 @kotlin.internal.InlineOnly
 public inline fun <K, V, R : Comparable<R>> Map<out K, V>.maxBy(selector: (Map.Entry<K, V>) -> R): Map.Entry<K, V>? {
     return maxByOrNull(selector)
@@ -312,7 +342,7 @@ public inline fun <K, V, R> Map<out K, V>.maxOfWithOrNull(comparator: Comparator
 }
 
 @Deprecated("Use maxWithOrNull instead.", ReplaceWith("this.maxWithOrNull(comparator)"))
-@DeprecatedSinceKotlin(warningSince = "1.4")
+@DeprecatedSinceKotlin(warningSince = "1.4", errorSince = "1.5")
 @kotlin.internal.InlineOnly
 public inline fun <K, V> Map<out K, V>.maxWith(comparator: Comparator<in Map.Entry<K, V>>): Map.Entry<K, V>? {
     return maxWithOrNull(comparator)
@@ -328,7 +358,7 @@ public inline fun <K, V> Map<out K, V>.maxWithOrNull(comparator: Comparator<in M
 }
 
 @Deprecated("Use minByOrNull instead.", ReplaceWith("this.minByOrNull(selector)"))
-@DeprecatedSinceKotlin(warningSince = "1.4")
+@DeprecatedSinceKotlin(warningSince = "1.4", errorSince = "1.5")
 public inline fun <K, V, R : Comparable<R>> Map<out K, V>.minBy(selector: (Map.Entry<K, V>) -> R): Map.Entry<K, V>? {
     return minByOrNull(selector)
 }
@@ -457,7 +487,7 @@ public inline fun <K, V, R> Map<out K, V>.minOfWithOrNull(comparator: Comparator
 }
 
 @Deprecated("Use minWithOrNull instead.", ReplaceWith("this.minWithOrNull(comparator)"))
-@DeprecatedSinceKotlin(warningSince = "1.4")
+@DeprecatedSinceKotlin(warningSince = "1.4", errorSince = "1.5")
 public fun <K, V> Map<out K, V>.minWith(comparator: Comparator<in Map.Entry<K, V>>): Map.Entry<K, V>? {
     return minWithOrNull(comparator)
 }

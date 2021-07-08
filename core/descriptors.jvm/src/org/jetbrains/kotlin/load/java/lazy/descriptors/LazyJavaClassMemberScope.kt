@@ -29,9 +29,9 @@ import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.incremental.record
 import org.jetbrains.kotlin.load.java.*
 import org.jetbrains.kotlin.load.java.BuiltinMethodsWithDifferentJvmName.isRemoveAtByIndex
-import org.jetbrains.kotlin.load.java.BuiltinMethodsWithDifferentJvmName.sameAsRenamedInJvmBuiltin
 import org.jetbrains.kotlin.load.java.BuiltinMethodsWithSpecialGenericSignature.sameAsBuiltinMethodWithErasedValueParameters
 import org.jetbrains.kotlin.load.java.ClassicBuiltinSpecialProperties.getBuiltinSpecialPropertyGetterName
+import org.jetbrains.kotlin.load.java.SpecialGenericSignatures.Companion.sameAsRenamedInJvmBuiltin
 import org.jetbrains.kotlin.load.java.components.DescriptorResolverUtils.resolveOverridesForNonStaticMembers
 import org.jetbrains.kotlin.load.java.components.TypeUsage
 import org.jetbrains.kotlin.load.java.descriptors.*
@@ -57,7 +57,6 @@ import org.jetbrains.kotlin.types.checker.KotlinTypeChecker
 import org.jetbrains.kotlin.types.refinement.TypeRefinement
 import org.jetbrains.kotlin.utils.SmartSet
 import org.jetbrains.kotlin.utils.addIfNotNull
-import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
 import org.jetbrains.kotlin.utils.ifEmpty
 import java.util.*
 
@@ -78,6 +77,7 @@ class LazyJavaClassMemberScope(
             addAll(declaredMemberIndex().getMethodNames())
             addAll(declaredMemberIndex().getRecordComponentNames())
             addAll(computeClassNames(kindFilter, nameFilter))
+            addAll(c.components.syntheticPartsProvider.getMethodNames(ownerDescriptor))
         }
 
     internal val constructors = c.storageManager.createLazyValue {
@@ -97,6 +97,8 @@ class LazyJavaClassMemberScope(
                 c.components.javaResolverCache.recordConstructor(jClass, defaultConstructor)
             }
         }
+
+        c.components.syntheticPartsProvider.generateConstructors(ownerDescriptor, result)
 
         c.components.signatureEnhancement.enhanceSignatures(
             c,
@@ -203,7 +205,7 @@ class LazyJavaClassMemberScope(
         }
 
     private fun SimpleFunctionDescriptor.doesOverrideRenamedBuiltins(): Boolean {
-        return BuiltinMethodsWithDifferentJvmName.getBuiltinFunctionNamesByJvmName(name).any {
+        return SpecialGenericSignatures.getBuiltinFunctionNamesByJvmName(name).any {
             // e.g. 'removeAt' or 'toInt'
                 builtinName ->
             val builtinSpecialFromSuperTypes =
@@ -285,7 +287,7 @@ class LazyJavaClassMemberScope(
         getterName: String,
         functions: (Name) -> Collection<SimpleFunctionDescriptor>
     ): SimpleFunctionDescriptor? {
-        return functions(Name.identifier(getterName)).firstNotNullResult factory@{ descriptor ->
+        return functions(Name.identifier(getterName)).firstNotNullOfOrNull factory@{ descriptor ->
             if (descriptor.valueParameters.size != 0) return@factory null
 
             descriptor.takeIf { KotlinTypeChecker.DEFAULT.isSubtypeOf(descriptor.returnType ?: return@takeIf false, type) }
@@ -295,7 +297,7 @@ class LazyJavaClassMemberScope(
     private fun PropertyDescriptor.findSetterOverride(
         functions: (Name) -> Collection<SimpleFunctionDescriptor>
     ): SimpleFunctionDescriptor? {
-        return functions(Name.identifier(JvmAbi.setterName(name.asString()))).firstNotNullResult factory@{ descriptor ->
+        return functions(Name.identifier(JvmAbi.setterName(name.asString()))).firstNotNullOfOrNull factory@{ descriptor ->
             if (descriptor.valueParameters.size != 1) return@factory null
 
             if (!KotlinBuiltIns.isUnit(descriptor.returnType ?: return@factory null)) return@factory null
@@ -445,7 +447,7 @@ class LazyJavaClassMemberScope(
     ): SimpleFunctionDescriptor? {
         if (!descriptor.isSuspend) return null
 
-        return functions(descriptor.name).firstNotNullResult { overrideCandidate ->
+        return functions(descriptor.name).firstNotNullOfOrNull { overrideCandidate ->
             overrideCandidate.createSuspendView()?.takeIf { suspendView -> suspendView.doesOverride(descriptor) }
         }
     }
@@ -496,6 +498,8 @@ class LazyJavaClassMemberScope(
         if (jClass.isRecord && declaredMemberIndex().findRecordComponentByName(name) != null && result.none { it.valueParameters.isEmpty() }) {
             result.add(resolveRecordComponentToFunctionDescriptor(declaredMemberIndex().findRecordComponentByName(name)!!))
         }
+
+        c.components.syntheticPartsProvider.generateMethods(ownerDescriptor, name, result)
     }
 
     private fun resolveRecordComponentToFunctionDescriptor(recordComponent: JavaRecordComponent): JavaMethodDescriptor {

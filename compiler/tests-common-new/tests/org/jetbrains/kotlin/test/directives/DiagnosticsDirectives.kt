@@ -7,6 +7,9 @@ package org.jetbrains.kotlin.test.directives
 
 import org.jetbrains.kotlin.test.backend.handlers.JvmBackendDiagnosticsHandler
 import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.USE_JAVAC
+import org.jetbrains.kotlin.test.directives.model.DirectiveApplicability
+import org.jetbrains.kotlin.test.directives.model.DirectiveApplicability.Any
+import org.jetbrains.kotlin.test.directives.model.DirectiveApplicability.Global
 import org.jetbrains.kotlin.test.directives.model.SimpleDirectivesContainer
 
 object DiagnosticsDirectives : SimpleDirectivesContainer() {
@@ -23,6 +26,11 @@ object DiagnosticsDirectives : SimpleDirectivesContainer() {
                     '-' means 'exclude'
               '+' May be used in case if some diagnostic was disabled by default in test runner
                 and it should be enabled in specific test
+                
+            Also you can enable/disable all diagnostics with specific severity using following syntax:
+              [+-]infos
+              [+-]warnings
+              [+-]errors
         """.trimIndent()
     )
 
@@ -60,6 +68,13 @@ object DiagnosticsDirectives : SimpleDirectivesContainer() {
         description = """
             Dump declaration from packages listed in directive
               (additional to root package)
+        """.trimIndent()
+    )
+
+    val REPORT_ONLY_EXPLICITLY_DEFINED_DEBUG_INFO by directive(
+        description = """
+            If this directive enabled then `DEBUG_INFO_...` diagnostics will be reported
+              only if they are defined in testdata.
         """.trimIndent()
     )
 }

@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.load.java.structure.JavaWildcardType
 import org.jetbrains.kotlin.load.java.typeEnhancement.*
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqNameUnsafe
-import org.jetbrains.kotlin.utils.JavaTypeEnhancementState
+import org.jetbrains.kotlin.load.java.JavaTypeEnhancementState
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 internal class EnhancementSignatureParts(
@@ -51,7 +51,7 @@ internal class EnhancementSignatureParts(
         session: FirSession,
         javaTypeEnhancementState: JavaTypeEnhancementState,
         predefined: TypeEnhancementInfo? = null,
-        forAnnotationValueParameter: Boolean = false
+        forAnnotationMember: Boolean = false
     ): PartEnhancementResult {
         val qualifiers = computeIndexedQualifiersForOverride(session, javaTypeEnhancementState)
 
@@ -64,7 +64,7 @@ internal class EnhancementSignatureParts(
         val typeWithoutEnhancement = current.type.toConeKotlinTypeWithoutEnhancement(
             session,
             javaTypeParameterStack,
-            forAnnotationValueParameter,
+            forAnnotationMember,
             attributes = attributesCache.getValue(current)
         )
         val containsFunctionN = typeWithoutEnhancement.contains {
@@ -248,7 +248,7 @@ internal class EnhancementSignatureParts(
         val superQualifiers = fromSupertypes.map { it.extractQualifiers(session) }
         val mutabilityFromSupertypes = superQualifiers.mapNotNull { it.mutability }.toSet()
         val nullabilityFromSupertypes = superQualifiers.mapNotNull { it.nullability }.toSet()
-        val nullabilityFromSupertypesWithWarning = fromOverridden
+        val nullabilityFromSupertypesWithWarning = fromSupertypes
             .mapNotNull { it.extractQualifiers(session).nullability }
             .toSet()
 

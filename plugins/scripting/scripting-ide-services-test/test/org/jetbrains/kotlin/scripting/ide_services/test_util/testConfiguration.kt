@@ -72,8 +72,8 @@ class TestConf {
 
         class Expected(private val run: Run) {
             val completions = ExpectedList<SourceCodeCompletionVariant>(run::doComplete)
-            fun addCompletion(text: String, displayText: String, tail: String, icon: String) {
-                completions.add(SourceCodeCompletionVariant(text, displayText, tail, icon))
+            fun addCompletion(text: String, displayText: String, tail: String, icon: String, deprecationLevel: DeprecationLevel? = null) {
+                completions.add(SourceCodeCompletionVariant(text, displayText, tail, icon, deprecationLevel))
             }
 
             val errors = ExpectedList<ScriptDiagnostic>(run::doErrorCheck)
@@ -283,7 +283,7 @@ private suspend fun checkEvaluateInRepl(
 
                 checkLists(index, "completions", expectedCompletions.list, completionsRes, expectedCompletions)
                 val expectedErrorsWithPath = expectedErrors.list.map {
-                    it.copy(sourcePath = errorsRes.firstOrNull()?.sourcePath)
+                    if (it.location != null) it.copy(sourcePath = errorsRes.firstOrNull()?.sourcePath) else it
                 }
                 checkLists(index, "errors", expectedErrorsWithPath, errorsRes, expectedErrors)
                 TestCase.assertEquals("Analysis result types are different", expectedResultType, resultType)

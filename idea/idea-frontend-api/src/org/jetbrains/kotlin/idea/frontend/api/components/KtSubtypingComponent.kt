@@ -7,7 +7,18 @@ package org.jetbrains.kotlin.idea.frontend.api.components
 
 import org.jetbrains.kotlin.idea.frontend.api.types.KtType
 
-abstract class KtSubtypingComponent : KtAnalysisSessionComponent() {
-    abstract fun isEqualTo(first: KtType, second: KtType): Boolean
-    abstract fun isSubTypeOf(subType: KtType, superType: KtType): Boolean
+public abstract class KtSubtypingComponent : KtAnalysisSessionComponent() {
+    public abstract fun isEqualTo(first: KtType, second: KtType): Boolean
+    public abstract fun isSubTypeOf(subType: KtType, superType: KtType): Boolean
+}
+
+public interface KtSubtypingComponentMixIn : KtAnalysisSessionMixIn {
+    infix public fun KtType.isEqualTo(other: KtType): Boolean =
+        analysisSession.subtypingComponent.isEqualTo(this, other)
+
+    infix public fun KtType.isSubTypeOf(superType: KtType): Boolean =
+        analysisSession.subtypingComponent.isSubTypeOf(this, superType)
+
+    infix public fun KtType.isNotSubTypeOf(superType: KtType): Boolean =
+        !analysisSession.subtypingComponent.isSubTypeOf(this, superType)
 }

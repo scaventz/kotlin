@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.config
 
-import org.jetbrains.kotlin.utils.JavaTypeEnhancementState
+import org.jetbrains.kotlin.load.java.JavaTypeEnhancementState
 import kotlin.reflect.KProperty
 
 object JvmAnalysisFlags {
@@ -32,6 +32,9 @@ object JvmAnalysisFlags {
 
     @JvmStatic
     val enableJvmPreview by AnalysisFlag.Delegates.Boolean
+
+    @JvmStatic
+    val useIR by AnalysisFlag.Delegates.Boolean
 
     private object Delegates {
         object JavaTypeEnhancementStateWarnByDefault {

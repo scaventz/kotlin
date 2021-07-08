@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.cli.common.arguments
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.*
+import kotlin.reflect.KVisibility
 
 class K2JVMCompilerArguments : CommonCompilerArguments() {
     companion object {
@@ -25,10 +26,16 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
         description = "List of directories and JAR/ZIP archives to search for user class files")
     var classpath: String? by NullableStringFreezableVar(null)
 
+    @DeprecatedOption(removeAfter = "1.5", level = DeprecationLevel.ERROR)
     @GradleOption(DefaultValues.BooleanFalseDefault::class)
     @Argument(value = "-include-runtime", description = "Include Kotlin runtime into the resulting JAR")
     var includeRuntime: Boolean by FreezableVar(false)
 
+    @DeprecatedOption(
+        message = "This option is not working well with Gradle caching and will be removed in the future.",
+        removeAfter = "1.7",
+        level = DeprecationLevel.WARNING
+    )
     @GradleOption(DefaultValues.StringNullDefault::class)
     @Argument(
         value = "-jdk-home",
@@ -41,10 +48,12 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(value = "-no-jdk", description = "Don't automatically include the Java runtime into the classpath")
     var noJdk: Boolean by FreezableVar(false)
 
+    @DeprecatedOption(removeAfter = "1.5", level = DeprecationLevel.ERROR)
     @GradleOption(DefaultValues.BooleanTrueDefault::class)
     @Argument(value = "-no-stdlib", description = "Don't automatically include the Kotlin/JVM stdlib and Kotlin reflection into the classpath")
     var noStdlib: Boolean by FreezableVar(false)
 
+    @DeprecatedOption(removeAfter = "1.5", level = DeprecationLevel.ERROR)
     @GradleOption(DefaultValues.BooleanTrueDefault::class)
     @Argument(value = "-no-reflect", description = "Don't automatically include Kotlin reflection into the classpath")
     var noReflect: Boolean by FreezableVar(false)
@@ -67,11 +76,14 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(value = "-module-name", valueDescription = "<name>", description = "Name of the generated .kotlin_module file")
     var moduleName: String? by NullableStringFreezableVar(null)
 
-    @GradleOption(DefaultValues.JvmTargetVersions::class)
+    @GradleOption(
+        value = DefaultValues.JvmTargetVersions::class,
+        backingFieldVisibility = KVisibility.INTERNAL
+    )
     @Argument(
         value = "-jvm-target",
         valueDescription = "<version>",
-        description = "Target version of the generated JVM bytecode (1.6, 1.8, 9, 10, 11, 12, 13, 14 or 15), default is 1.6"
+        description = "Target version of the generated JVM bytecode (1.6 (DEPRECATED), 1.8, 9, 10, 11, 12, 13, 14, 15 or 16), default is 1.8"
     )
     var jvmTarget: String? by NullableStringFreezableVar(JvmTarget.DEFAULT.description)
 
@@ -81,8 +93,12 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
 
     // Advanced options
 
+    @DeprecatedOption(removeAfter = "1.5", level = DeprecationLevel.WARNING)
     @GradleOption(DefaultValues.BooleanFalseDefault::class)
-    @Argument(value = "-Xuse-ir", description = "Use the IR backend")
+    @Argument(
+        value = "-Xuse-ir",
+        description = "Use the IR backend. This option has no effect unless the language version less than 1.5 is used"
+    )
     var useIR: Boolean by FreezableVar(false)
 
     @GradleOption(DefaultValues.BooleanFalseDefault::class)
@@ -110,6 +126,14 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
         description = "When using the IR backend, do not clear BindingContext between psi2ir and lowerings"
     )
     var doNotClearBindingContext: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xparallel-backend-threads",
+        description = "When using the IR backend, run lowerings by file in N parallel threads.\n" +
+                "0 means use a thread per processor core.\n" +
+                "Default value is 1"
+    )
+    var parallelBackendThreads: String by FreezableVar("1")
 
     @Argument(value = "-Xmodule-path", valueDescription = "<path>", description = "Paths where to find Java 9+ modules")
     var javaModulePath: String? by NullableStringFreezableVar(null)
@@ -259,6 +283,17 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     var jsr305: Array<String>? by FreezableVar(null)
 
     @Argument(
+        value = "-Xnullability-annotations",
+        valueDescription = "@<fq.name>:{ignore/strict/warn}",
+        description = "Specify behavior for specific Java nullability annotations (provided with fully qualified package name)\n" +
+                "Modes:\n" +
+                "  * ignore\n" +
+                "  * strict\n" +
+                "  * warn (report a warning)"
+    )
+    var nullabilityAnnotations: Array<String>? by FreezableVar(null)
+
+    @Argument(
         value = "-Xsupport-compatqual-checker-framework-annotations",
         valueDescription = "enable|disable",
         description = "Specify behavior for Checker Framework compatqual annotations (NullableDecl/NonNullDecl).\n" +
@@ -355,12 +390,33 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     @Argument(
         value = "-Xstring-concat",
         valueDescription = "{indy-with-constants|indy|inline}",
-        description = """Switch a way in which string concatenation is performed.
--Xstring-concat=indy-with-constants   Performs string concatenation via `invokedynamic` 'makeConcatWithConstants'. Works only with `-jvm-target 9` or greater
--Xstring-concat=indy                Performs string concatenation via `invokedynamic` 'makeConcat'. Works only with `-jvm-target 9` or greater
--Xstring-concat=inline              Performs string concatenation via `StringBuilder`"""
+        description = """Select code generation scheme for string concatenation.
+-Xstring-concat=indy-with-constants   Concatenate strings using `invokedynamic` `makeConcatWithConstants`. Requires `-jvm-target 9` or greater.
+-Xstring-concat=indy                Concatenate strings using `invokedynamic` `makeConcat`. Requires `-jvm-target 9` or greater.
+-Xstring-concat=inline              Concatenate strings using `StringBuilder`
+default: `indy-with-constants` for JVM target 9 or greater, `inline` otherwise"""
+
     )
-    var stringConcat: String? by NullableStringFreezableVar(JvmStringConcat.INLINE.description)
+    var stringConcat: String? by NullableStringFreezableVar(null)
+
+    @Argument(
+        value = "-Xsam-conversions",
+        valueDescription = "{class|indy}",
+        description = """Select code generation scheme for SAM conversions.
+-Xsam-conversions=indy              Generate SAM conversions using `invokedynamic` with `LambdaMetafactory.metafactory`. Requires `-jvm-target 1.8` or greater.
+-Xsam-conversions=class             Generate SAM conversions as explicit classes"""
+    )
+    var samConversions: String? by NullableStringFreezableVar(null)
+
+    @Argument(
+        value = "-Xlambdas",
+        valueDescription = "{class|indy}",
+        description = """Select code generation scheme for lambdas.
+-Xlambdas=indy                      Generate lambdas using `invokedynamic` with `LambdaMetafactory.metafactory`. Requires `-jvm-target 1.8` or greater.
+                                    Lambda objects created using `LambdaMetafactory.metafactory` will have different `toString()`.
+-Xlambdas=class                     Generate lambdas as explicit classes"""
+    )
+    var lambdas: String? by NullableStringFreezableVar(null)
 
     @Argument(
         value = "-Xklib",
@@ -429,14 +485,25 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
     )
     var enableJvmPreview: Boolean by FreezableVar(false)
 
-    override fun configureAnalysisFlags(collector: MessageCollector): MutableMap<AnalysisFlag<*>, Any> {
-        val result = super.configureAnalysisFlags(collector)
+    @Argument(
+        value = "-Xsuppress-deprecated-jvm-target-warning",
+        description = "Suppress deprecation warning about deprecated JVM target versions"
+    )
+    var suppressDeprecatedJvmTargetWarning: Boolean by FreezableVar(false)
+
+    @Argument(
+        value = "-Xtype-enhancement-improvements-strict-mode",
+        description = "Enable strict mode for some improvements in the type enhancement for loaded Java types based on nullability annotations," +
+                "including freshly supported reading of the type use annotations from class files. " +
+                "See KT-45671 for more details"
+    )
+    var typeEnhancementImprovementsInStrictMode: Boolean by FreezableVar(false)
+
+    override fun configureAnalysisFlags(collector: MessageCollector, languageVersion: LanguageVersion): MutableMap<AnalysisFlag<*>, Any> {
+        val result = super.configureAnalysisFlags(collector, languageVersion)
         result[JvmAnalysisFlags.strictMetadataVersionSemantics] = strictMetadataVersionSemantics
-        result[JvmAnalysisFlags.javaTypeEnhancementState] = JavaTypeEnhancementStateParser(collector).parse(
-            jsr305,
-            supportCompatqualCheckerFrameworkAnnotations,
-            jspecifyAnnotations
-        )
+        result[JvmAnalysisFlags.javaTypeEnhancementState] = JavaTypeEnhancementStateParser(collector, languageVersion.toKotlinVersion())
+            .parse(jsr305, supportCompatqualCheckerFrameworkAnnotations, jspecifyAnnotations, nullabilityAnnotations)
         result[AnalysisFlags.ignoreDataFlowInAssert] = JVMAssertionsMode.fromString(assertionsMode) != JVMAssertionsMode.LEGACY
         JvmDefaultMode.fromStringOrNull(jvmDefault)?.let {
             result[JvmAnalysisFlags.jvmDefaultMode] = it
@@ -451,6 +518,7 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
         result[JvmAnalysisFlags.enableJvmPreview] = enableJvmPreview
         result[AnalysisFlags.allowUnstableDependencies] = allowUnstableDependencies || useFir
         result[JvmAnalysisFlags.disableUltraLightClasses] = disableUltraLightClasses
+        result[JvmAnalysisFlags.useIR] = !useOldBackend
         return result
     }
 
@@ -458,6 +526,9 @@ class K2JVMCompilerArguments : CommonCompilerArguments() {
         val result = super.configureLanguageFeatures(collector)
         if (strictJavaNullabilityAssertions) {
             result[LanguageFeature.StrictJavaNullabilityAssertions] = LanguageFeature.State.ENABLED
+        }
+        if (typeEnhancementImprovementsInStrictMode) {
+            result[LanguageFeature.TypeEnhancementImprovementsInStrictMode] = LanguageFeature.State.ENABLED
         }
         return result
     }

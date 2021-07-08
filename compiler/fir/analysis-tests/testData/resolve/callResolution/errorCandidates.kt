@@ -9,11 +9,11 @@ fun bar(x: B) {}
 
 fun test(c: C) {
     // Argument mapping error
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>foo<!>("")<!>
+    foo(<!ARGUMENT_TYPE_MISMATCH!>""<!>)
 
     // Ambiguity
-    <!AMBIGUITY{LT}!><!AMBIGUITY{PSI}!>bar<!>(c)<!>
+    <!OVERLOAD_RESOLUTION_AMBIGUITY!>bar<!>(c)
 
     // Unresolved reference
-    <!UNRESOLVED_REFERENCE{LT}!><!UNRESOLVED_REFERENCE{PSI}!>baz<!>()<!>
+    <!UNRESOLVED_REFERENCE!>baz<!>()
 }

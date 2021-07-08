@@ -48,16 +48,13 @@ class AndroidExtensionsSubpluginIndicator @Inject internal constructor(private v
     }
 
     private fun addAndroidExtensionsRuntime(project: Project) {
-        val kotlinPluginVersion = project.getKotlinPluginVersion() ?: run {
-            project.logger.error("Kotlin plugin should be enabled before 'kotlin-android-extensions'")
-            return
-        }
+        val kotlinPluginVersion = project.getKotlinPluginVersion()
 
         project.configurations.all { configuration ->
             val name = configuration.name
             if (name != "implementation" && name != "compile") return@all
 
-            val androidPluginVersion = loadAndroidPluginVersion() ?: return@all
+            androidPluginVersion ?: return@all
             val requiredConfigurationName = when {
                 compareVersionNumbers(androidPluginVersion, "2.5") > 0 -> "implementation"
                 else -> "compile"

@@ -13,20 +13,20 @@ annotation class Ann4(val value: String)
 @Ann4("a") class MyClass
 
 fun foo() {
-    Ann()
-    val a = Ann()
+    <!ANNOTATION_CLASS_CONSTRUCTOR_CALL!>Ann()<!>
+    val a = <!ANNOTATION_CLASS_CONSTRUCTOR_CALL!>Ann()<!>
 
-    <!INAPPLICABLE_CANDIDATE!>Ann1<!>()
-    Ann1(1)
-    bar(Ann())
-    bar(a = Ann())
+    Ann1(<!NO_VALUE_FOR_PARAMETER!>)<!>
+    <!ANNOTATION_CLASS_CONSTRUCTOR_CALL!>Ann1(1)<!>
+    bar(<!ANNOTATION_CLASS_CONSTRUCTOR_CALL!>Ann()<!>)
+    bar(a = <!ANNOTATION_CLASS_CONSTRUCTOR_CALL!>Ann()<!>)
 
     val ann = javaClass<MyClass>().getAnnotation(javaClass<Ann4>())
     ann!!.value()
 }
 
-fun bar(a: Ann = Ann()) {
-    if (a is Ann) {}
+fun bar(a: Ann = <!ANNOTATION_CLASS_CONSTRUCTOR_CALL!>Ann()<!>) {
+    if (<!USELESS_IS_CHECK!>a is Ann<!>) {}
 }
 
 operator fun String.invoke() {}

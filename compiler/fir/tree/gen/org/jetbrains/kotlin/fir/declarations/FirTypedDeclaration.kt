@@ -5,9 +5,11 @@
 
 package org.jetbrains.kotlin.fir.declarations
 
-import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.FirModuleData
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.types.FirTypeRef
 import org.jetbrains.kotlin.fir.visitors.*
 
@@ -16,22 +18,27 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-interface FirTypedDeclaration : FirAnnotatedDeclaration {
-    override val source: FirSourceElement?
-    override val session: FirSession
-    override val resolvePhase: FirResolvePhase
-    override val origin: FirDeclarationOrigin
-    override val attributes: FirDeclarationAttributes
-    override val annotations: List<FirAnnotationCall>
-    val returnTypeRef: FirTypeRef
+sealed class FirTypedDeclaration : FirAnnotatedDeclaration() {
+    abstract override val source: FirSourceElement?
+    abstract override val symbol: FirBasedSymbol<out FirDeclaration>
+    abstract override val moduleData: FirModuleData
+    abstract override val resolvePhase: FirResolvePhase
+    abstract override val origin: FirDeclarationOrigin
+    abstract override val attributes: FirDeclarationAttributes
+    abstract override val annotations: List<FirAnnotationCall>
+    abstract val returnTypeRef: FirTypeRef
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitTypedDeclaration(this, data)
 
-    override fun replaceResolvePhase(newResolvePhase: FirResolvePhase)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformTypedDeclaration(this, data) as E
 
-    fun replaceReturnTypeRef(newReturnTypeRef: FirTypeRef)
+    abstract override fun replaceResolvePhase(newResolvePhase: FirResolvePhase)
 
-    override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirTypedDeclaration
+    abstract fun replaceReturnTypeRef(newReturnTypeRef: FirTypeRef)
 
-    fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirTypedDeclaration
+    abstract override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirTypedDeclaration
+
+    abstract fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirTypedDeclaration
 }

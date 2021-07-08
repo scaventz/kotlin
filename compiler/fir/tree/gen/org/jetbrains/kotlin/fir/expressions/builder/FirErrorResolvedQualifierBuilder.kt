@@ -58,7 +58,14 @@ class FirErrorResolvedQualifierBuilder : FirAbstractResolvedQualifierBuilder, Fi
     @Deprecated("Modification of 'typeRef' has no impact for FirErrorResolvedQualifierBuilder", level = DeprecationLevel.HIDDEN)
     override var typeRef: FirTypeRef
         get() = throw IllegalStateException()
-        set(value) {
+        set(_) {
+            throw IllegalStateException()
+        }
+
+    @Deprecated("Modification of 'resolvedToCompanionObject' has no impact for FirErrorResolvedQualifierBuilder", level = DeprecationLevel.HIDDEN)
+    override var resolvedToCompanionObject: Boolean
+        get() = throw IllegalStateException()
+        set(_) {
             throw IllegalStateException()
         }
 }

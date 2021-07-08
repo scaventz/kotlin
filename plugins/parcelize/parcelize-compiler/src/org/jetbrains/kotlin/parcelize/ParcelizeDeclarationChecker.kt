@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.parcelize
 
-import org.jetbrains.kotlin.backend.common.serialization.findPackage
 import org.jetbrains.kotlin.codegen.ClassBuilderMode
 import org.jetbrains.kotlin.codegen.FrameMap
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
@@ -18,7 +17,6 @@ import org.jetbrains.kotlin.descriptors.annotations.Annotations
 import org.jetbrains.kotlin.diagnostics.DiagnosticSink
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.parcelize.ParcelizeAnnotationChecker.Companion.DEPRECATED_RUNTIME_PACKAGE
 import org.jetbrains.kotlin.parcelize.diagnostic.ErrorsParcelize
 import org.jetbrains.kotlin.parcelize.serializers.ParcelSerializer
 import org.jetbrains.kotlin.parcelize.serializers.isParcelable
@@ -40,8 +38,8 @@ val ANDROID_PARCEL_CLASS_FQNAME = FqName("android.os.Parcel")
 open class ParcelizeDeclarationChecker : DeclarationChecker {
     private companion object {
         private val IGNORED_ON_PARCEL_FQ_NAMES = listOf(
-            FqName(kotlinx.parcelize.IgnoredOnParcel::class.java.canonicalName),
-            @Suppress("DEPRECATION") FqName(kotlinx.android.parcel.IgnoredOnParcel::class.java.canonicalName)
+            FqName("kotlinx.parcelize.IgnoredOnParcel"),
+            FqName("kotlinx.android.parcel.IgnoredOnParcel")
         )
     }
 

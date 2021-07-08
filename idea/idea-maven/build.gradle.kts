@@ -26,9 +26,7 @@ dependencies {
     excludeInAndroidStudio(rootProject) { compileOnly(intellijPluginDep("maven")) }
 
     excludeInAndroidStudio(rootProject) {
-        Platform[202].orHigher {
-            compileOnly(intellijPluginDep("maven-model"))
-        }
+        compileOnly(intellijPluginDep("maven-model"))
     }
 
     testCompile(projectTests(":idea"))
@@ -40,14 +38,9 @@ dependencies {
         testCompileOnly(intellijPluginDep("maven"))
         testRuntime(intellijPluginDep("maven"))
 
-        Platform[202].orHigher {
-            testCompileOnly(intellijPluginDep("maven-model"))
-            testRuntime(intellijPluginDep("maven-model"))
-        }
-
-        if (Ide.IJ201.orHigher()) {
-            testRuntime(intellijPluginDep("repository-search"))
-        }
+        testCompileOnly(intellijPluginDep("maven-model"))
+        testRuntime(intellijPluginDep("maven-model"))
+        testRuntime(intellijPluginDep("repository-search"))
     }
 
     testCompile(project(":idea:idea-native")) { isTransitive = false }
@@ -65,6 +58,7 @@ dependencies {
     testRuntime(project(":plugins:parcelize:parcelize-ide"))
     testRuntime(project(":kotlin-scripting-idea"))
     testRuntime(project(":kotlinx-serialization-ide-plugin"))
+    testRuntime(project(":plugins:lombok:lombok-ide-plugin"))
 
     testRuntime(intellijDep())
     // TODO: the order of the plugins matters here, consider avoiding order-dependency
@@ -77,11 +71,8 @@ dependencies {
     testRuntime(intellijPluginDep("android"))
     testRuntime(intellijPluginDep("smali"))
 
-    if (Ide.AS36.orHigher()) {
+    if (Ide.AS()) {
         testRuntime(intellijPluginDep("android-layoutlib"))
-    }
-
-    if (Ide.AS41.orHigher()) {
         testRuntime(intellijPluginDep("platform-images"))
     }
 }

@@ -9,10 +9,10 @@ import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirClass
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
-import org.jetbrains.kotlin.fir.declarations.classId
+import org.jetbrains.kotlin.fir.declarations.utils.classId
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.constructType
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
 import org.jetbrains.kotlin.fir.resolve.wrapSubstitutionScopeIfNeed
 import org.jetbrains.kotlin.fir.scopes.FirScope
 import org.jetbrains.kotlin.fir.scopes.jvm.JvmMappedScope
@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 
 
 fun wrapScopeWithJvmMapped(
-    klass: FirClass<*>,
+    klass: FirClass,
     declaredMemberScope: FirScope,
     useSiteSession: FirSession,
     scopeSession: ScopeSession
@@ -31,13 +31,20 @@ fun wrapScopeWithJvmMapped(
     val kotlinUnsafeFqName = classId.asSingleFqName().toUnsafe()
     val javaClassId = JavaToKotlinClassMap.mapKotlinToJava(kotlinUnsafeFqName)
         ?: return declaredMemberScope
-    val symbolProvider = useSiteSession.firSymbolProvider
+    val symbolProvider = useSiteSession.symbolProvider
     val javaClass = symbolProvider.getClassLikeSymbolByFqName(javaClassId)?.fir as? FirRegularClass
         ?: return declaredMemberScope
     val preparedSignatures = JvmMappedScope.prepareSignatures(javaClass, JavaToKotlinClassMap.isMutable(kotlinUnsafeFqName))
     return if (preparedSignatures.isNotEmpty()) {
         javaClass.unsubstitutedScope(useSiteSession, scopeSession, withForcedTypeCalculator = false).let { javaClassUseSiteScope ->
-            val jvmMappedScope = JvmMappedScope(declaredMemberScope, javaClassUseSiteScope, preparedSignatures)
+            val jvmMappedScope = JvmMappedScope(
+                useSiteSession,
+                klass,
+                javaClass,
+                declaredMemberScope,
+                javaClassUseSiteScope,
+                preparedSignatures
+            )
             if (klass !is FirRegularClass) {
                 jvmMappedScope
             } else {

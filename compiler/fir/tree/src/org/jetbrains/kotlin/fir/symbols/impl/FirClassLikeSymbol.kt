@@ -5,20 +5,21 @@
 
 package org.jetbrains.kotlin.fir.symbols.impl
 
-import org.jetbrains.kotlin.fir.FirSymbolOwner
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.symbols.ConeClassLikeLookupTag
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
-sealed class FirClassLikeSymbol<D>(
+sealed class FirClassLikeSymbol<D : FirClassLikeDeclaration>(
     val classId: ClassId
-) : FirClassifierSymbol<D>() where D : FirClassLikeDeclaration<D>, D : FirSymbolOwner<D> {
+) : FirClassifierSymbol<D>() {
     abstract override fun toLookupTag(): ConeClassLikeLookupTag
+
+    override fun toString(): String = "${this::class.simpleName} ${classId.asString()}"
 }
 
-sealed class FirClassSymbol<C : FirClass<C>>(classId: ClassId) : FirClassLikeSymbol<C>(classId) {
+sealed class FirClassSymbol<C : FirClass>(classId: ClassId) : FirClassLikeSymbol<C>(classId) {
     private val lookupTag =
         if (classId.isLocal) ConeClassLookupTagWithFixedSymbol(classId, this)
         else ConeClassLikeLookupTagImpl(classId)

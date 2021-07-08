@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.resolve.calls.callUtil.getCalleeExpressionIfAny
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.checkers.isBuiltInCoroutineContext
 import org.jetbrains.kotlin.resolve.calls.context.*
-import org.jetbrains.kotlin.resolve.calls.inference.CoroutineInferenceSession
+import org.jetbrains.kotlin.resolve.calls.inference.BuilderInferenceSession
 import org.jetbrains.kotlin.resolve.calls.results.OverloadResolutionResults
 import org.jetbrains.kotlin.resolve.calls.results.OverloadResolutionResultsUtil
 import org.jetbrains.kotlin.resolve.calls.smartcasts.DataFlowInfo
@@ -113,6 +113,11 @@ class DoubleColonExpressionResolver(
             c.trace.report(UNSUPPORTED.on(expression, "Class literals with empty left hand side are not yet supported"))
         } else {
             val result = resolveDoubleColonLHS(expression, c)
+
+            if (c.inferenceSession is BuilderInferenceSession && result?.type?.contains { it is StubTypeForBuilderInference } == true) {
+                c.inferenceSession.addOldCallableReferenceCalls(expression)
+            }
+
             if (result != null && !result.type.isError) {
                 val inherentType = result.type
                 val dataFlowInfo = (result as? DoubleColonLHS.Expression)?.dataFlowInfo ?: c.dataFlowInfo
@@ -543,18 +548,20 @@ class DoubleColonExpressionResolver(
         val result = getCallableReferenceType(expression, lhs, resolutionResults, c)
         val doesSomeExtensionReceiverContainsStubType =
             resolutionResults != null && resolutionResults.resultingCalls.any { resolvedCall ->
-                resolvedCall.extensionReceiver?.type?.contains { it is StubType } == true
+                resolvedCall.extensionReceiver?.type?.contains { it is StubTypeForBuilderInference } == true
             }
 
-        if (doesSomeExtensionReceiverContainsStubType) {
+        val unrestrictedBuilderInferenceSupported = languageVersionSettings.supportsFeature(LanguageFeature.UnrestrictedBuilderInference)
+
+        if (doesSomeExtensionReceiverContainsStubType && !unrestrictedBuilderInferenceSupported) {
             c.trace.reportDiagnosticOnce(TYPE_INFERENCE_POSTPONED_VARIABLE_IN_RECEIVER_TYPE.on(expression))
             return noTypeInfo(c)
         }
 
         val dataFlowInfo = (lhs as? DoubleColonLHS.Expression)?.dataFlowInfo ?: c.dataFlowInfo
 
-        if (c.inferenceSession is CoroutineInferenceSession && result?.contains { it is StubType } == true) {
-            c.inferenceSession.addSimpleCall(expression)
+        if (c.inferenceSession is BuilderInferenceSession && result?.contains { it is StubTypeForBuilderInference } == true) {
+            c.inferenceSession.addOldCallableReferenceCalls(expression)
         }
 
         return dataFlowAnalyzer.checkType(createTypeInfo(result, dataFlowInfo), expression, c)

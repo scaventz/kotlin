@@ -1617,9 +1617,39 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/box/export"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
         }
 
+        @TestMetadata("exportAllFile.kt")
+        public void testExportAllFile() throws Exception {
+            runTest("js/js.translator/testData/box/export/exportAllFile.kt");
+        }
+
+        @TestMetadata("exportNestedClass.kt")
+        public void testExportNestedClass() throws Exception {
+            runTest("js/js.translator/testData/box/export/exportNestedClass.kt");
+        }
+
         @TestMetadata("nonIndetifierModuleName.kt")
         public void testNonIndetifierModuleName() throws Exception {
             runTest("js/js.translator/testData/box/export/nonIndetifierModuleName.kt");
+        }
+
+        @TestMetadata("overriddenChainNonExportIntermediate.kt")
+        public void testOverriddenChainNonExportIntermediate() throws Exception {
+            runTest("js/js.translator/testData/box/export/overriddenChainNonExportIntermediate.kt");
+        }
+
+        @TestMetadata("overriddenExternalMethodWithSameNameMethod.kt")
+        public void testOverriddenExternalMethodWithSameNameMethod() throws Exception {
+            runTest("js/js.translator/testData/box/export/overriddenExternalMethodWithSameNameMethod.kt");
+        }
+
+        @TestMetadata("overriddenExternalMethodWithSameStableNameMethod.kt")
+        public void testOverriddenExternalMethodWithSameStableNameMethod() throws Exception {
+            runTest("js/js.translator/testData/box/export/overriddenExternalMethodWithSameStableNameMethod.kt");
+        }
+
+        @TestMetadata("overridenMethod.kt")
+        public void testOverridenMethod() throws Exception {
+            runTest("js/js.translator/testData/box/export/overridenMethod.kt");
         }
 
         @TestMetadata("reservedModuleName.kt")
@@ -3275,6 +3305,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("implicitReceiverInExtension.kt")
         public void testImplicitReceiverInExtension() throws Exception {
             runTest("js/js.translator/testData/box/extensionFunction/implicitReceiverInExtension.kt");
+        }
+
+        @TestMetadata("inExternalInterface.kt")
+        public void testInExternalInterface() throws Exception {
+            runTest("js/js.translator/testData/box/extensionFunction/inExternalInterface.kt");
         }
 
         @TestMetadata("intExtension.kt")
@@ -5035,6 +5070,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/jsCode/codeFromVariable.kt");
         }
 
+        @TestMetadata("constantExpression.kt")
+        public void testConstantExpression() throws Exception {
+            runTest("js/js.translator/testData/box/jsCode/constantExpression.kt");
+        }
+
         @TestMetadata("continue.kt")
         public void testContinue() throws Exception {
             runTest("js/js.translator/testData/box/jsCode/continue.kt");
@@ -5073,6 +5113,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("if.kt")
         public void testIf() throws Exception {
             runTest("js/js.translator/testData/box/jsCode/if.kt");
+        }
+
+        @TestMetadata("init.kt")
+        public void testInit() throws Exception {
+            runTest("js/js.translator/testData/box/jsCode/init.kt");
         }
 
         @TestMetadata("invocation.kt")
@@ -5206,6 +5251,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/jsModule/externalClass.kt");
         }
 
+        @TestMetadata("externalClassNameClash.kt")
+        public void testExternalClassNameClash() throws Exception {
+            runTest("js/js.translator/testData/box/jsModule/externalClassNameClash.kt");
+        }
+
         @TestMetadata("externalClassWithDefaults.kt")
         public void testExternalClassWithDefaults() throws Exception {
             runTest("js/js.translator/testData/box/jsModule/externalClassWithDefaults.kt");
@@ -5319,6 +5369,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/jsName/classes.kt");
         }
 
+        @TestMetadata("defaultJsName.kt")
+        public void testDefaultJsName() throws Exception {
+            runTest("js/js.translator/testData/box/jsName/defaultJsName.kt");
+        }
+
         @TestMetadata("inheritFromRenamedNativeClass.kt")
         public void testInheritFromRenamedNativeClass() throws Exception {
             runTest("js/js.translator/testData/box/jsName/inheritFromRenamedNativeClass.kt");
@@ -5337,6 +5392,16 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("jsNamePropertyAccessors.kt")
         public void testJsNamePropertyAccessors() throws Exception {
             runTest("js/js.translator/testData/box/jsName/jsNamePropertyAccessors.kt");
+        }
+
+        @TestMetadata("jsTopLevelClashes.kt")
+        public void testJsTopLevelClashes() throws Exception {
+            runTest("js/js.translator/testData/box/jsName/jsTopLevelClashes.kt");
+        }
+
+        @TestMetadata("jsTopLevelRenameReserved.kt")
+        public void testJsTopLevelRenameReserved() throws Exception {
+            runTest("js/js.translator/testData/box/jsName/jsTopLevelRenameReserved.kt");
         }
 
         @TestMetadata("overriddenMethod.kt")
@@ -6757,6 +6822,16 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/box/propertyAccess"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
         }
 
+        @TestMetadata("booleanInExternals.kt")
+        public void testBooleanInExternals() throws Exception {
+            runTest("js/js.translator/testData/box/propertyAccess/booleanInExternals.kt");
+        }
+
+        @TestMetadata("booleanInExternalsWithDiagnostic.kt")
+        public void testBooleanInExternalsWithDiagnostic() throws Exception {
+            runTest("js/js.translator/testData/box/propertyAccess/booleanInExternalsWithDiagnostic.kt");
+        }
+
         @TestMetadata("classUsesPackageProperties.kt")
         public void testClassUsesPackageProperties() throws Exception {
             runTest("js/js.translator/testData/box/propertyAccess/classUsesPackageProperties.kt");
@@ -7061,6 +7136,11 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
             runTest("js/js.translator/testData/box/reflection/kClassOnReifiedTypeInLambda-advanced.kt");
         }
 
+        @TestMetadata("kClassReifiedWithJsCall.kt")
+        public void testKClassReifiedWithJsCall() throws Exception {
+            runTest("js/js.translator/testData/box/reflection/kClassReifiedWithJsCall.kt");
+        }
+
         @TestMetadata("kClassSimpleName.kt")
         public void testKClassSimpleName() throws Exception {
             runTest("js/js.translator/testData/box/reflection/kClassSimpleName.kt");
@@ -7069,6 +7149,21 @@ public class IrBoxJsTestGenerated extends AbstractIrBoxJsTest {
         @TestMetadata("kClassToAndFromJsClass.kt")
         public void testKClassToAndFromJsClass() throws Exception {
             runTest("js/js.translator/testData/box/reflection/kClassToAndFromJsClass.kt");
+        }
+
+        @TestMetadata("kClassWithJsCall.kt")
+        public void testKClassWithJsCall() throws Exception {
+            runTest("js/js.translator/testData/box/reflection/kClassWithJsCall.kt");
+        }
+
+        @TestMetadata("kJsClassWithJsCall.kt")
+        public void testKJsClassWithJsCall() throws Exception {
+            runTest("js/js.translator/testData/box/reflection/kJsClassWithJsCall.kt");
+        }
+
+        @TestMetadata("kTypeWithJsCall.kt")
+        public void testKTypeWithJsCall() throws Exception {
+            runTest("js/js.translator/testData/box/reflection/kTypeWithJsCall.kt");
         }
 
         @TestMetadata("primitiveKClassOnReifiedType.kt")

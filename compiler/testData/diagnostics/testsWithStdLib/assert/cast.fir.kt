@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !IGNORE_DATA_FLOW_IN_ASSERT
 // SKIP_TXT
 // WITH_RUNTIME
@@ -17,5 +16,5 @@ fun test1(a: A) {
 fun test2() {
     val a: A? = null;
     assert((a as B).bool())
-    a?.bool()
+    a<!UNNECESSARY_SAFE_CALL!>?.<!>bool()
 }

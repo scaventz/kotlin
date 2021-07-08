@@ -266,6 +266,8 @@ open class IrBasedTypeParameterDescriptor(owner: IrTypeParameter) : TypeParamete
             override fun getDeclarationDescriptor() = this@IrBasedTypeParameterDescriptor
 
             override fun getBuiltIns() = module.builtIns
+
+            override fun isSameClassifier(classifier: ClassifierDescriptor): Boolean = declarationDescriptor === classifier
         }
     }
 
@@ -302,6 +304,7 @@ open class IrBasedTypeParameterDescriptor(owner: IrTypeParameter) : TypeParamete
         visitor!!.visitTypeParameterDescriptor(this, null)
     }
 
+    override fun toString(): String = super.toString() + "\nParent: $containingDeclaration"
 }
 
 fun IrTypeParameter.toIrBasedDescriptor() = IrBasedTypeParameterDescriptor(this)
@@ -358,7 +361,7 @@ open class IrBasedVariableDescriptorWithAccessor(owner: IrLocalDelegatedProperty
 
     override fun isConst(): Boolean = false
 
-    override fun getContainingDeclaration() = (owner.parent as IrFunction).toIrBasedDescriptor()
+    override fun getContainingDeclaration() = (owner.parent as IrDeclaration).toIrBasedDescriptor()
 
     override fun isLateInit(): Boolean = false
 
@@ -612,6 +615,9 @@ open class IrBasedClassDescriptor(owner: IrClass) : ClassDescriptor, IrBasedDecl
         TODO("not implemented")
     }
 
+    override fun getInlineClassRepresentation(): InlineClassRepresentation<SimpleType>? =
+        owner.inlineClassRepresentation?.mapUnderlyingType { it.toIrBasedKotlinType() as SimpleType }
+
     override fun getOriginal() = this
 
     override fun isExpect() = false
@@ -735,6 +741,8 @@ open class IrBasedEnumEntryDescriptor(owner: IrEnumEntry) : ClassDescriptor, IrB
     override fun getSealedSubclasses(): Collection<ClassDescriptor> {
         TODO("not implemented")
     }
+
+    override fun getInlineClassRepresentation(): InlineClassRepresentation<SimpleType>? = TODO("not implemented")
 
     override fun getOriginal() = this
 

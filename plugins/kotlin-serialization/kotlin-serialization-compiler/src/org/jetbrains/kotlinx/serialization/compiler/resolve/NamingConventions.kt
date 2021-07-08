@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -29,6 +29,7 @@ object SerializationAnnotations {
     internal val requiredAnnotationFqName = FqName("kotlinx.serialization.Required")
     val serialTransientFqName = FqName("kotlinx.serialization.Transient")
     internal val serialInfoFqName = FqName("kotlinx.serialization.SerialInfo")
+    internal val encodeDefaultFqName = FqName("kotlinx.serialization.EncodeDefault")
 
     internal val contextualFqName = FqName("kotlinx.serialization.ContextualSerialization") // this one is deprecated
     internal val contextualOnFileFqName = FqName("kotlinx.serialization.UseContextualSerialization")
@@ -44,7 +45,8 @@ object SerialEntityNames {
     const val LOAD = "deserialize"
     const val SERIALIZER_CLASS = "\$serializer"
 
-    const val initializedDescriptorFieldName = "\$initializedDescriptor"
+    const val CACHED_DESCRIPTOR_FIELD = "\$cachedDescriptor"
+    const val CACHED_SERIALIZER_PROPERTY = "\$cachedSerializer"
 
     // classes
     val KSERIALIZER_NAME = Name.identifier(KSERIALIZER_CLASS)
@@ -90,10 +92,14 @@ object SerialEntityNames {
     val ARRAY_MASK_FIELD_MISSING_FUNC_NAME = Name.identifier("throwArrayMissingFieldException")
     val SINGLE_MASK_FIELD_MISSING_FUNC_FQ = SerializationPackages.internalPackageFqName.child(SINGLE_MASK_FIELD_MISSING_FUNC_NAME)
     val ARRAY_MASK_FIELD_MISSING_FUNC_FQ = SerializationPackages.internalPackageFqName.child(ARRAY_MASK_FIELD_MISSING_FUNC_NAME)
+    val CACHED_SERIALIZER_PROPERTY_NAME = Name.identifier(CACHED_SERIALIZER_PROPERTY)
+    val CACHED_DESCRIPTOR_FIELD_NAME = Name.identifier(CACHED_DESCRIPTOR_FIELD)
 
     // parameters
     val dummyParamName = Name.identifier("serializationConstructorMarker")
     internal const val typeArgPrefix = "typeSerial"
+
+    internal val wrapIntoNullableExt = SerializationPackages.builtinsPackageFqName.child(Name.identifier("nullable"))
 }
 
 object SpecialBuiltins {
@@ -125,4 +131,13 @@ object CallingConventions {
     const val addElement = "addElement"
     const val addAnnotation = "pushAnnotation"
     const val addClassAnnotation = "pushClassAnnotation"
+}
+
+internal object SerializationDependencies {
+    val LAZY_FQ = FqName("kotlin.Lazy")
+    val LAZY_FUNC_FQ = FqName("kotlin.lazy")
+    val LAZY_MODE_FQ = FqName("kotlin.LazyThreadSafetyMode")
+    val KPROPERTY1_FQ = FqName("kotlin.reflect.KProperty1")
+    val FUNCTION0_FQ = FqName("kotlin.Function0")
+    val LAZY_PUBLICATION_MODE_NAME = Name.identifier("PUBLICATION")
 }

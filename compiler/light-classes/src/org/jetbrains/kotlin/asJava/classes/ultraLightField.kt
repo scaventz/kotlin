@@ -67,6 +67,9 @@ internal class KtUltraLightFieldForSourceDeclaration(
 ) : KtUltraLightFieldImpl(declaration, name, containingClass, support, modifiers),
     KtLightFieldForSourceDeclarationSupport {
 
+    private val lightIdentifier = KtLightIdentifier(this, declaration)
+
+    override fun getNameIdentifier(): PsiIdentifier = lightIdentifier
     override fun getText(): String? = kotlinOrigin.text
     override fun getTextRange(): TextRange = kotlinOrigin.textRange
     override fun getTextOffset(): Int = kotlinOrigin.textOffset
@@ -111,9 +114,8 @@ internal open class KtUltraLightFieldImpl protected constructor(
     private val kotlinType: KotlinType?
         get() = when {
             declaration is KtProperty && declaration.hasDelegate() ->
-                (variableDescriptor as? PropertyDescriptor)?.let {
-                    val context = LightClassGenerationSupport.getInstance(project).analyze(declaration)
-                    PropertyCodegen.getDelegateTypeForProperty(it, context)
+                declaration.delegateExpression?.let {
+                    LightClassGenerationSupport.getInstance(project).analyze(it).getType(it)
                 }
             declaration is KtObjectDeclaration ->
                 (declaration.resolve() as? ClassDescriptor)?.defaultType

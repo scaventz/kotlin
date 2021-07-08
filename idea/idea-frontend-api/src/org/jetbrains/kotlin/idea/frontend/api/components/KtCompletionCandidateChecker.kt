@@ -5,17 +5,36 @@
 
 package org.jetbrains.kotlin.idea.frontend.api.components
 
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtCallableSymbol
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtSimpleNameExpression
 
-abstract class KtCompletionCandidateChecker : KtAnalysisSessionComponent() {
-    abstract fun checkExtensionFitsCandidate(
+public abstract class KtCompletionCandidateChecker : KtAnalysisSessionComponent() {
+    public abstract fun checkExtensionFitsCandidate(
         firSymbolForCandidate: KtCallableSymbol,
         originalFile: KtFile,
         nameExpression: KtSimpleNameExpression,
         possibleExplicitReceiver: KtExpression?,
-    ): Boolean
+    ): KtExtensionApplicabilityResult
+}
+
+public enum class KtExtensionApplicabilityResult(public val isApplicable: Boolean) {
+    ApplicableAsExtensionCallable(isApplicable = true),
+    ApplicableAsFunctionalVariableCall(isApplicable = true),
+    NonApplicable(isApplicable = false),
+}
+
+public interface KtCompletionCandidateCheckerMixIn : KtAnalysisSessionMixIn {
+    public fun KtCallableSymbol.checkExtensionIsSuitable(
+        originalPsiFile: KtFile,
+        psiFakeCompletionExpression: KtSimpleNameExpression,
+        psiReceiverExpression: KtExpression?,
+    ): KtExtensionApplicabilityResult =
+        analysisSession.completionCandidateChecker.checkExtensionFitsCandidate(
+            this,
+            originalPsiFile,
+            psiFakeCompletionExpression,
+            psiReceiverExpression
+        )
 }

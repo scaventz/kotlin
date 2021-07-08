@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.resolve
 
 import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.descriptors.EffectiveVisibility
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.containingClassAttr
@@ -13,29 +14,31 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.builder.FirTypeParameterBuilder
 import org.jetbrains.kotlin.fir.declarations.builder.buildSimpleFunction
 import org.jetbrains.kotlin.fir.declarations.builder.buildValueParameter
-import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
+import org.jetbrains.kotlin.fir.declarations.impl.FirResolvedDeclarationStatusImpl
+import org.jetbrains.kotlin.fir.declarations.utils.*
 import org.jetbrains.kotlin.fir.diagnostics.ConeIntermediateDiagnostic
+import org.jetbrains.kotlin.fir.moduleData
 import org.jetbrains.kotlin.fir.resolve.calls.FirSyntheticFunctionSymbol
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
 import org.jetbrains.kotlin.fir.scopes.impl.hasTypeOf
 import org.jetbrains.kotlin.fir.scopes.unsubstitutedScope
-import org.jetbrains.kotlin.fir.symbols.CallableId
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirValueParameterSymbol
 import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.builder.buildResolvedTypeRef
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.types.Variance
 
 abstract class FirSamResolver {
     abstract fun getFunctionTypeForPossibleSamType(type: ConeKotlinType): ConeKotlinType?
-    abstract fun shouldRunSamConversionForFunction(firFunction: FirFunction<*>): Boolean
+    abstract fun shouldRunSamConversionForFunction(firFunction: FirFunction): Boolean
     abstract fun getSamConstructor(firRegularClass: FirRegularClass): FirSimpleFunction?
 }
 
@@ -94,6 +97,7 @@ class FirSamResolverImpl(
                         Pair(parameterSymbol, typeArgument)
                     }
                     .toMap(),
+                firSession
             )
 
         val result =
@@ -130,7 +134,7 @@ class FirSamResolverImpl(
             val declaredTypeParameter = typeParameter.symbol.fir // TODO: or really declared?
             FirTypeParameterBuilder().apply {
                 source = declaredTypeParameter.source
-                session = firSession
+                moduleData = firSession.moduleData
                 origin = FirDeclarationOrigin.SamConstructor
                 name = declaredTypeParameter.name
                 this.symbol = FirTypeParameterSymbol()
@@ -148,6 +152,7 @@ class FirSamResolverImpl(
             firRegularClass.typeParameters
                 .map { it.symbol }
                 .zip(newTypeParameterTypes).toMap(),
+            firSession
         )
 
         for ((newTypeParameter, oldTypeParameter) in newTypeParameters.zip(firRegularClass.typeParameters)) {
@@ -161,11 +166,16 @@ class FirSamResolverImpl(
         }
 
         return buildSimpleFunction {
-            session = firSession
+            moduleData = firSession.moduleData
             source = firRegularClass.source
             name = classId.shortClassName
             origin = FirDeclarationOrigin.SamConstructor
-            status = FirDeclarationStatusImpl(firRegularClass.visibility, Modality.FINAL).apply {
+            val visibility = firRegularClass.visibility
+            status = FirResolvedDeclarationStatusImpl(
+                visibility,
+                Modality.FINAL,
+                EffectiveVisibility.Local
+            ).apply {
                 isExpect = firRegularClass.isExpect
                 isActual = firRegularClass.isActual
                 isOverride = false
@@ -191,14 +201,14 @@ class FirSamResolverImpl(
             }
 
             valueParameters += buildValueParameter {
-                session = firSession
+                moduleData = firSession.moduleData
                 origin = FirDeclarationOrigin.SamConstructor
                 returnTypeRef = buildResolvedTypeRef {
                     source = firRegularClass.source
                     type = substitutedFunctionType
                 }
                 name = SAM_PARAMETER_NAME
-                this.symbol = FirVariableSymbol(SAM_PARAMETER_NAME)
+                this.symbol = FirValueParameterSymbol(SAM_PARAMETER_NAME)
                 isCrossinline = false
                 isNoinline = false
                 isVararg = false
@@ -220,7 +230,7 @@ class FirSamResolverImpl(
         } as? ConeLookupTagBasedType
     }
 
-    override fun shouldRunSamConversionForFunction(firFunction: FirFunction<*>): Boolean {
+    override fun shouldRunSamConversionForFunction(firFunction: FirFunction): Boolean {
         // TODO: properly support, see org.jetbrains.kotlin.load.java.sam.JvmSamConversionTransformer.shouldRunSamConversionForFunction
         return true
     }
@@ -241,7 +251,7 @@ private fun FirRegularClass.computeSamCandidateNames(session: FirSession): Set<N
     val classes =
         lookupSuperTypes(this, lookupInterfaces = true, deep = true, useSiteSession = session)
             .mapNotNullTo(mutableListOf(this)) {
-                (session.firSymbolProvider.getSymbolByLookupTag(it.lookupTag) as? FirRegularClassSymbol)?.fir
+                (session.symbolProvider.getSymbolByLookupTag(it.lookupTag) as? FirRegularClassSymbol)?.fir
             }
 
     val samCandidateNames = mutableSetOf<Name>()

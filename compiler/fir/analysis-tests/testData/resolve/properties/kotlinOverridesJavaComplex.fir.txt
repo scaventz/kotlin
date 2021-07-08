@@ -7,12 +7,12 @@ FILE: Test.kt
     }
     public final fun listOf(): R|kotlin/collections/List<kotlin/String>| {
     }
-    public final class LightMember<D> : R|Member<D>|, R|Light| {
+    public open class LightMember<D> : R|Member<D>|, R|Light| {
         public constructor<D>(): R|LightMember<D>| {
             super<R|Light|>()
         }
 
-        public final override fun getName(): R|kotlin/String| {
+        public open override fun getName(): R|kotlin/String| {
             ^getName String(Light)
         }
 
@@ -23,7 +23,7 @@ FILE: Test.kt
         }
 
         public final fun test(): R|kotlin/String| {
-            ^test this@R|/LightClassWrapper|.R|/LightClassWrapper.typeParameters|.R|/single|()
+            ^test this@R|/LightClassWrapper|.R|/Light.typeParameters|.R|/single|()
         }
 
     }
@@ -47,7 +47,7 @@ FILE: Test.kt
         public final fun test(other: R|kotlin/Any?|): R|kotlin/Unit| {
             when () {
                 (R|<local>/other| is R|LightField<*>|) ->  {
-                    R|<local>/other|.R|/LightField.name|
+                    R|<local>/other|.R|/LightMember.name|
                 }
             }
 

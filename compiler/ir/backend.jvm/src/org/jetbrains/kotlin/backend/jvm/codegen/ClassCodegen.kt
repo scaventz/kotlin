@@ -5,13 +5,16 @@
 
 package org.jetbrains.kotlin.backend.jvm.codegen
 
+import org.jetbrains.kotlin.backend.common.psi.PsiSourceManager
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.lower.MultifileFacadeFileEntry
 import org.jetbrains.kotlin.backend.jvm.lower.buildAssertionsDisabledField
 import org.jetbrains.kotlin.backend.jvm.lower.hasAssertionsDisabledField
+import org.jetbrains.kotlin.backend.jvm.lower.isReifiedTypeParameter
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.inline.*
+import org.jetbrains.kotlin.config.JvmAnalysisFlags
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
@@ -26,6 +29,11 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionReference
 import org.jetbrains.kotlin.ir.expressions.impl.IrBlockBodyImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrSetFieldImpl
+import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
+import org.jetbrains.kotlin.ir.types.IrSimpleType
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.IrTypeProjection
+import org.jetbrains.kotlin.ir.types.classifierOrFail
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.load.java.JvmAnnotationNames
 import org.jetbrains.kotlin.load.kotlin.header.KotlinClassHeader
@@ -39,12 +47,13 @@ import org.jetbrains.kotlin.resolve.jvm.annotations.VOLATILE_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.checkers.JvmSimpleNameBacktickChecker
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.*
 import org.jetbrains.kotlin.resolve.jvm.jvmSignature.JvmClassSignature
+import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.org.objectweb.asm.*
 import org.jetbrains.org.objectweb.asm.commons.Method
-import org.jetbrains.org.objectweb.asm.tree.MethodNode
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 interface MetadataSerializer {
     fun serialize(metadata: MetadataSource): Pair<MessageLite, JvmStringTable>?
@@ -81,7 +90,7 @@ class ClassCodegen private constructor(
         defineClass(
             irClass.psiElement,
             state.classFileVersion,
-            irClass.flags,
+            irClass.getFlags(context.state.languageVersionSettings),
             signature.name,
             signature.javaGenericSignature,
             signature.superclassName,
@@ -111,9 +120,6 @@ class ClassCodegen private constructor(
         if (generated) return
         generated = true
 
-        // We remove reads of `$$delegatedProperties` (and the field itself) if they are not in fact used for anything.
-        val delegatedProperties = irClass.fields.singleOrNull { it.origin == JvmLoweredDeclarationOrigin.GENERATED_PROPERTY_REFERENCE }
-        val delegatedPropertyOptimizer = if (delegatedProperties != null) DelegatedPropertyOptimizer() else null
         // Generating a method node may cause the addition of a field with an initializer if an inline function
         // call uses `assert` and the JVM assertions mode is enabled. To avoid concurrent modification errors,
         // there is a very specific generation order.
@@ -121,16 +127,14 @@ class ClassCodegen private constructor(
         // 1. Any method other than `<clinit>` can add a field and a `<clinit>` statement:
         for (method in irClass.declarations.filterIsInstance<IrFunction>()) {
             if (method.name.asString() != "<clinit>") {
-                generateMethod(method, smap, delegatedPropertyOptimizer)
+                generateMethod(method, smap)
             }
         }
         // 2. `<clinit>` itself can add a field, but the statement is generated via the `return init` hack:
-        irClass.functions.find { it.name.asString() == "<clinit>" }?.let { generateMethod(it, smap, delegatedPropertyOptimizer) }
-        // 3. Now we have all the fields (`$$delegatedProperties` might be redundant if all reads were optimized out):
+        irClass.functions.find { it.name.asString() == "<clinit>" }?.let { generateMethod(it, smap) }
+        // 3. Now we have all the fields, including `$assertionsDisabled` if needed:
         for (field in irClass.fields) {
-            if (field !== delegatedProperties || delegatedPropertyOptimizer?.needsDelegatedProperties == true) {
-                generateField(field)
-            }
+            generateField(field)
         }
         // 4. Generate nested classes at the end, to ensure that when the companion's metadata is serialized
         //    everything moved to the outer class has already been recorded in `globalSerializationBindings`.
@@ -141,10 +145,21 @@ class ClassCodegen private constructor(
         }
 
         object : AnnotationCodegen(this@ClassCodegen, context) {
-            override fun visitAnnotation(descr: String?, visible: Boolean): AnnotationVisitor {
+            override fun visitAnnotation(descr: String, visible: Boolean): AnnotationVisitor {
                 return visitor.visitor.visitAnnotation(descr, visible)
             }
         }.genAnnotations(irClass, null, null)
+
+        AnnotationCodegen.genAnnotationsOnTypeParametersAndBounds(
+            context,
+            irClass,
+            this,
+            TypeReference.CLASS_TYPE_PARAMETER,
+            TypeReference.CLASS_TYPE_PARAMETER_BOUND
+        ) { typeRef: Int, typePath: TypePath?, descriptor: String, visible: Boolean ->
+            visitor.visitor.visitTypeAnnotation(typeRef, typePath, descriptor, visible)
+        }
+
         generateKotlinMetadataAnnotation()
 
         generateInnerAndOuterClasses()
@@ -157,8 +172,29 @@ class ClassCodegen private constructor(
             }
         }
 
+        addReifiedParametersFromSignature()
+
         visitor.done()
         jvmSignatureClashDetector.reportErrors(classOrigin)
+    }
+
+    private fun addReifiedParametersFromSignature() {
+        for (type in irClass.superTypes) {
+            processTypeParameters(type)
+        }
+    }
+
+    private fun processTypeParameters(type: IrType) {
+        for (supertypeArgument in (type as? IrSimpleType)?.arguments ?: emptyList()) {
+            if (supertypeArgument is IrTypeProjection) {
+                val typeArgument = supertypeArgument.type
+                if (typeArgument.isReifiedTypeParameter) {
+                    reifiedTypeParametersUsages.addUsedReifiedParameter(typeArgument.classifierOrFail.cast<IrTypeParameterSymbol>().owner.name.asString())
+                } else {
+                    processTypeParameters(typeArgument)
+                }
+            }
+        }
     }
 
     fun generateAssertFieldIfNeeded(generatingClInit: Boolean): IrExpression? {
@@ -166,16 +202,14 @@ class ClassCodegen private constructor(
             return null
         val topLevelClass = generateSequence(this) { it.parentClassCodegen }.last().irClass
         val field = irClass.buildAssertionsDisabledField(context, topLevelClass)
-        generateField(field)
-        // Normally, `InitializersLowering` would move the initializer to <clinit>, but
-        // it's obviously too late for that.
-        val init = IrSetFieldImpl(
-            field.startOffset, field.endOffset, field.symbol, null,
-            field.initializer!!.expression, context.irBuiltIns.unitType
-        )
+        irClass.declarations.add(0, field)
+        // Normally, `InitializersLowering` would move the initializer to <clinit>, but it's obviously too late for that.
+        val init = with(field) {
+            IrSetFieldImpl(startOffset, endOffset, symbol, null, initializer!!.expression, context.irBuiltIns.unitType)
+        }
         if (generatingClInit) {
-            // Too late to modify the IR; have to ask the currently active `ExpressionCodegen`
-            // to generate this statement directly.
+            // Too late to modify the IR; have to ask the currently active `ExpressionCodegen` to generate this statement
+            // directly. At least we know that nothing before this point uses the field.
             return init
         }
         val classInitializer = irClass.functions.singleOrNull { it.name.asString() == "<clinit>" } ?: irClass.addFunction {
@@ -184,6 +218,7 @@ class ClassCodegen private constructor(
         }.apply {
             body = IrBlockBodyImpl(startOffset, endOffset)
         }
+        // Should be initialized first in case some inline function call in `<clinit>` also uses assertions.
         (classInitializer.body as IrBlockBody).statements.add(0, init)
         return null
     }
@@ -194,20 +229,29 @@ class ClassCodegen private constructor(
         )
 
     private fun generateKotlinMetadataAnnotation() {
-        // TODO: if `-Xmultifile-parts-inherit` is enabled, write the corresponding flag for parts and facades to [Metadata.extraInt].
-        val extraFlags = context.backendExtension.generateMetadataExtraFlags(state.abiStability)
-
         val facadeClassName = context.multifileFacadeForPart[irClass.attributeOwnerId]
         val metadata = irClass.metadata
         val entry = irClass.fileParent.fileEntry
         val kind = when {
             facadeClassName != null -> KotlinClassHeader.Kind.MULTIFILE_CLASS_PART
             metadata is MetadataSource.Class -> KotlinClassHeader.Kind.CLASS
+            metadata is MetadataSource.Script -> KotlinClassHeader.Kind.CLASS
             metadata is MetadataSource.File -> KotlinClassHeader.Kind.FILE_FACADE
             metadata is MetadataSource.Function -> KotlinClassHeader.Kind.SYNTHETIC_CLASS
             entry is MultifileFacadeFileEntry -> KotlinClassHeader.Kind.MULTIFILE_CLASS
             else -> KotlinClassHeader.Kind.SYNTHETIC_CLASS
         }
+
+        val isMultifileClassOrPart = kind == KotlinClassHeader.Kind.MULTIFILE_CLASS || kind == KotlinClassHeader.Kind.MULTIFILE_CLASS_PART
+
+        var extraFlags = context.backendExtension.generateMetadataExtraFlags(state.abiStability)
+        if (isMultifileClassOrPart && state.languageVersionSettings.getFlag(JvmAnalysisFlags.inheritMultifileParts)) {
+            extraFlags = extraFlags or JvmAnnotationNames.METADATA_MULTIFILE_PARTS_INHERIT_FLAG
+        }
+        if (metadata is MetadataSource.Script) {
+            extraFlags = extraFlags or JvmAnnotationNames.METADATA_SCRIPT_FLAG
+        }
+
         writeKotlinMetadata(visitor, state, kind, extraFlags) {
             if (metadata != null) {
                 metadataSerializer.serialize(metadata)?.let { (proto, stringTable) ->
@@ -229,9 +273,7 @@ class ClassCodegen private constructor(
             }
 
             if (irClass in context.classNameOverride) {
-                val isFileClass = kind == KotlinClassHeader.Kind.MULTIFILE_CLASS ||
-                        kind == KotlinClassHeader.Kind.MULTIFILE_CLASS_PART ||
-                        kind == KotlinClassHeader.Kind.FILE_FACADE
+                val isFileClass = isMultifileClassOrPart || kind == KotlinClassHeader.Kind.FILE_FACADE
                 assert(isFileClass) { "JvmPackageName is not supported for classes: ${irClass.render()}" }
                 it.visit(JvmAnnotationNames.METADATA_PACKAGE_NAME_FIELD_NAME, irClass.fqNameWhenAvailable!!.parent().asString())
             }
@@ -243,34 +285,7 @@ class ClassCodegen private constructor(
         if (entry is MultifileFacadeFileEntry) {
             return entry.partFiles.flatMap { it.loadSourceFilesInfo() }
         }
-        return listOfNotNull(context.psiSourceManager.getFileEntry(this)?.let { File(it.name) })
-    }
-
-    companion object {
-        fun getOrCreate(
-            irClass: IrClass,
-            context: JvmBackendContext,
-            // The `parentFunction` is only set for classes nested inside of functions. This is usually safe, since there is no
-            // way to refer to (inline) members of such a class from outside of the function unless the function in question is
-            // itself declared as inline. In that case, the function will be compiled before we can refer to the nested class.
-            //
-            // The one exception to this rule are anonymous objects defined as members of a class. These are nested inside of the
-            // class initializer, but can be referred to from anywhere within the scope of the class. That's why we have to ensure
-            // that all references to classes inside of <clinit> have a non-null `parentFunction`.
-            parentFunction: IrFunction? = irClass.parent.safeAs<IrFunction>()?.takeIf {
-                it.origin == JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER
-            },
-        ): ClassCodegen =
-            context.classCodegens.getOrPut(irClass) { ClassCodegen(irClass, context, parentFunction) }.also {
-                assert(parentFunction == null || it.parentFunction == parentFunction) {
-                    "inconsistent parent function for ${irClass.render()}:\n" +
-                            "New: ${parentFunction!!.render()}\n" +
-                            "Old: ${it.parentFunction?.render()}"
-                }
-            }
-
-        private fun JvmClassSignature.hasInvalidName() =
-            name.splitToSequence('/').any { identifier -> identifier.any { it in JvmSimpleNameBacktickChecker.INVALID_CHARS } }
+        return listOf(File(entry.name))
     }
 
     private fun generateField(field: IrField) {
@@ -292,11 +307,11 @@ class ClassCodegen private constructor(
                 flags and (Opcodes.ACC_SYNTHETIC or Opcodes.ACC_ENUM) != 0 ||
                         field.origin == JvmLoweredDeclarationOrigin.FIELD_FOR_STATIC_CALLABLE_REFERENCE_INSTANCE
             object : AnnotationCodegen(this@ClassCodegen, context, skipNullabilityAnnotations) {
-                override fun visitAnnotation(descr: String?, visible: Boolean): AnnotationVisitor {
+                override fun visitAnnotation(descr: String, visible: Boolean): AnnotationVisitor {
                     return fv.visitAnnotation(descr, visible)
                 }
 
-                override fun visitTypeAnnotation(descr: String?, path: TypePath?, visible: Boolean): AnnotationVisitor {
+                override fun visitTypeAnnotation(descr: String, path: TypePath?, visible: Boolean): AnnotationVisitor {
                     return fv.visitTypeAnnotation(TypeReference.newTypeReference(TypeReference.FIELD).value, path, descr, visible)
                 }
             }.genAnnotations(field, fieldType, field.type)
@@ -312,7 +327,7 @@ class ClassCodegen private constructor(
         }
     }
 
-    private val generatedInlineMethods = mutableMapOf<IrFunction, SMAPAndMethodNode>()
+    private val generatedInlineMethods = ConcurrentHashMap<IrFunction, SMAPAndMethodNode>()
 
     fun generateMethodNode(method: IrFunction): SMAPAndMethodNode {
         if (!method.isInline && !method.isSuspendCapturingCrossinline()) {
@@ -323,26 +338,22 @@ class ClassCodegen private constructor(
             //       multiple times if declared in a `finally` block - should they be cached?
             return FunctionCodegen(method, this).generate()
         }
-        val (node, smap) = generatedInlineMethods.getOrPut(method) { FunctionCodegen(method, this).generate() }
-        val copy = with(node) { MethodNode(Opcodes.API_VERSION, access, name, desc, signature, exceptions.toTypedArray()) }
-        node.instructions.resetLabels()
-        node.accept(copy)
-        return SMAPAndMethodNode(copy, smap)
+
+        // Only allow generation of one inline method at a time, to avoid deadlocks when files call inline methods of each other.
+        val (node, smap) =
+            generatedInlineMethods[method] ?: synchronized(context.inlineMethodGenerationLock) {
+                generatedInlineMethods.getOrPut(method) { FunctionCodegen(method, this).generate() }
+            }
+        return SMAPAndMethodNode(cloneMethodNode(node), smap)
     }
 
-    private fun generateMethod(method: IrFunction, classSMAP: SourceMapper, delegatedPropertyOptimizer: DelegatedPropertyOptimizer?) {
+    private fun generateMethod(method: IrFunction, classSMAP: SourceMapper) {
         if (method.isFakeOverride) {
             jvmSignatureClashDetector.trackFakeOverrideMethod(method)
             return
         }
 
         val (node, smap) = generateMethodNode(method)
-        if (delegatedPropertyOptimizer != null) {
-            delegatedPropertyOptimizer.transform(node)
-            if (method.name.asString() == "<clinit>") {
-                delegatedPropertyOptimizer.transformClassInitializer(node)
-            }
-        }
         node.preprocessSuspendMarkers(
             method.origin == JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE || method.isEffectivelyInlineOnly(),
             method.origin == JvmLoweredDeclarationOrigin.FOR_INLINE_STATE_MACHINE_TEMPLATE_CAPTURES_CROSSINLINE
@@ -455,7 +466,7 @@ class ClassCodegen private constructor(
 
     private val IrDeclaration.descriptorOrigin: JvmDeclarationOrigin
         get() {
-            val psiElement = context.psiSourceManager.findPsiElement(this)
+            val psiElement = PsiSourceManager.findPsiElement(this)
             // For declarations inside lambdas, produce a descriptor which refers back to the original function.
             // This is needed for plugins which check for lambdas inside of inline functions using the descriptor
             // contained in JvmDeclarationOrigin. This matches the behavior of the JVM backend.
@@ -471,12 +482,40 @@ class ClassCodegen private constructor(
             else
                 OtherOrigin(psiElement, descriptor)
         }
+
+    companion object {
+        fun getOrCreate(
+            irClass: IrClass,
+            context: JvmBackendContext,
+            // The `parentFunction` is only set for classes nested inside of functions. This is usually safe, since there is no
+            // way to refer to (inline) members of such a class from outside of the function unless the function in question is
+            // itself declared as inline. In that case, the function will be compiled before we can refer to the nested class.
+            //
+            // The one exception to this rule are anonymous objects defined as members of a class. These are nested inside of the
+            // class initializer, but can be referred to from anywhere within the scope of the class. That's why we have to ensure
+            // that all references to classes inside of <clinit> have a non-null `parentFunction`.
+            parentFunction: IrFunction? = irClass.parent.safeAs<IrFunction>()?.takeIf {
+                it.origin == JvmLoweredDeclarationOrigin.CLASS_STATIC_INITIALIZER
+            },
+        ): ClassCodegen =
+            context.classCodegens.getOrPut(irClass) { ClassCodegen(irClass, context, parentFunction) }.also {
+                assert(parentFunction == null || it.parentFunction == parentFunction) {
+                    "inconsistent parent function for ${irClass.render()}:\n" +
+                            "New: ${parentFunction!!.render()}\n" +
+                            "Old: ${it.parentFunction?.render()}"
+                }
+            }
+
+        private fun JvmClassSignature.hasInvalidName() =
+            name.splitToSequence('/').any { identifier -> identifier.any { it in JvmSimpleNameBacktickChecker.INVALID_CHARS } }
+    }
 }
 
-private val IrClass.flags: Int
-    get() = origin.flags or getVisibilityAccessFlagForClass() or
+private fun IrClass.getFlags(languageVersionSettings: LanguageVersionSettings): Int =
+    origin.flags or
+            getVisibilityAccessFlagForClass() or
             (if (isAnnotatedWithDeprecated) Opcodes.ACC_DEPRECATED else 0) or
-            (if (hasAnnotation(JVM_SYNTHETIC_ANNOTATION_FQ_NAME)) Opcodes.ACC_SYNTHETIC else 0) or
+            getSynthAccessFlag(languageVersionSettings) or
             when {
                 isAnnotationClass -> Opcodes.ACC_ANNOTATION or Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT
                 isInterface -> Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT
@@ -484,6 +523,16 @@ private val IrClass.flags: Int
                 hasAnnotation(JVM_RECORD_ANNOTATION_FQ_NAME) -> VersionIndependentOpcodes.ACC_RECORD or Opcodes.ACC_SUPER or modality.flags
                 else -> Opcodes.ACC_SUPER or modality.flags
             }
+
+private fun IrClass.getSynthAccessFlag(languageVersionSettings: LanguageVersionSettings): Int {
+    if (hasAnnotation(JVM_SYNTHETIC_ANNOTATION_FQ_NAME))
+        return Opcodes.ACC_SYNTHETIC
+    if (origin == IrDeclarationOrigin.GENERATED_SAM_IMPLEMENTATION &&
+        languageVersionSettings.supportsFeature(LanguageFeature.SamWrapperClassesAreSynthetic)
+    )
+        return Opcodes.ACC_SYNTHETIC
+    return 0
+}
 
 private fun IrField.computeFieldFlags(context: JvmBackendContext, languageVersionSettings: LanguageVersionSettings): Int =
     origin.flags or visibility.flags or

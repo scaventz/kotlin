@@ -10,6 +10,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiManager
 import org.jetbrains.kotlin.asJava.KotlinAsJavaSupport
 import org.jetbrains.kotlin.asJava.classes.KtLightClassForFacade
+import org.jetbrains.kotlin.asJava.classes.KtLightClassForFacadeImpl
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.fileClasses.JvmFileClassUtil
 import org.jetbrains.kotlin.fileClasses.javaFileFacadeFqName
@@ -52,7 +53,7 @@ class KtFileClassProviderImpl(val project: Project) : KtFileClassProvider {
         val facadeClasses = when {
             file.analysisContext != null && file.hasTopLevelCallables() ->
                 listOf(
-                    KtLightClassForFacade.createForSyntheticFile(
+                    KtLightClassForFacadeImpl.createForSyntheticFile(
                         PsiManager.getInstance(
                             file.project
                         ), fileClassFqName, file

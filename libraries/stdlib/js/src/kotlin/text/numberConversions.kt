@@ -16,8 +16,9 @@ public actual inline fun String.toBoolean(): Boolean = this.toBoolean()
 
 /**
  * Returns `true` if this string is not `null` and its content is equal to the word "true", ignoring case, and `false` otherwise.
+ *
+ * There are also strict versions of the function available on non-nullable String, [toBooleanStrict] and [toBooleanStrictOrNull].
  */
-@OptIn(ExperimentalStdlibApi::class)
 @SinceKotlin("1.4")
 public actual fun String?.toBoolean(): Boolean = this != null && this.lowercase() == "true"
 
@@ -131,7 +132,6 @@ public actual inline fun Short.toString(radix: Int): String = this.toInt().toStr
 @SinceKotlin("1.2")
 public actual fun Int.toString(radix: Int): String = asDynamic().toString(checkRadix(radix))
 
-@OptIn(ExperimentalStdlibApi::class)
 private fun String.isNaN(): Boolean = when (this.lowercase()) {
     "nan", "+nan", "-nan" -> true
     else -> false
@@ -152,5 +152,8 @@ internal actual fun digitOf(char: Char, radix: Int): Int = when {
     char >= '0' && char <= '9' -> char - '0'
     char >= 'A' && char <= 'Z' -> char - 'A' + 10
     char >= 'a' && char <= 'z' -> char - 'a' + 10
-    else -> -1
+    char < '\u0080' -> -1
+    char >= '\uFF21' && char <= '\uFF3A' -> char - '\uFF21' + 10 // full-width latin capital letter
+    char >= '\uFF41' && char <= '\uFF5A' -> char - '\uFF41' + 10 // full-width latin small letter
+    else -> char.digitToIntImpl()
 }.let { if (it >= radix) -1 else it }

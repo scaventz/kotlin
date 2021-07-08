@@ -5,12 +5,14 @@
 
 package org.jetbrains.kotlin.codegen.inline
 
+import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.codegen.*
 import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
 import org.jetbrains.kotlin.descriptors.TypeParameterDescriptor
+import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameUnsafe
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes.*
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.model.TypeParameterMarker
@@ -19,7 +21,7 @@ import org.jetbrains.org.objectweb.asm.Type.INT_TYPE
 import org.jetbrains.org.objectweb.asm.Type.VOID_TYPE
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
-class PsiInlineIntrinsicsSupport(private val state: GenerationState) : ReifiedTypeInliner.IntrinsicsSupport<KotlinType> {
+class PsiInlineIntrinsicsSupport(override val state: GenerationState) : ReifiedTypeInliner.IntrinsicsSupport<KotlinType> {
     override fun putClassInstance(v: InstructionAdapter, type: KotlinType) {
         DescriptorAsmUtil.putJavaLangClassInstance(v, state.typeMapper.mapType(type), type, state.typeMapper)
     }
@@ -54,6 +56,11 @@ class PsiInlineIntrinsicsSupport(private val state: GenerationState) : ReifiedTy
             Type.getMethodDescriptor(VOID_TYPE, INT_TYPE, JAVA_CLASS_TYPE, JAVA_STRING_TYPE, JAVA_STRING_TYPE, INT_TYPE),
             false
         )
+    }
+
+    override fun isMutableCollectionType(type: KotlinType): Boolean {
+        val classifier = type.constructor.declarationDescriptor
+        return classifier is ClassDescriptor && JavaToKotlinClassMap.isMutable(classifier.fqNameUnsafe)
     }
 
     override fun toKotlinType(type: KotlinType): KotlinType = type

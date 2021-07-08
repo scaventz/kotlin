@@ -7,10 +7,12 @@
 
 package kotlin
 
+import kotlin.jvm.*
+
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
-public inline class ULongArray
-@Suppress("NON_PUBLIC_PRIMARY_CONSTRUCTOR_OF_INLINE_CLASS")
+@JvmInline
+public value class ULongArray
 @PublishedApi
 internal constructor(@PublishedApi internal val storage: LongArray) : Collection<ULong> {
 
@@ -39,8 +41,9 @@ internal constructor(@PublishedApi internal val storage: LongArray) : Collection
     public override val size: Int get() = storage.size
 
     /** Creates an iterator over the elements of the array. */
-    public override operator fun iterator(): ULongIterator = Iterator(storage)
+    public override operator fun iterator(): kotlin.collections.Iterator<ULong> = Iterator(storage)
 
+    @Suppress("DEPRECATION_ERROR")
     private class Iterator(private val array: LongArray) : ULongIterator() {
         private var index = 0
         override fun hasNext() = index < array.size

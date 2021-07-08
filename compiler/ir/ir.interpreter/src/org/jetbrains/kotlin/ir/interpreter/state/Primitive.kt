@@ -7,8 +7,6 @@ package org.jetbrains.kotlin.ir.interpreter.state
 
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrProperty
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.interpreter.getLastOverridden
 import org.jetbrains.kotlin.ir.interpreter.stack.Variable
@@ -16,25 +14,16 @@ import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.util.defaultType
-import org.jetbrains.kotlin.ir.util.isFakeOverride
-import org.jetbrains.kotlin.ir.util.overrides
 
-internal class Primitive<T>(var value: T, val type: IrType) : State {
+internal class Primitive<T>(val value: T, val type: IrType) : State {
     override val fields: MutableList<Variable> = mutableListOf()
-    override val typeArguments: MutableList<Variable> = mutableListOf()
     override val irClass: IrClass = type.classOrNull!!.owner
 
-    override fun getState(symbol: IrSymbol): State {
-        return super.getState(symbol) ?: this
-    }
+    override fun getField(symbol: IrSymbol): State? = null
 
-    override fun getIrFunctionByIrCall(expression: IrCall): IrFunction? {
+    override fun getIrFunctionByIrCall(expression: IrCall): IrFunction {
         val owner = expression.symbol.owner
-        // must add property's getter to declaration's list because they are not present in ir class for primitives
-        val declarations = irClass.declarations.map { if (it is IrProperty) it.getter else it }
-        return declarations.filterIsInstance<IrFunction>()
-            .firstOrNull { it.symbol == owner.symbol || (it is IrSimpleFunction && it.overrides(owner)) }
-            ?.let { if (it.isFakeOverride) it.getLastOverridden() else it }
+        return if (owner.isFakeOverride) owner.getLastOverridden() else owner
     }
 
     override fun equals(other: Any?): Boolean {

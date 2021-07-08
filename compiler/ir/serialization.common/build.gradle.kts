@@ -4,17 +4,16 @@ plugins {
 }
 
 dependencies {
-    // TODO: decouple from backend.common
-    compile(project(":compiler:frontend"))
-    compile(project(":compiler:ir.backend.common"))
     compile(project(":compiler:ir.tree"))
     compile(project(":compiler:serialization"))
     compile(project(":kotlin-util-klib"))
     compile(project(":kotlin-util-klib-metadata"))
     compile(project(":compiler:util"))
-    compile(project(":compiler:ir.psi2ir"))
-    compile(project(":compiler:ir.backend.common"))
+    implementation(project(":compiler:psi"))
     compileOnly(project(":kotlin-reflect-api"))
+
+    // TODO: move usages of JvmAnnotationNames and hasEnhancedNullability to ir.serialization.jvm and remove this dependency.
+    implementation(project(":core:compiler.common.jvm"))
 
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
 }

@@ -9,14 +9,22 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.TestDataFile
 import org.jetbrains.kotlin.test.model.*
 import org.jetbrains.kotlin.test.services.*
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
+import java.io.IOException
 
 class TestRunner(private val testConfiguration: TestConfiguration) {
-    private val failedAssertions = mutableListOf<AssertionError>()
+    private val failedAssertions = mutableListOf<WrappedException>()
 
-    fun runTest(@TestDataFile testDataFileName: String) {
+    fun runTest(@TestDataFile testDataFileName: String, beforeDispose: (TestConfiguration) -> Unit = {}) {
         try {
             runTestImpl(testDataFileName)
         } finally {
+            try {
+                testConfiguration.testServices.temporaryDirectoryManager.cleanupTemporaryDirectories()
+            } catch (_: IOException) {
+                // ignored
+            }
+            beforeDispose(testConfiguration)
             Disposer.dispose(testConfiguration.rootDisposable)
         }
     }
@@ -29,11 +37,19 @@ class TestRunner(private val testConfiguration: TestConfiguration) {
             configurator.transformTestDataPath(fileName)
         }
 
-        val moduleStructure = testConfiguration.moduleStructureExtractor.splitTestDataByModules(
-            testDataFileName,
-            testConfiguration.directives,
-        ).also {
-            services.register(TestModuleStructure::class, it)
+        val moduleStructure = try {
+            testConfiguration.moduleStructureExtractor.splitTestDataByModules(
+                testDataFileName,
+                testConfiguration.directives,
+            ).also {
+                services.register(TestModuleStructure::class, it)
+            }
+        } catch (e: ExceptionFromModuleStructureTransformer) {
+            services.register(TestModuleStructure::class, e.alreadyParsedModuleStructure)
+            val exception = filterFailedExceptions(
+                listOf(WrappedException.FromModuleStructureTransformer(e.cause))
+            ).singleOrNull() ?: return
+            throw exception
         }
 
         testConfiguration.metaTestConfigurators.forEach {
@@ -46,94 +62,157 @@ class TestRunner(private val testConfiguration: TestConfiguration) {
         val modules = moduleStructure.modules
         val dependencyProvider = DependencyProviderImpl(services, modules)
         services.registerDependencyProvider(dependencyProvider)
-        var failedException: Throwable? = null
+        var failedException: WrappedException? = null
         try {
             for (module in modules) {
-                processModule(module, dependencyProvider, moduleStructure)
+                val shouldProcessNextModules = processModule(services, module, dependencyProvider, moduleStructure)
+                if (!shouldProcessNextModules) break
             }
-        } catch (e: Throwable) {
+        } catch (e: WrappedException) {
             failedException = e
+        } catch (e: Exception) {
+            throw IllegalStateException("Unexpected exception type. Only WrappedException are expected here", e)
         }
+
         for (handler in testConfiguration.getAllHandlers()) {
-            withAssertionCatching { handler.processAfterAllModules(failedAssertions.isNotEmpty()) }
+            val wrapperFactory = when (handler) {
+                is FrontendOutputHandler -> WrappedException::FromFrontendHandler
+                is BackendInputHandler -> WrappedException::FromBackendHandler
+                is BinaryArtifactHandler -> WrappedException::FromBinaryHandler
+                else -> WrappedException::FromUnknownHandler
+            }
+            withAssertionCatching(wrapperFactory) {
+                val thereWasAnException = failedException != null || failedAssertions.isNotEmpty()
+                if (handler.shouldRun(thereWasAnException)) {
+                    handler.processAfterAllModules(thereWasAnException)
+                }
+            }
         }
         if (testConfiguration.metaInfoHandlerEnabled) {
-            withAssertionCatching(insertExceptionInStart = true) {
+            withAssertionCatching(WrappedException::FromMetaInfoHandler) {
                 globalMetadataInfoHandler.compareAllMetaDataInfos()
             }
         }
         if (failedException != null) {
-            failedAssertions.add(0, ExceptionFromTestError(failedException))
+            failedAssertions.add(0, failedException)
         }
 
         testConfiguration.afterAnalysisCheckers.forEach {
-            withAssertionCatching {
+            withAssertionCatching(WrappedException::FromAfterAnalysisChecker) {
                 it.check(failedAssertions)
             }
         }
 
-        val filteredFailedAssertions = testConfiguration.afterAnalysisCheckers
-            .fold<AfterAnalysisChecker, List<AssertionError>>(failedAssertions) { assertions, checker ->
-                checker.suppressIfNeeded(assertions)
-            }
-
+        val filteredFailedAssertions = filterFailedExceptions(failedAssertions)
+        filteredFailedAssertions.firstIsInstanceOrNull<WrappedException.FromFacade>()?.let {
+            throw it
+        }
         services.assertions.assertAll(filteredFailedAssertions)
     }
 
+    private fun filterFailedExceptions(failedExceptions: List<WrappedException>): List<Throwable> {
+        return testConfiguration.afterAnalysisCheckers
+            .fold(failedExceptions) { assertions, checker ->
+                checker.suppressIfNeeded(assertions)
+            }
+            .sorted()
+            .map { it.cause }
+    }
+
+    /*
+     * If there was failure from handler with `failureDisablesNextSteps=true` then `processModule`
+     *   returns false which indicates that other modules should not be processed
+     */
     private fun processModule(
+        services: TestServices,
         module: TestModule,
         dependencyProvider: DependencyProviderImpl,
         moduleStructure: TestModuleStructure
-    ) {
+    ): Boolean {
         val sourcesArtifact = ResultingArtifact.Source()
 
         val frontendKind = module.frontendKind
-        if (!frontendKind.shouldRunAnalysis) return
+        if (!frontendKind.shouldRunAnalysis) return true
 
-        val frontendArtifacts: ResultingArtifact.FrontendOutput<*> = testConfiguration.getFacade(SourcesKind, frontendKind)
-            .transform(module, sourcesArtifact).also { dependencyProvider.registerArtifact(module, it) }
+        val frontendArtifacts: ResultingArtifact.FrontendOutput<*> = withExceptionWrapping(WrappedException.FromFacade::Frontend) {
+            testConfiguration.getFacade(SourcesKind, frontendKind)
+                .transform(module, sourcesArtifact)?.also { dependencyProvider.registerArtifact(module, it) }
+                ?: return true
+        }
         val frontendHandlers: List<AnalysisHandler<*>> = testConfiguration.getHandlers(frontendKind)
         for (frontendHandler in frontendHandlers) {
-            withAssertionCatching {
-                frontendHandler.hackyProcess(module, frontendArtifacts)
+            val thereWasAnException = withAssertionCatching(WrappedException::FromFrontendHandler) {
+                if (frontendHandler.shouldRun(failedAssertions.isNotEmpty())) {
+                    frontendHandler.hackyProcess(module, frontendArtifacts)
+                }
             }
+            if (thereWasAnException && frontendHandler.failureDisablesNextSteps) return false
         }
 
-        val backendKind = module.backendKind
-        if (!backendKind.shouldRunAnalysis) return
+        val backendKind = services.backendKindExtractor.backendKind(module.targetBackend)
+        if (!backendKind.shouldRunAnalysis) return true
 
-        val backendInputInfo = testConfiguration.getFacade(frontendKind, backendKind)
-            .hackyTransform(module, frontendArtifacts).also { dependencyProvider.registerArtifact(module, it) }
+        val backendInputInfo = withExceptionWrapping(WrappedException.FromFacade::Converter) {
+            testConfiguration.getFacade(frontendKind, backendKind)
+                .hackyTransform(module, frontendArtifacts)?.also { dependencyProvider.registerArtifact(module, it) } ?: return true
+        }
 
         val backendHandlers: List<AnalysisHandler<*>> = testConfiguration.getHandlers(backendKind)
         for (backendHandler in backendHandlers) {
-            withAssertionCatching { backendHandler.hackyProcess(module, backendInputInfo) }
+            val thereWasAnException = withAssertionCatching(WrappedException::FromBackendHandler) {
+                if (backendHandler.shouldRun(failedAssertions.isNotEmpty())) {
+                    backendHandler.hackyProcess(module, backendInputInfo)
+                }
+            }
+            if (thereWasAnException && backendHandler.failureDisablesNextSteps) return false
         }
 
         for (artifactKind in moduleStructure.getTargetArtifactKinds(module)) {
             if (!artifactKind.shouldRunAnalysis) continue
-            val binaryArtifact = testConfiguration.getFacade(backendKind, artifactKind)
-                .hackyTransform(module, backendInputInfo).also {
-                    dependencyProvider.registerArtifact(module, it)
-                }
+            val binaryArtifact = withExceptionWrapping(WrappedException.FromFacade::Backend) {
+                testConfiguration.getFacade(backendKind, artifactKind)
+                    .hackyTransform(module, backendInputInfo)?.also {
+                        dependencyProvider.registerArtifact(module, it)
+                    } ?: return true
+            }
 
             val binaryHandlers: List<AnalysisHandler<*>> = testConfiguration.getHandlers(artifactKind)
             for (binaryHandler in binaryHandlers) {
-                withAssertionCatching { binaryHandler.hackyProcess(module, binaryArtifact) }
+                val thereWasAnException = withAssertionCatching(WrappedException::FromBinaryHandler) {
+                    if (binaryHandler.shouldRun(failedAssertions.isNotEmpty())) {
+                        binaryHandler.hackyProcess(module, binaryArtifact)
+                    }
+                }
+                if (thereWasAnException && binaryHandler.failureDisablesNextSteps) return false
             }
+        }
+
+        return true
+    }
+
+    /*
+     * Returns true if there was an exception in block
+     */
+    private inline fun withAssertionCatching(exceptionWrapper: (Throwable) -> WrappedException, block: () -> Unit): Boolean {
+        return try {
+            block()
+            false
+        } catch (e: Throwable) {
+            failedAssertions += exceptionWrapper(e)
+            true
         }
     }
 
-    private inline fun withAssertionCatching(insertExceptionInStart: Boolean = false, block: () -> Unit) {
-        try {
+    private inline fun <R> withExceptionWrapping(exceptionWrapper: (Throwable) -> WrappedException, block: () -> R): R {
+        return try {
             block()
-        } catch (e: AssertionError) {
-            if (insertExceptionInStart) {
-                failedAssertions.add(0, e)
-            } else {
-                failedAssertions += e
-            }
+        } catch (e: Throwable) {
+            throw exceptionWrapper(e)
         }
+    }
+
+    private fun AnalysisHandler<*>.shouldRun(thereWasAnException: Boolean): Boolean {
+        return !(doNotRunIfThereWerePreviousFailures && thereWasAnException)
     }
 }
 
@@ -160,7 +239,7 @@ private fun <A : ResultingArtifact<A>> AnalysisHandler<A>.processModule(module: 
 private fun AbstractTestFacade<*, *>.hackyTransform(
     module: TestModule,
     artifact: ResultingArtifact<*>
-): ResultingArtifact<*> {
+): ResultingArtifact<*>? {
     @Suppress("UNCHECKED_CAST")
     return (this as AbstractTestFacade<ResultingArtifact.Source, ResultingArtifact.Source>)
         .transform(module, artifact as ResultingArtifact<ResultingArtifact.Source>)
@@ -169,7 +248,7 @@ private fun AbstractTestFacade<*, *>.hackyTransform(
 private fun <I : ResultingArtifact<I>, O : ResultingArtifact<O>> AbstractTestFacade<I, O>.transform(
     module: TestModule,
     inputArtifact: ResultingArtifact<I>
-): O {
+): O? {
     @Suppress("UNCHECKED_CAST")
     return transform(module, inputArtifact as I)
 }

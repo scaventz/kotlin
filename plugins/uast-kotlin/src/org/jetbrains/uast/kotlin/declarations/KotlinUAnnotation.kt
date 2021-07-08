@@ -22,8 +22,6 @@ import org.jetbrains.kotlin.types.ErrorUtils
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstanceOrNull
 import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import org.jetbrains.uast.*
-import org.jetbrains.uast.kotlin.declarations.KotlinUIdentifier
-import org.jetbrains.uast.kotlin.declarations.KotlinUMethod
 import org.jetbrains.uast.kotlin.internal.multiResolveResults
 
 abstract class KotlinUAnnotationBase<T : KtCallElement>(
@@ -64,7 +62,7 @@ abstract class KotlinUAnnotationBase<T : KtCallElement>(
     protected abstract fun computeClassDescriptor(): ClassDescriptor?
 
     override fun resolve(): PsiClass? = computeClassDescriptor()?.let {
-        sourcePsi.calleeExpression?.let { ktExpression -> resolveToDeclaration(ktExpression, it) }
+        sourcePsi.calleeExpression?.let { ktExpression -> resolveToDeclarationImpl(ktExpression, it) }
     } as? PsiClass
 
     override fun findAttributeValue(name: String?): UExpression? =

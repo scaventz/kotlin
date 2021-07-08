@@ -9,18 +9,19 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiModifierList
 import org.jetbrains.kotlin.asJava.classes.lazyPub
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
-import org.jetbrains.kotlin.idea.frontend.api.symbols.KtConstructorParameterSymbol
-import org.jetbrains.kotlin.idea.frontend.api.symbols.KtParameterSymbol
-import org.jetbrains.kotlin.idea.util.ifTrue
+import org.jetbrains.kotlin.idea.frontend.api.isValid
+import org.jetbrains.kotlin.idea.frontend.api.symbols.KtValueParameterSymbol
 
 internal class FirLightParameterForSymbol(
-    private val parameterSymbol: KtParameterSymbol,
+    private val parameterSymbol: KtValueParameterSymbol,
     containingMethod: FirLightMethod
 ) : FirLightParameterBaseForSymbol(parameterSymbol, containingMethod) {
 
+    private val isConstructorParameterSymbol = containingMethod.isConstructor
+
     private val _annotations: List<PsiAnnotation> by lazyPub {
 
-        val annotationSite = (parameterSymbol is KtConstructorParameterSymbol).ifTrue {
+        val annotationSite = isConstructorParameterSymbol.ifTrue {
             AnnotationUseSiteTarget.CONSTRUCTOR_PARAMETER
         }
 
@@ -46,4 +47,6 @@ internal class FirLightParameterForSymbol(
                 (other is FirLightParameterForSymbol && parameterSymbol == other.parameterSymbol)
 
     override fun hashCode(): Int = kotlinOrigin.hashCode()
+
+    override fun isValid(): Boolean = super.isValid() && parameterSymbol.isValid()
 }

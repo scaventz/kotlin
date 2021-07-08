@@ -1,9 +1,8 @@
-// !LANGUAGE: -ProhibitConcurrentHashMapContains -NonStrictOnlyInputTypesChecks
-// !WITH_NEW_INFERENCE
+// !LANGUAGE: -ProhibitConcurrentHashMapContains
 // FULL_JDK
 
 class A : java.util.concurrent.ConcurrentHashMap<String, Int>() {
-    operator fun contains(<!UNUSED_PARAMETER!>x<!>: Char): Boolean = true
+    operator fun contains(x: Char): Boolean = true
 }
 class B : java.util.concurrent.ConcurrentHashMap<String, Int>() {
     override fun contains(value: Any?): Boolean {
@@ -29,8 +28,8 @@ fun main() {
 
     "" in (hm as Map<String, Int>)
     "" !in (hm as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>in<!> (hm as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>!in<!> (hm as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>in<!> (hm as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>!in<!> (hm as Map<String, Int>)
 
     val a = A()
     "" <!CONCURRENT_HASH_MAP_CONTAINS_OPERATOR!>in<!> a
@@ -45,8 +44,8 @@ fun main() {
 
     "" in (a as Map<String, Int>)
     "" !in (a as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>in<!> (a as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>!in<!> (a as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>in<!> (a as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>!in<!> (a as Map<String, Int>)
 
     val b = B()
     "" <!CONCURRENT_HASH_MAP_CONTAINS_OPERATOR!>in<!> b
@@ -59,8 +58,8 @@ fun main() {
 
     "" in (b as Map<String, Int>)
     "" !in (b as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>in<!> (b as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>!in<!> (b as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>in<!> (b as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>!in<!> (b as Map<String, Int>)
 
     // Actually, we could've allow calls here because the owner explicitly declared as operator, but semantics is still weird
     val c = C()
@@ -74,7 +73,6 @@ fun main() {
 
     "" in (c as Map<String, Int>)
     "" !in (c as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>in<!> (c as Map<String, Int>)
-    1 <!TYPE_INFERENCE_CONFLICTING_SUBSTITUTIONS{OI}, TYPE_INFERENCE_ONLY_INPUT_TYPES{NI}!>!in<!> (c as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>in<!> (c as Map<String, Int>)
+    1 <!TYPE_INFERENCE_ONLY_INPUT_TYPES!>!in<!> (c as Map<String, Int>)
 }
-

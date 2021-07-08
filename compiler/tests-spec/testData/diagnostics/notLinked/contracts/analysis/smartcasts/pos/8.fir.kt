@@ -1,5 +1,5 @@
+// FIR_IDE_IGNORE
 // !USE_EXPERIMENTAL: kotlin.contracts.ExperimentalContracts
-// !WITH_NEW_INFERENCE
 
 // FILE: contracts.kt
 
@@ -20,11 +20,11 @@ fun <T> T?.case_3(value_1: Int?, value_2: Boolean): Boolean {
 
 // TESTCASE NUMBER: 4
 fun case_4(value_1: Number, block: (() -> Unit)?): Boolean? {
-    <!WRONG_IMPLIES_CONDITION!>contract {
+    contract {
         returns(true) implies (value_1 is Int)
         returns(false) implies (block == null)
         returns(null) implies (block != null)
-    }<!>
+    }
 
     return value_1 == null
 }
@@ -111,7 +111,7 @@ fun case_5(value_1: Number?, value_2: String?) {
             println(value_1.toByte())
         }
         false -> {
-            println(value_2.<!INAPPLICABLE_CANDIDATE!>length<!>)
+            println(value_2<!UNSAFE_CALL!>.<!>length)
             println(value_1.inv())
         }
     }
@@ -130,10 +130,10 @@ fun case_6(value_1: Number, value_2: String?, value_3: Any?) {
         }
         false -> {
             println(value_3.length)
-            println(value_2.<!INAPPLICABLE_CANDIDATE!>length<!>)
+            println(value_2<!UNSAFE_CALL!>.<!>length)
         }
         null -> {
-            <!AMBIGUITY!>println<!>(value_1.<!UNRESOLVED_REFERENCE!>inv<!>())
+            <!OVERLOAD_RESOLUTION_AMBIGUITY!>println<!>(value_1.<!UNRESOLVED_REFERENCE!>inv<!>())
         }
     }
 }

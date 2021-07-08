@@ -1,0 +1,11 @@
+UFile (package = )
+    UClass (name = TestPropertyInitializer)
+        UMethod (name = TestPropertyInitializer)
+        UMethod (name = getWithSetter)
+            UBlockExpression
+                UReturnExpression
+                    USimpleNameReferenceExpression (identifier = field)
+        UMethod (name = setWithSetter)
+            UParameter (name = p)
+            UBlockExpression
+                [!] UnknownKotlinExpression (BINARY_EXPRESSION)

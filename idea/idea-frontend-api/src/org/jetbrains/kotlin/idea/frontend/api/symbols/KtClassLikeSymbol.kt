@@ -9,48 +9,87 @@ import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.*
 import org.jetbrains.kotlin.idea.frontend.api.symbols.pointers.KtSymbolPointer
 import org.jetbrains.kotlin.idea.frontend.api.types.KtType
 import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.name.SpecialNames
+import org.jetbrains.kotlin.types.Variance
 
-sealed class KtClassifierSymbol : KtSymbol, KtNamedSymbol
+public sealed class KtClassifierSymbol : KtSymbol, KtPossiblyNamedSymbol
 
-abstract class KtTypeParameterSymbol : KtClassifierSymbol(), KtNamedSymbol {
+public val KtClassifierSymbol.nameOrAnonymous: Name
+    get() = name ?: SpecialNames.ANONYMOUS_FUNCTION
+
+public abstract class KtTypeParameterSymbol : KtClassifierSymbol(), KtNamedSymbol {
     abstract override fun createPointer(): KtSymbolPointer<KtTypeParameterSymbol>
 
-    abstract val upperBounds: List<KtType>
+    public abstract val upperBounds: List<KtType>
+    public abstract val variance: Variance
+    public abstract val isReified: Boolean
 }
 
-sealed class KtClassLikeSymbol : KtClassifierSymbol(), KtNamedSymbol, KtSymbolWithKind {
-    abstract val classIdIfNonLocal: ClassId?
+public sealed class KtClassLikeSymbol : KtClassifierSymbol(), KtSymbolWithKind {
+    public abstract val classIdIfNonLocal: ClassId?
 
     abstract override fun createPointer(): KtSymbolPointer<KtClassLikeSymbol>
 }
 
-abstract class KtTypeAliasSymbol : KtClassLikeSymbol() {
-    abstract override val classIdIfNonLocal: ClassId
-
+public abstract class KtTypeAliasSymbol : KtClassLikeSymbol(), KtNamedSymbol {
     final override val symbolKind: KtSymbolKind get() = KtSymbolKind.TOP_LEVEL
+
+    /**
+     * Returns type from right-hand site of type alias
+     * If type alias has type parameters, then those type parameters will be present in result type
+     */
+    public abstract val expandedType: KtType
 
     abstract override fun createPointer(): KtSymbolPointer<KtTypeAliasSymbol>
 }
 
-abstract class KtClassOrObjectSymbol : KtClassLikeSymbol(),
-    KtSymbolWithTypeParameters,
-    KtSymbolWithModality<KtSymbolModality>,
-    KtSymbolWithVisibility,
+public sealed class KtClassOrObjectSymbol : KtClassLikeSymbol(),
     KtAnnotatedSymbol,
     KtSymbolWithMembers {
-    abstract val classKind: KtClassKind
 
-    abstract val isInner: Boolean
-
-    abstract val companionObject: KtClassOrObjectSymbol?
-
-    abstract val superTypes: List<KtTypeAndAnnotations>
-
-    abstract val primaryConstructor: KtConstructorSymbol?
+    public abstract val classKind: KtClassKind
+    public abstract val superTypes: List<KtTypeAndAnnotations>
 
     abstract override fun createPointer(): KtSymbolPointer<KtClassOrObjectSymbol>
 }
 
-enum class KtClassKind {
-    CLASS, ENUM_CLASS, ENUM_ENTRY, ANNOTATION_CLASS, OBJECT, COMPANION_OBJECT, INTERFACE
+public abstract class KtAnonymousObjectSymbol : KtClassOrObjectSymbol() {
+    final override val classKind: KtClassKind get() = KtClassKind.ANONYMOUS_OBJECT
+    final override val classIdIfNonLocal: ClassId? get() = null
+    final override val symbolKind: KtSymbolKind get() = KtSymbolKind.LOCAL
+    final override val name: Name? get() = null
+
+    abstract override fun createPointer(): KtSymbolPointer<KtAnonymousObjectSymbol>
+}
+
+public abstract class KtNamedClassOrObjectSymbol : KtClassOrObjectSymbol(),
+    KtSymbolWithTypeParameters,
+    KtSymbolWithModality,
+    KtSymbolWithVisibility,
+    KtNamedSymbol {
+
+    public abstract val isInner: Boolean
+    public abstract val isData: Boolean
+    public abstract val isInline: Boolean
+    public abstract val isFun: Boolean
+
+    public abstract val isExternal: Boolean
+
+    public abstract val companionObject: KtNamedClassOrObjectSymbol?
+
+    abstract override fun createPointer(): KtSymbolPointer<KtNamedClassOrObjectSymbol>
+}
+
+public enum class KtClassKind {
+    CLASS,
+    ENUM_CLASS,
+    ENUM_ENTRY,
+    ANNOTATION_CLASS,
+    OBJECT,
+    COMPANION_OBJECT,
+    INTERFACE,
+    ANONYMOUS_OBJECT;
+
+    public val isObject: Boolean get() = this == OBJECT || this == COMPANION_OBJECT || this == ANONYMOUS_OBJECT
 }

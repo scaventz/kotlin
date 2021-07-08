@@ -39,6 +39,11 @@ public class AntTaskTestGenerated extends AbstractAntTaskTest {
         runTest("compiler/testData/integration/ant/jvm/doNotFailOnError/");
     }
 
+    @TestMetadata("doNotIncludeRuntimeByDefault")
+    public void testDoNotIncludeRuntimeByDefault() throws Exception {
+        runTest("compiler/testData/integration/ant/jvm/doNotIncludeRuntimeByDefault/");
+    }
+
     @TestMetadata("failOnErrorByDefault")
     public void testFailOnErrorByDefault() throws Exception {
         runTest("compiler/testData/integration/ant/jvm/failOnErrorByDefault/");
@@ -82,6 +87,11 @@ public class AntTaskTestGenerated extends AbstractAntTaskTest {
     @TestMetadata("mainInFiles")
     public void testMainInFiles() throws Exception {
         runTest("compiler/testData/integration/ant/jvm/mainInFiles/");
+    }
+
+    @TestMetadata("manySourceRoots")
+    public void testManySourceRoots() throws Exception {
+        runTest("compiler/testData/integration/ant/jvm/manySourceRoots/");
     }
 
     @TestMetadata("moduleName")

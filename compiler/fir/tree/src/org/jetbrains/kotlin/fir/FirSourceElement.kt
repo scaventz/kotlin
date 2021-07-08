@@ -37,6 +37,10 @@ sealed class FirFakeSourceElementKind : FirSourceElementKind() {
     // they have a fake source which refers to property
     object DefaultAccessor : FirFakeSourceElementKind()
 
+    // for delegated properties, getter & setter calls to the delegate
+    // they have a fake source which refers to the call that creates the delegate
+    object DelegatedPropertyAccessor : FirFakeSourceElementKind()
+
     // for kt classes without implicit primary constructor one is generated
     // with a fake source which refers to containing class
     object ImplicitConstructor : FirFakeSourceElementKind()
@@ -132,9 +136,6 @@ sealed class FirFakeSourceElementKind : FirSourceElementKind() {
     // where a + 2 will have a fake source
     object DesugaredCompoundAssignment : FirFakeSourceElementKind()
 
-    //"$a" --> a.toString() where toString call source is marked as a fake one
-    object GeneratedToStringCallOnTemplateEntry : FirFakeSourceElementKind()
-
     // `a > b` will be wrapped in FirComparisonExpression
     // with real source which points to initial `a > b` expression
     // and inner FirFunctionCall will refer to a fake source
@@ -161,6 +162,18 @@ sealed class FirFakeSourceElementKind : FirSourceElementKind() {
     // { it + 1} --> { it -> it + 1 }
     // where `it` parameter declaration has fake source
     object ItLambdaParameter : FirFakeSourceElementKind()
+
+    // for java annotations implicit constructor is generated
+    // with a fake source which refers to containing class
+    object ImplicitJavaAnnotationConstructor : FirFakeSourceElementKind()
+
+    // for java annotations constructor implicit parameters are generated
+    // with a fake source which refers to declared annotation methods
+    object ImplicitAnnotationAnnotationConstructorParameter : FirFakeSourceElementKind()
+
+    // for the implicit field storing the delegated object for class delegation
+    // with a fake source that refers to the KtExpression that creates the delegate
+    object ClassDelegationField : FirFakeSourceElementKind()
 }
 
 sealed class FirSourceElement {
@@ -174,7 +187,7 @@ sealed class FirSourceElement {
 
 // NB: in certain situations, psi.node could be null
 // Potentially exceptions can be provoked by elementType / lighterASTNode
-sealed class FirPsiSourceElement<out P : PsiElement>(val psi: P) : FirSourceElement() {
+sealed class FirPsiSourceElement(val psi: PsiElement) : FirSourceElement() {
     override val elementType: IElementType
         get() = psi.node.elementType
 
@@ -188,20 +201,20 @@ sealed class FirPsiSourceElement<out P : PsiElement>(val psi: P) : FirSourceElem
 
     override val treeStructure: FlyweightCapableTreeStructure<LighterASTNode> by lazy { WrappedTreeStructure(psi.containingFile) }
 
-    private class WrappedTreeStructure(file: PsiFile) : FlyweightCapableTreeStructure<LighterASTNode> {
+    internal class WrappedTreeStructure(file: PsiFile) : FlyweightCapableTreeStructure<LighterASTNode> {
         private val lighterAST = TreeBackedLighterAST(file.node)
 
-        private fun LighterASTNode.unwrap() = lighterAST.unwrap(this)
+        fun unwrap(node: LighterASTNode) = lighterAST.unwrap(node)
 
-        override fun toString(node: LighterASTNode): CharSequence = node.unwrap().text
+        override fun toString(node: LighterASTNode): CharSequence = unwrap(node).text
 
         override fun getRoot(): LighterASTNode = lighterAST.root
 
         override fun getParent(node: LighterASTNode): LighterASTNode? =
-            node.unwrap().psi.parent?.node?.let { TreeBackedLighterAST.wrap(it) }
+            unwrap(node).psi.parent?.node?.let { TreeBackedLighterAST.wrap(it) }
 
         override fun getChildren(node: LighterASTNode, nodesRef: Ref<Array<LighterASTNode>>): Int {
-            val psi = node.unwrap().psi
+            val psi = unwrap(node).psi
             val children = mutableListOf<PsiElement>()
             var child = psi.firstChild
             while (child != null) {
@@ -220,7 +233,7 @@ sealed class FirPsiSourceElement<out P : PsiElement>(val psi: P) : FirSourceElem
         }
 
         override fun getStartOffset(node: LighterASTNode): Int {
-            return getStartOffset(node.unwrap().psi)
+            return getStartOffset(unwrap(node).psi)
         }
 
         private fun getStartOffset(element: PsiElement): Int {
@@ -237,7 +250,7 @@ sealed class FirPsiSourceElement<out P : PsiElement>(val psi: P) : FirSourceElem
         }
 
         override fun getEndOffset(node: LighterASTNode): Int {
-            return getEndOffset(node.unwrap().psi)
+            return getEndOffset(unwrap(node).psi)
         }
 
         private fun getEndOffset(element: PsiElement): Int {
@@ -255,23 +268,23 @@ sealed class FirPsiSourceElement<out P : PsiElement>(val psi: P) : FirSourceElem
     }
 }
 
-class FirRealPsiSourceElement<out P : PsiElement>(psi: P) : FirPsiSourceElement<P>(psi) {
+class FirRealPsiSourceElement(psi: PsiElement) : FirPsiSourceElement(psi) {
     override val kind: FirSourceElementKind get() = FirRealSourceElementKind
 }
 
-class FirFakeSourceElement<out P : PsiElement>(psi: P, override val kind: FirFakeSourceElementKind) : FirPsiSourceElement<P>(psi)
+class FirFakeSourceElement(psi: PsiElement, override val kind: FirFakeSourceElementKind) : FirPsiSourceElement(psi)
 
 fun FirSourceElement.fakeElement(newKind: FirFakeSourceElementKind): FirSourceElement {
     return when (this) {
         is FirLightSourceElement -> FirLightSourceElement(lighterASTNode, startOffset, endOffset, treeStructure, newKind)
-        is FirPsiSourceElement<*> -> FirFakeSourceElement(psi, newKind)
+        is FirPsiSourceElement -> FirFakeSourceElement(psi, newKind)
     }
 }
 
 fun FirSourceElement.realElement(): FirSourceElement = when (this) {
-    is FirRealPsiSourceElement<*> -> this
+    is FirRealPsiSourceElement -> this
     is FirLightSourceElement -> FirLightSourceElement(lighterASTNode, startOffset, endOffset, treeStructure, FirRealSourceElementKind)
-    is FirPsiSourceElement<*> -> FirRealPsiSourceElement(psi)
+    is FirPsiSourceElement -> FirRealPsiSourceElement(psi)
 }
 
 
@@ -284,15 +297,35 @@ class FirLightSourceElement(
 ) : FirSourceElement() {
     override val elementType: IElementType
         get() = lighterASTNode.tokenType
+
+    /**
+     * We can create a [FirLightSourceElement] from a [FirPsiSourceElement] by using [FirPsiSourceElement.lighterASTNode];
+     * [unwrapToFirPsiSourceElement] allows to get original [FirPsiSourceElement] in such case.
+     *
+     * If it is `pure` [FirLightSourceElement], i.e, compiler created it in light tree mode, then return [unwrapToFirPsiSourceElement] `null`.
+     * Otherwise, return some not-null result.
+     */
+    fun unwrapToFirPsiSourceElement(): FirPsiSourceElement? {
+        if (treeStructure !is FirPsiSourceElement.WrappedTreeStructure) return null
+        val node = treeStructure.unwrap(lighterASTNode)
+        return node.psi?.toFirPsiSourceElement(kind)
+    }
 }
 
-val FirSourceElement?.psi: PsiElement? get() = (this as? FirPsiSourceElement<*>)?.psi
+val FirSourceElement?.psi: PsiElement? get() = (this as? FirPsiSourceElement)?.psi
 
-val FirElement.psi: PsiElement? get() = (source as? FirPsiSourceElement<*>)?.psi
-val FirElement.realPsi: PsiElement? get() = (source as? FirRealPsiSourceElement<*>)?.psi
+val FirSourceElement?.text: CharSequence?
+    get() = when (this) {
+        is FirPsiSourceElement -> psi.text
+        is FirLightSourceElement -> treeStructure.toString(lighterASTNode)
+        else -> null
+    }
+
+val FirElement.psi: PsiElement? get() = (source as? FirPsiSourceElement)?.psi
+val FirElement.realPsi: PsiElement? get() = (source as? FirRealPsiSourceElement)?.psi
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun PsiElement.toFirPsiSourceElement(kind: FirSourceElementKind = FirRealSourceElementKind): FirPsiSourceElement<*> = when (kind) {
+inline fun PsiElement.toFirPsiSourceElement(kind: FirSourceElementKind = FirRealSourceElementKind): FirPsiSourceElement = when (kind) {
     is FirRealSourceElementKind -> FirRealPsiSourceElement(this)
     is FirFakeSourceElementKind -> FirFakeSourceElement(this, kind)
 }

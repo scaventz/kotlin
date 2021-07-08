@@ -95,7 +95,6 @@ abstract class KotlinLightCodeInsightFixtureTestCase : KotlinLightCodeInsightFix
         }
 
 
-        runPostStartupActivitiesOnce(project)
         VfsRootAccess.allowRootAccess(project, KtTestUtil.getHomeDirectory())
 
         EditorTracker.getInstance(project)
@@ -409,7 +408,7 @@ private fun configureLanguageAndApiVersion(
             compilerArguments.apiVersion = null
         }
 
-        facet.configureFacet(languageVersion, LanguageFeature.State.DISABLED, null, modelsProvider)
+        facet.configureFacet(languageVersion, null, modelsProvider)
         if (apiVersion != null) {
             facet.configuration.settings.apiLevel = LanguageVersion.fromVersionString(apiVersion)
         }

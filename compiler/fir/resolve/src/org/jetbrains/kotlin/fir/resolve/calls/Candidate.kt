@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.resolve.calls
 
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirFile
@@ -20,11 +21,12 @@ import org.jetbrains.kotlin.fir.resolve.inference.InferenceComponents
 import org.jetbrains.kotlin.fir.resolve.inference.PostponedResolvedAtom
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
 import org.jetbrains.kotlin.fir.types.ConeTypeVariable
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.resolve.calls.components.SuspendConversionStrategy
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemBuilder
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
@@ -34,6 +36,7 @@ import org.jetbrains.kotlin.resolve.calls.tower.CandidateApplicability
 import org.jetbrains.kotlin.resolve.calls.tower.isSuccess
 
 data class CallInfo(
+    val callSite: FirElement,
     val callKind: CallKind,
     val name: Name,
 
@@ -74,7 +77,7 @@ data class CallInfo(
 }
 
 class Candidate(
-    val symbol: AbstractFirBasedSymbol<*>,
+    val symbol: FirBasedSymbol<*>,
     val dispatchReceiverValue: ReceiverValue?,
     val extensionReceiverValue: ReceiverValue?,
     val explicitReceiverKind: ExplicitReceiverKind,
@@ -82,6 +85,7 @@ class Candidate(
     private val baseSystem: ConstraintStorage,
     val callInfo: CallInfo,
     val originScope: FirScope?,
+    val isFromCompanionObjectTypeScope: Boolean = false
 ) {
 
     var systemInitialized: Boolean = false
@@ -97,6 +101,16 @@ class Candidate(
     var resultingTypeForCallableReference: ConeKotlinType? = null
     var outerConstraintBuilderEffect: (ConstraintSystemOperation.() -> Unit)? = null
     var usesSAM: Boolean = false
+
+    internal var callableReferenceAdaptation: CallableReferenceAdaptation? = null
+        set(value) {
+            field = value
+            usesSuspendConversion = value?.suspendConversionStrategy == SuspendConversionStrategy.SUSPEND_CONVERSION
+            if (value != null) {
+                numDefaults = value.defaults
+            }
+        }
+
     var usesSuspendConversion: Boolean = false
 
     var argumentMapping: LinkedHashMap<FirExpression, FirValueParameter>? = null

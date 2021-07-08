@@ -6,52 +6,61 @@
 package org.jetbrains.kotlin.idea.frontend.api.fir.symbols
 
 import com.intellij.psi.PsiElement
-import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibility
+import org.jetbrains.kotlin.fir.declarations.FirPropertyAccessor
+import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
+import org.jetbrains.kotlin.fir.declarations.utils.isInline
+import org.jetbrains.kotlin.fir.declarations.utils.isOverride
 import org.jetbrains.kotlin.idea.fir.findPsi
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
 import org.jetbrains.kotlin.idea.frontend.api.fir.KtSymbolByFirBuilder
+import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.annotations.containsAnnotation
+import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.annotations.getAnnotationClassIds
+import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.annotations.toAnnotationsList
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.cached
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.firRef
+import org.jetbrains.kotlin.idea.frontend.api.fir.utils.weakRef
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtPropertyGetterSymbol
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.*
+import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtAnnotationCall
+import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtTypeAndAnnotations
 import org.jetbrains.kotlin.idea.frontend.api.symbols.pointers.KtPsiBasedSymbolPointer
 import org.jetbrains.kotlin.idea.frontend.api.symbols.pointers.KtSymbolPointer
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ValidityToken
+import org.jetbrains.kotlin.idea.frontend.api.types.KtType
+import org.jetbrains.kotlin.name.ClassId
 
 internal class KtFirPropertyGetterSymbol(
     fir: FirPropertyAccessor,
     resolveState: FirModuleResolveState,
     override val token: ValidityToken,
-    private val builder: KtSymbolByFirBuilder,
+    _builder: KtSymbolByFirBuilder,
 ) : KtPropertyGetterSymbol(), KtFirSymbol<FirPropertyAccessor> {
     init {
         require(fir.isGetter)
     }
 
+    private val builder by weakRef(_builder)
     override val firRef = firRef(fir, resolveState)
-    override val psi: PsiElement? by firRef.withFirAndCache { fir -> fir.findPsi(fir.session) }
+    override val psi: PsiElement? by firRef.withFirAndCache { fir -> fir.findPsi(fir.moduleData.session) }
 
     override val isDefault: Boolean get() = firRef.withFir { it is FirDefaultPropertyAccessor }
     override val isInline: Boolean get() = firRef.withFir { it.isInline }
     override val isOverride: Boolean get() = firRef.withFir { it.isOverride }
     override val hasBody: Boolean get() = firRef.withFir { it.body != null }
 
-    override val symbolKind: KtSymbolKind
-        get() = firRef.withFir { fir ->
-            when (fir.symbol.callableId.classId) {
-                null -> KtSymbolKind.TOP_LEVEL
-                else -> KtSymbolKind.MEMBER
-            }
-        }
-
     override val annotatedType: KtTypeAndAnnotations by cached {
         firRef.returnTypeAndAnnotations(FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE, builder)
     }
-    override val modality: KtCommonSymbolModality get() = firRef.withFir(FirResolvePhase.STATUS) { it.modality.getSymbolModality() }
-    override val visibility: KtSymbolVisibility get() = firRef.withFir(FirResolvePhase.STATUS) { it.visibility.getSymbolVisibility() }
-    override val annotations: List<KtAnnotationCall> by cached {
-        firRef.toAnnotationsList()
+    override val modality: Modality get() = getModality()
+    override val visibility: Visibility get() = getVisibility()
+    override val annotations: List<KtAnnotationCall> by cached { firRef.toAnnotationsList() }
+    override fun containsAnnotation(classId: ClassId): Boolean = firRef.containsAnnotation(classId)
+    override val annotationClassIds: Collection<ClassId> by cached { firRef.getAnnotationClassIds() }
+
+    override val dispatchType: KtType? by cached {
+        firRef.dispatchReceiverTypeAndAnnotations(builder)
     }
 
     override fun createPointer(): KtSymbolPointer<KtPropertyGetterSymbol> {

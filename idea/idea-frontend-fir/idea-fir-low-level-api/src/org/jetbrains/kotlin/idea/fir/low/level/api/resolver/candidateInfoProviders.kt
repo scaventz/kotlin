@@ -7,7 +7,11 @@ package org.jetbrains.kotlin.idea.fir.low.level.api.resolver
 
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirFile
+import org.jetbrains.kotlin.fir.declarations.FirVariable
 import org.jetbrains.kotlin.fir.resolve.calls.*
+import org.jetbrains.kotlin.fir.resolve.inference.receiverType
+import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
+import org.jetbrains.kotlin.fir.types.coneType
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 
 /**
@@ -36,6 +40,7 @@ abstract class AbstractCandidateInfoProvider(
 ) : CandidateInfoProvider {
     override fun callInfo(): CallInfo = with(resolutionParameters) {
         CallInfo(
+            firFile, // TODO: consider passing more precise info here, if needed
             callKind = callKind(),
             name = callableSymbol.callableId.callableName,
             explicitReceiver = explicitReceiver,
@@ -83,7 +88,9 @@ class CheckExtensionForCompletionCandidateInfoProvider(
     override fun shouldFailBeforeResolve(): Boolean = with(resolutionParameters) {
         val callHasExtensionReceiver = explicitReceiverKind() == ExplicitReceiverKind.EXTENSION_RECEIVER
                 || implicitExtensionReceiverValue() != null
-        val candidateHasExtensionReceiver = callableSymbol.fir.receiverTypeRef != null
+        val fir = callableSymbol.fir
+        val candidateHasExtensionReceiver = fir.receiverTypeRef != null
+                || fir is FirVariable && fir.returnTypeRef.coneType.receiverType(firSession) != null
         callHasExtensionReceiver != candidateHasExtensionReceiver
     }
 }

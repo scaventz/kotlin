@@ -4,6 +4,7 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.Transformer
 import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContext
 import kotlinx.metadata.jvm.KmModuleVisitor
 import kotlinx.metadata.jvm.KotlinModuleMetadata
+import org.gradle.kotlin.dsl.support.serviceOf
 import shadow.org.apache.tools.zip.ZipEntry
 import shadow.org.apache.tools.zip.ZipOutputStream
 
@@ -11,7 +12,7 @@ description = "Kotlin Full Reflection Library"
 
 buildscript {
     dependencies {
-        classpath("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.1.0")
+        classpath("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.2.0")
     }
 }
 
@@ -19,9 +20,7 @@ plugins {
     java
 }
 
-val JDK_16: String by rootProject.extra
-
-callGroovy("configureJavaOnlyJvm6Project", project)
+configureJavaOnlyToolchain(JdkMajorVersion.JDK_1_6)
 
 publish()
 
@@ -149,16 +148,30 @@ val proguard by task<CacheableProguardTask> {
     injars(mapOf("filter" to "!META-INF/**,!**/*.kotlin_builtins"), proguardAdditionalInJars)
     outjars(proguardOutput)
 
-    jdkHome = File(JDK_16)
+    javaLauncher.set(project.getToolchainLauncherFor(JdkMajorVersion.JDK_1_6))
     libraryjars(mapOf("filter" to "!META-INF/versions/**"), proguardDeps)
-    libraryjars(firstFromJavaHomeThatExists("jre/lib/rt.jar", "../Classes/classes.jar", jdkHome = jdkHome!!))
+    libraryjars(
+        project.files(
+            javaLauncher.map {
+                firstFromJavaHomeThatExists(
+                    "jre/lib/rt.jar",
+                    "../Classes/classes.jar",
+                    jdkHome = it.metadata.installationPath.asFile
+                )
+            }
+        )
+    )
 
     configuration("$core/reflection.jvm/reflection.pro")
 }
 
 val relocateCoreSources by task<Copy> {
+    val relocatedCoreSrc = relocatedCoreSrc
+    val fs = serviceOf<FileSystemOperations>()
     doFirst {
-        delete(relocatedCoreSrc)
+        fs.delete {
+            delete(relocatedCoreSrc)
+        }
     }
 
     from("$core/descriptors/src")
@@ -239,7 +252,7 @@ modularJar {
 dexMethodCount {
     dependsOn(result)
     jarFile = result.get().outputs.files.single()
-    ownPackages = listOf("kotlin.reflect")
+    ownPackages.set(listOf("kotlin.reflect"))
 }
 
 artifacts {

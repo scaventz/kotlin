@@ -1,0 +1,3 @@
+C -> UClass (name = C)
+Test -> USimpleNameReferenceExpression (identifier = Test)
+foo -> UMethod (name = foo)

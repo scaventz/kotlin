@@ -1,6 +1,8 @@
+// COMPARE_WITH_LIGHT_TREE
+
 fun List<String>.modify() {
-    <!VARIABLE_EXPECTED!>this<!> += "Alpha"
-    <!VARIABLE_EXPECTED!>this<!> += "Omega"
+    <!VARIABLE_EXPECTED{PSI}!>this<!> += "Alpha"
+    <!VARIABLE_EXPECTED{PSI}!>this<!> += "Omega"
 }
 
 fun Any.modify() {

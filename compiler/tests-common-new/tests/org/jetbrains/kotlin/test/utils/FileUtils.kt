@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.test.utils
 
+import org.jetbrains.kotlin.test.directives.model.Directive
 import java.io.File
 
 private const val FIR_KT = ".fir.kt"
@@ -28,9 +29,13 @@ val File.firTestDataFile: File
     }
 
 fun File.withExtension(extension: String): File {
+    return withSuffixAndExtension(suffix = "", extension)
+}
+
+fun File.withSuffixAndExtension(suffix: String, extension: String): File {
     @Suppress("NAME_SHADOWING")
     val extension = extension.removePrefix(".")
-    return parentFile.resolve("$nameWithoutExtension.$extension")
+    return parentFile.resolve("$nameWithoutExtension$suffix.$extension")
 }
 
 /*
@@ -39,4 +44,14 @@ fun File.withExtension(extension: String): File {
  */
 fun File.isDirectiveDefined(directive: String): Boolean = this.useLines { line ->
     line.any { it == directive }
+}
+
+fun File.removeDirectiveFromFile(directive: Directive) {
+    val directiveName = directive.name
+    val directiveRegexp = "^// $directiveName(:.*)?$(\n)?".toRegex(RegexOption.MULTILINE)
+    val text = readText()
+    val directiveRange = directiveRegexp.find(text)?.range
+        ?: error("Directive $directiveName was not found in $this")
+    val textWithoutDirective = text.removeRange(directiveRange)
+    writeText(textWithoutDirective)
 }

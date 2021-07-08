@@ -48,6 +48,7 @@ dependencies {
     testRuntime(project(":kotlinx-serialization-ide-plugin"))
     testRuntime(project(":plugins:lint"))
     testRuntime(project(":plugins:parcelize:parcelize-ide"))
+    testRuntime(project(":plugins:lombok:lombok-ide-plugin"))
     testRuntime(intellijPluginDep("junit"))
     testRuntime(intellijPluginDep("IntelliLang"))
     testRuntime(intellijPluginDep("properties"))
@@ -57,18 +58,13 @@ dependencies {
     testRuntime(intellijPluginDep("java-decompiler"))
     Ide.IJ {
         testRuntime(intellijPluginDep("maven"))
-        if (Ide.IJ201.orHigher()) {
-            testRuntime(intellijPluginDep("repository-search"))
-        }
+        testRuntime(intellijPluginDep("repository-search"))
     }
     testRuntime(intellijPluginDep("android"))
     testRuntime(intellijPluginDep("smali"))
 
-    if (Ide.AS36.orHigher()) {
+    Ide.AS {
         testRuntime(intellijPluginDep("android-layoutlib"))
-    }
-
-    if (Ide.AS41.orHigher()) {
         testRuntime(intellijPluginDep("platform-images"))
     }
 }
@@ -92,5 +88,3 @@ runtimeJar()
 sourcesJar()
 
 javadocJar()
-
-apply(from = "$rootDir/gradle/kotlinPluginPublication.gradle.kts")

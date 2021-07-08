@@ -39,6 +39,12 @@ public class IrSteppingTestGenerated extends AbstractIrSteppingTest {
     }
 
     @Test
+    @TestMetadata("anonymousFunctionDirect.kt")
+    public void testAnonymousFunctionDirect() throws Exception {
+        runTest("compiler/testData/debug/stepping/anonymousFunctionDirect.kt");
+    }
+
+    @Test
     @TestMetadata("assertion.kt")
     public void testAssertion() throws Exception {
         runTest("compiler/testData/debug/stepping/assertion.kt");
@@ -96,6 +102,12 @@ public class IrSteppingTestGenerated extends AbstractIrSteppingTest {
     @TestMetadata("conjunction.kt")
     public void testConjunction() throws Exception {
         runTest("compiler/testData/debug/stepping/conjunction.kt");
+    }
+
+    @Test
+    @TestMetadata("constantConditions.kt")
+    public void testConstantConditions() throws Exception {
+        runTest("compiler/testData/debug/stepping/constantConditions.kt");
     }
 
     @Test
@@ -243,6 +255,24 @@ public class IrSteppingTestGenerated extends AbstractIrSteppingTest {
     }
 
     @Test
+    @TestMetadata("kt42208.kt")
+    public void testKt42208() throws Exception {
+        runTest("compiler/testData/debug/stepping/kt42208.kt");
+    }
+
+    @Test
+    @TestMetadata("kt42208b.kt")
+    public void testKt42208b() throws Exception {
+        runTest("compiler/testData/debug/stepping/kt42208b.kt");
+    }
+
+    @Test
+    @TestMetadata("kt42208c.kt")
+    public void testKt42208c() throws Exception {
+        runTest("compiler/testData/debug/stepping/kt42208c.kt");
+    }
+
+    @Test
     @TestMetadata("lambdaStepInline.kt")
     public void testLambdaStepInline() throws Exception {
         runTest("compiler/testData/debug/stepping/lambdaStepInline.kt");
@@ -270,6 +300,12 @@ public class IrSteppingTestGenerated extends AbstractIrSteppingTest {
     @TestMetadata("localFunctionWIthOnelineExpressionBody.kt")
     public void testLocalFunctionWIthOnelineExpressionBody() throws Exception {
         runTest("compiler/testData/debug/stepping/localFunctionWIthOnelineExpressionBody.kt");
+    }
+
+    @Test
+    @TestMetadata("multilineExpression.kt")
+    public void testMultilineExpression() throws Exception {
+        runTest("compiler/testData/debug/stepping/multilineExpression.kt");
     }
 
     @Test

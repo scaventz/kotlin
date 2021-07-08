@@ -195,7 +195,7 @@ open class KotlinJpsBuildTest : KotlinJpsBuildTestBase() {
     }
 
     fun testKotlinJavaScriptProjectWithCustomOutputPaths() {
-        initProject(JS_STDLIB)
+        initProject(JS_STDLIB_WITHOUT_FACET)
         buildAllModules().assertSuccessful()
 
         checkOutputFilesList(File(workDir, "target"))
@@ -246,6 +246,7 @@ open class KotlinJpsBuildTest : KotlinJpsBuildTestBase() {
 
     fun testKotlinJavaScriptProjectWithDirectoryAsStdlib() {
         initProject()
+        setupKotlinJSFacet()
         val jslibJar = PathUtil.kotlinPathsForDistDirectory.jsStdLibJarPath
         val jslibDir = File(workDir, "KotlinJavaScript")
         try {
@@ -458,7 +459,7 @@ open class KotlinJpsBuildTest : KotlinJpsBuildTestBase() {
         assertEquals(1, myProject.modules.size)
         val module = myProject.modules.first()
         val args = module.kotlinCompilerArguments
-        args.apiVersion = "1.2"
+        args.apiVersion = "1.4"
         myProject.kotlinCommonCompilerArguments = args
 
         buildAllModules().assertSuccessful()

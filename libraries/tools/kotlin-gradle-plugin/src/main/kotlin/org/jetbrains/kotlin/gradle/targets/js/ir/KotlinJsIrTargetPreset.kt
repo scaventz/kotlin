@@ -10,14 +10,14 @@ import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinCompilationFactory
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinOnlyTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinOnlyTargetPreset
+import org.jetbrains.kotlin.gradle.plugin.statistics.KotlinBuildStatsService
 import org.jetbrains.kotlin.gradle.utils.lowerCamelCaseName
+import org.jetbrains.kotlin.statistics.metrics.StringMetrics
 
 open class KotlinJsIrTargetPreset(
-    project: Project,
-    kotlinPluginVersion: String
+    project: Project
 ) : KotlinOnlyTargetPreset<KotlinJsIrTarget, KotlinJsIrCompilation>(
-    project,
-    kotlinPluginVersion
+    project
 ) {
     internal var mixedMode: Boolean? = null
 
@@ -47,13 +47,21 @@ open class KotlinJsIrTargetPreset(
                             """.trimIndent()
                         )
                     }
+                    val buildStatsService = KotlinBuildStatsService.getInstance()
+                    when {
+                        isBrowserConfigured && isNodejsConfigured -> buildStatsService?.report(StringMetrics.JS_TARGET_MODE, "both")
+                        isBrowserConfigured -> buildStatsService?.report(StringMetrics.JS_TARGET_MODE, "browser")
+                        isNodejsConfigured -> buildStatsService?.report(StringMetrics.JS_TARGET_MODE, "nodejs")
+                        !isBrowserConfigured && !isNodejsConfigured -> buildStatsService?.report(StringMetrics.JS_TARGET_MODE, "none")
+                    }
+                    Unit
                 }
             }
         }
     }
 
     override fun createKotlinTargetConfigurator(): KotlinOnlyTargetConfigurator<KotlinJsIrCompilation, KotlinJsIrTarget> =
-        KotlinJsIrTargetConfigurator(kotlinPluginVersion)
+        KotlinJsIrTargetConfigurator()
 
     override fun getName(): String = PRESET_NAME
 
@@ -72,11 +80,9 @@ open class KotlinJsIrTargetPreset(
 }
 
 class KotlinJsIrSingleTargetPreset(
-    project: Project,
-    kotlinPluginVersion: String
+    project: Project
 ) : KotlinJsIrTargetPreset(
-    project,
-    kotlinPluginVersion
+    project
 ) {
     override val isMpp: Boolean
         get() = false
@@ -93,5 +99,5 @@ class KotlinJsIrSingleTargetPreset(
     }
 
     override fun createKotlinTargetConfigurator(): KotlinOnlyTargetConfigurator<KotlinJsIrCompilation, KotlinJsIrTarget> =
-        KotlinJsIrTargetConfigurator(kotlinPluginVersion)
+        KotlinJsIrTargetConfigurator()
 }

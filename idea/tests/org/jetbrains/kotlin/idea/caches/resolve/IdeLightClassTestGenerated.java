@@ -49,6 +49,11 @@ public class IdeLightClassTestGenerated extends AbstractIdeLightClassTest {
         runTest("compiler/testData/asJava/lightClasses/AnnotationClass.kt");
     }
 
+    @TestMetadata("Constructors.kt")
+    public void testConstructors() throws Exception {
+        runTest("compiler/testData/asJava/lightClasses/Constructors.kt");
+    }
+
     @TestMetadata("DataClassWithCustomImplementedMembers.kt")
     public void testDataClassWithCustomImplementedMembers() throws Exception {
         runTest("compiler/testData/asJava/lightClasses/DataClassWithCustomImplementedMembers.kt");
@@ -119,6 +124,11 @@ public class IdeLightClassTestGenerated extends AbstractIdeLightClassTest {
         runTest("compiler/testData/asJava/lightClasses/JvmStatic.kt");
     }
 
+    @TestMetadata("LocalFunctions.kt")
+    public void testLocalFunctions() throws Exception {
+        runTest("compiler/testData/asJava/lightClasses/LocalFunctions.kt");
+    }
+
     @TestMetadata("NestedObjects.kt")
     public void testNestedObjects() throws Exception {
         runTest("compiler/testData/asJava/lightClasses/NestedObjects.kt");
@@ -129,6 +139,11 @@ public class IdeLightClassTestGenerated extends AbstractIdeLightClassTest {
         runTest("compiler/testData/asJava/lightClasses/NonDataClassWithComponentFunctions.kt");
     }
 
+    @TestMetadata("OnlySecondaryConstructors.kt")
+    public void testOnlySecondaryConstructors() throws Exception {
+        runTest("compiler/testData/asJava/lightClasses/OnlySecondaryConstructors.kt");
+    }
+
     @TestMetadata("PublishedApi.kt")
     public void testPublishedApi() throws Exception {
         runTest("compiler/testData/asJava/lightClasses/PublishedApi.kt");
@@ -137,6 +152,11 @@ public class IdeLightClassTestGenerated extends AbstractIdeLightClassTest {
     @TestMetadata("SpecialAnnotationsOnAnnotationClass.kt")
     public void testSpecialAnnotationsOnAnnotationClass() throws Exception {
         runTest("compiler/testData/asJava/lightClasses/SpecialAnnotationsOnAnnotationClass.kt");
+    }
+
+    @TestMetadata("SpecialAnnotationsOnAnnotationClass_1_6.kt")
+    public void testSpecialAnnotationsOnAnnotationClass_1_6() throws Exception {
+        runTest("compiler/testData/asJava/lightClasses/SpecialAnnotationsOnAnnotationClass_1_6.kt");
     }
 
     @TestMetadata("StubOrderForOverloads.kt")

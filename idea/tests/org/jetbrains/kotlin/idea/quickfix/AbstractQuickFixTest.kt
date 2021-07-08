@@ -50,7 +50,7 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
     }
 
     @Throws(Exception::class)
-    protected fun doTest(beforeFileName: String) {
+    protected open fun doTest(beforeFileName: String) {
         val beforeFileText = FileUtil.loadFile(File(beforeFileName))
         withCustomCompilerOptions(beforeFileText, project, module) {
             val inspections = parseInspectionsToEnable(beforeFileName, beforeFileText).toTypedArray()
@@ -66,7 +66,7 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
     }
 
     override fun getProjectDescriptor(): LightProjectDescriptor =
-        if ("createfromusage" in testDataPath.toLowerCase()) {
+        if ("createfromusage" in testDataPath.lowercase()) {
             KotlinWithJdkAndRuntimeLightProjectDescriptor.INSTANCE
         } else {
             super.getProjectDescriptor()
@@ -162,9 +162,12 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
                 return
             }
 
-            val writeActionResolveHandler: () -> Unit = {
-                val unwrappedIntention = unwrapIntention(intention)
+            val unwrappedIntention = unwrapIntention(intention)
+            if (shouldCheckIntentionActionType) {
+                assertInstanceOf(unwrappedIntention, QuickFixActionBase::class.java)
+            }
 
+            val writeActionResolveHandler: () -> Unit = {
                 val intentionClassName = unwrappedIntention.javaClass.name
                 if (!quickFixesAllowedToResolveInWriteAction.isWriteActionAllowed(intentionClassName)) {
                     throw ResolveInDispatchThreadException("Resolve is not allowed under the write action for `$intentionClassName`!")
@@ -190,7 +193,7 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
                 )
             }
 
-            myFixture.checkResultByFile(File(fileName).name + ".after")
+            myFixture.checkResultByFile(getAfterFileName(fileName))
 
             if (stubComparisonFailure != null) {
                 throw stubComparisonFailure
@@ -199,6 +202,18 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
             assertNull("Action with text ${actionHint.expectedText} is present, but should not", intention)
         }
     }
+
+    protected open fun getAfterFileName(beforeFileName: String): String {
+        return File(beforeFileName).name + ".after"
+    }
+
+    /**
+     * If true, the type of the [IntentionAction] to invoke is [QuickFixActionBase]. This ensures that the action is coming from a
+     * quickfix (i.e., diagnostic-based), and not a regular IDE intention.
+     */
+    protected open val shouldCheckIntentionActionType: Boolean
+        // For FE 1.0, many quickfixes are implemented as IntentionActions, which may or may not be used as regular IDE intentions as well
+        get() = false
 
     @Throws(ClassNotFoundException::class)
     private fun checkForUnexpectedActions() {
@@ -231,7 +246,7 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
                 }
             } else {
                 // Action shouldn't be found. Check that other actions are expected and thus tested action isn't there under another name.
-                DirectiveBasedActionUtils.checkAvailableActionsAreExpected(myFixture.file, actions)
+                checkAvailableActionsAreExpected(actions)
             }
         }
     }
@@ -259,7 +274,11 @@ abstract class AbstractQuickFixTest : KotlinLightCodeInsightFixtureTestCase(), Q
         return null
     }
 
-    private fun checkForUnexpectedErrors() = DirectiveBasedActionUtils.checkForUnexpectedErrors(myFixture.file as KtFile)
+    protected open fun checkAvailableActionsAreExpected(actions: List<IntentionAction>) {
+        DirectiveBasedActionUtils.checkAvailableActionsAreExpected(myFixture.file, actions)
+    }
+
+    protected open fun checkForUnexpectedErrors() = DirectiveBasedActionUtils.checkForUnexpectedErrors(myFixture.file as KtFile)
 
     override fun getTestDataPath(): String {
         // Ensure full path is returned. Otherwise FileComparisonFailureException does not provide link to file diff

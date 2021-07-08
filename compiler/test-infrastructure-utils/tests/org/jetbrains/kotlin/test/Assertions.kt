@@ -6,10 +6,15 @@
 package org.jetbrains.kotlin.test
 
 import java.io.File
+import java.nio.file.Path
 
 abstract class Assertions {
     fun assertEqualsToFile(expectedFile: File, actual: String, sanitizer: (String) -> String = { it }) {
         assertEqualsToFile(expectedFile, actual, sanitizer) { "Actual data differs from file content" }
+    }
+
+    fun assertEqualsToFile(expectedFile: Path, actual: String, sanitizer: (String) -> String = { it }) {
+        assertEqualsToFile(expectedFile.toFile(), actual, sanitizer)
     }
 
     abstract fun assertEqualsToFile(
@@ -44,7 +49,7 @@ abstract class Assertions {
         return collection.joinToString("\n")
     }
 
-    abstract fun assertAll(exceptions: List<AssertionError>)
+    abstract fun assertAll(exceptions: List<Throwable>)
 
     abstract fun fail(message: () -> String): Nothing
 }

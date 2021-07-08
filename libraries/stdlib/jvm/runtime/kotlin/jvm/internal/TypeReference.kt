@@ -3,34 +3,46 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
+@file:Suppress("NEWER_VERSION_IN_SINCE_KOTLIN")
+
 package kotlin.jvm.internal
 
 import kotlin.reflect.*
 
 @SinceKotlin("1.4")
-public class TypeReference(
+public class TypeReference /* @SinceKotlin("1.6") constructor */(
     override val classifier: KClassifier,
     override val arguments: List<KTypeProjection>,
-    override val isMarkedNullable: Boolean
+    override val isMarkedNullable: Boolean,
+    internal val platformTypeUpperBound: KType?,
+    internal val mutableCollectionType: Boolean,
 ) : KType {
+    constructor(
+        classifier: KClassifier,
+        arguments: List<KTypeProjection>,
+        isMarkedNullable: Boolean,
+    ) : this(classifier, arguments, isMarkedNullable, null, false)
+
     override val annotations: List<Annotation>
         get() = emptyList()
 
     override fun equals(other: Any?): Boolean =
         other is TypeReference &&
-                classifier == other.classifier && arguments == other.arguments && isMarkedNullable == other.isMarkedNullable
+                classifier == other.classifier && arguments == other.arguments && isMarkedNullable == other.isMarkedNullable &&
+                platformTypeUpperBound == other.platformTypeUpperBound && mutableCollectionType == other.mutableCollectionType
 
     override fun hashCode(): Int =
         (classifier.hashCode() * 31 + arguments.hashCode()) * 31 + isMarkedNullable.hashCode()
 
     override fun toString(): String =
-        asString() + Reflection.REFLECTION_NOT_AVAILABLE
+        asString(false) + Reflection.REFLECTION_NOT_AVAILABLE
 
-    private fun asString(): String {
+    private fun asString(convertPrimitiveToWrapper: Boolean): String {
         val javaClass = (classifier as? KClass<*>)?.java
         val klass = when {
             javaClass == null -> classifier.toString()
             javaClass.isArray -> javaClass.arrayClassName
+            convertPrimitiveToWrapper && javaClass.isPrimitive -> (classifier as KClass<*>).javaObjectType.name
             else -> javaClass.name
         }
         val args =
@@ -59,7 +71,7 @@ public class TypeReference(
     private fun KTypeProjection.asString(): String {
         if (variance == null) return "*"
 
-        val typeString = (type as? TypeReference)?.asString() ?: type.toString()
+        val typeString = (type as? TypeReference)?.asString(true) ?: type.toString()
         return when (variance) {
             KVariance.INVARIANT -> typeString
             KVariance.IN -> "in $typeString"

@@ -5,15 +5,13 @@
 
 package org.jetbrains.kotlin.idea.frontend.api.symbols.markers
 
-interface KtSymbolWithVisibility {
-    val visibility: KtSymbolVisibility
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
+
+public interface KtSymbolWithVisibility {
+    public val visibility: Visibility
 }
 
-sealed class KtSymbolVisibility {
-    object PUBLIC : KtSymbolVisibility()
-    object PRIVATE : KtSymbolVisibility()
-    object PROTECTED : KtSymbolVisibility()
-    object INTERNAL : KtSymbolVisibility()
-    object UNKNOWN : KtSymbolVisibility()
-    object LOCAL : KtSymbolVisibility()
-}
+
+public fun Visibility.isPrivateOrPrivateToThis(): Boolean =
+    this == Visibilities.Private || this == Visibilities.PrivateToThis

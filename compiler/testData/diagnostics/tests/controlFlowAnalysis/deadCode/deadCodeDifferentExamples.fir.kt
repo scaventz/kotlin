@@ -1,3 +1,4 @@
+// LANGUAGE: -ProhibitSimplificationOfNonTrivialConstBooleanExpressions
 // !DIAGNOSTICS: -UNUSED_PARAMETER -UNUSED_EXPRESSION
 
 fun t1() : Int{
@@ -6,7 +7,7 @@ fun t1() : Int{
 }
 
 fun t1a() : Int {
-  return
+  <!RETURN_TYPE_MISMATCH!>return<!>
   return 1
   1
 }
@@ -19,7 +20,7 @@ fun t1b() : Int {
 
 fun t1c() : Int {
   return 1
-  return
+  <!RETURN_TYPE_MISMATCH!>return<!>
   1
 }
 
@@ -109,7 +110,7 @@ fun t7() : Int {
     return 1
     2
   }
-  catch (e : Any) {
+  catch (<!THROWABLE_TYPE_MISMATCH!>e : Any<!>) {
     2
   }
   return 1 // this is OK, like in Java
@@ -120,7 +121,7 @@ fun t8() : Int {
     return 1
     2
   }
-  catch (e : Any) {
+  catch (<!THROWABLE_TYPE_MISMATCH!>e : Any<!>) {
     return 1
     2
   }

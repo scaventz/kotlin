@@ -7,9 +7,13 @@ package org.jetbrains.kotlin.fir.diagnostics
 
 class ConeSimpleDiagnostic(override val reason: String, val kind: DiagnosticKind = DiagnosticKind.Other) : ConeDiagnostic()
 
+class ConeNotAnnotationContainer(val text: String) : ConeDiagnostic() {
+    override val reason: String get() = "Strange annotated expression: $text"
+}
+
 enum class DiagnosticKind {
     Syntax,
-    ExpressionRequired,
+    ExpressionExpected,
     NotLoopLabel,
     JumpOutsideLoop,
     VariableExpected,
@@ -18,19 +22,34 @@ enum class DiagnosticKind {
     UnresolvedLabel,
     NoThis,
     IllegalConstExpression,
+    IllegalSelector,
     IllegalUnderscore,
     DeserializationError,
     InferenceError,
-    TypeParameterAsSupertype,
     EnumAsSupertype,
     RecursionInSupertypes,
     RecursionInImplicitTypes,
     Java,
     SuperNotAllowed,
-    NoTypeForTypeParameter,
+    ValueParameterWithNoTypeAnnotation,
+    CannotInferParameterType,
     UnknownCallableKind,
-    SymbolNotFound,
     IllegalProjectionUsage,
     MissingStdlibClass,
-    Other
+
+    LoopInSupertype,
+    RecursiveTypealiasExpansion,
+    UnresolvedSupertype,
+    UnresolvedExpandedType,
+
+    IncorrectCharacterLiteral,
+    EmptyCharacterLiteral,
+    TooManyCharactersInCharacterLiteral,
+    IllegalEscape,
+
+    IntLiteralOutOfRange,
+    FloatLiteralOutOfRange,
+    WrongLongSuffix,
+
+    Other,
 }

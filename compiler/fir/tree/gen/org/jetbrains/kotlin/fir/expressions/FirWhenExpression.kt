@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.expressions
 
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.declarations.FirVariable
 import org.jetbrains.kotlin.fir.references.FirReference
@@ -22,17 +23,22 @@ abstract class FirWhenExpression : FirExpression(), FirResolvable {
     abstract override val annotations: List<FirAnnotationCall>
     abstract override val calleeReference: FirReference
     abstract val subject: FirExpression?
-    abstract val subjectVariable: FirVariable<*>?
+    abstract val subjectVariable: FirVariable?
     abstract val branches: List<FirWhenBranch>
-    abstract val isExhaustive: Boolean
+    abstract val exhaustivenessStatus: ExhaustivenessStatus?
+    abstract val usedAsExpression: Boolean
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitWhenExpression(this, data)
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformWhenExpression(this, data) as E
 
     abstract override fun replaceTypeRef(newTypeRef: FirTypeRef)
 
     abstract override fun replaceCalleeReference(newCalleeReference: FirReference)
 
-    abstract fun replaceIsExhaustive(newIsExhaustive: Boolean)
+    abstract fun replaceExhaustivenessStatus(newExhaustivenessStatus: ExhaustivenessStatus?)
 
     abstract override fun <D> transformAnnotations(transformer: FirTransformer<D>, data: D): FirWhenExpression
 

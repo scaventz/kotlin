@@ -34,6 +34,14 @@ import org.jetbrains.kotlin.resolve.*
 import org.jetbrains.kotlin.resolve.calls.checkers.CallChecker
 import org.jetbrains.kotlin.resolve.calls.checkers.CallCheckerContext
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedCall
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.EXPERIMENTAL_FQ_NAMES
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.OLD_EXPERIMENTAL_FQ_NAME
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.OLD_USE_EXPERIMENTAL_FQ_NAME
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.OPT_IN_FQ_NAME
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.REQUIRES_OPT_IN_FQ_NAME
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.USE_EXPERIMENTAL_ANNOTATION_CLASS
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.USE_EXPERIMENTAL_FQ_NAMES
+import org.jetbrains.kotlin.resolve.checkers.OptInNames.WAS_EXPERIMENTAL_FQ_NAME
 import org.jetbrains.kotlin.resolve.constants.ArrayValue
 import org.jetbrains.kotlin.resolve.constants.EnumValue
 import org.jetbrains.kotlin.resolve.constants.KClassValue
@@ -46,19 +54,14 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameSafe
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
+import org.jetbrains.kotlin.types.AbbreviatedType
+import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.isError
 import org.jetbrains.kotlin.utils.SmartSet
 import org.jetbrains.kotlin.utils.addIfNotNull
 
 class ExperimentalUsageChecker(project: Project) : CallChecker {
     private val moduleAnnotationsResolver = ModuleAnnotationsResolver.getInstance(project)
-
-    data class Experimentality(val annotationFqName: FqName, val severity: Severity, val message: String?) {
-        enum class Severity { WARNING, ERROR }
-
-        companion object {
-            val DEFAULT_SEVERITY = Severity.ERROR
-        }
-    }
 
     interface ExperimentalityDiagnostic {
         fun report(trace: BindingTrace, element: PsiElement, fqName: FqName, message: String?)
@@ -79,24 +82,37 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
     )
 
     override fun check(resolvedCall: ResolvedCall<*>, reportOn: PsiElement, context: CallCheckerContext) {
-        val experimentalities =
-            resolvedCall.resultingDescriptor.loadExperimentalities(moduleAnnotationsResolver, context.languageVersionSettings)
+        val resultingDescriptor = resolvedCall.resultingDescriptor
+        val experimentalities = resultingDescriptor.loadExperimentalities(moduleAnnotationsResolver, context.languageVersionSettings)
+        if (resultingDescriptor is FunctionDescriptor &&
+            resultingDescriptor.kind == CallableMemberDescriptor.Kind.SYNTHESIZED
+        ) {
+            val propertyDescriptor = resultingDescriptor.findRelevantDataClassPropertyIfAny(context)
+            if (propertyDescriptor != null) {
+                reportNotAcceptedExperimentalities(
+                    experimentalities + propertyDescriptor.loadExperimentalities(
+                        moduleAnnotationsResolver, context.languageVersionSettings
+                    ), reportOn, context
+                )
+                return
+            }
+        }
         reportNotAcceptedExperimentalities(experimentalities, reportOn, context)
     }
 
+    private fun FunctionDescriptor.findRelevantDataClassPropertyIfAny(context: CallCheckerContext): PropertyDescriptor? {
+        val index = name.asString().removePrefix("component").toIntOrNull()
+        val container = containingDeclaration
+        if (container is ClassDescriptor && container.isData && index != null) {
+            val dataClassParameterDescriptor = container.unsubstitutedPrimaryConstructor?.valueParameters?.getOrNull(index - 1)
+            if (dataClassParameterDescriptor != null) {
+                return context.trace.bindingContext[BindingContext.VALUE_PARAMETER_AS_PROPERTY, dataClassParameterDescriptor]
+            }
+        }
+        return null
+    }
+
     companion object {
-        val OLD_EXPERIMENTAL_FQ_NAME = FqName("kotlin.Experimental")
-        val OLD_USE_EXPERIMENTAL_FQ_NAME = FqName("kotlin.UseExperimental")
-        val REQUIRES_OPT_IN_FQ_NAME = FqName("kotlin.RequiresOptIn")
-        val OPT_IN_FQ_NAME = FqName("kotlin.OptIn")
-
-        val EXPERIMENTAL_FQ_NAMES = setOf(OLD_EXPERIMENTAL_FQ_NAME, REQUIRES_OPT_IN_FQ_NAME)
-        val USE_EXPERIMENTAL_FQ_NAMES = setOf(OLD_USE_EXPERIMENTAL_FQ_NAME, OPT_IN_FQ_NAME)
-
-        internal val WAS_EXPERIMENTAL_FQ_NAME = FqName("kotlin.WasExperimental")
-        internal val USE_EXPERIMENTAL_ANNOTATION_CLASS = Name.identifier("markerClass")
-        internal val WAS_EXPERIMENTAL_ANNOTATION_CLASS = Name.identifier("markerClass")
-
         private val LEVEL = Name.identifier("level")
         private val MESSAGE = Name.identifier("message")
         private val WARNING_LEVEL = Name.identifier("WARNING")
@@ -145,12 +161,44 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
 
         fun DeclarationDescriptor.loadExperimentalities(
             moduleAnnotationsResolver: ModuleAnnotationsResolver,
-            languageVersionSettings: LanguageVersionSettings
+            languageVersionSettings: LanguageVersionSettings,
+            visited: MutableSet<DeclarationDescriptor> = mutableSetOf()
         ): Set<Experimentality> {
+            if (!visited.add(this)) return emptySet()
             val result = SmartSet.create<Experimentality>()
+            if (this is CallableMemberDescriptor && kind == CallableMemberDescriptor.Kind.FAKE_OVERRIDE) {
+                for (overridden in overriddenDescriptors) {
+                    result.addAll(overridden.loadExperimentalities(moduleAnnotationsResolver, languageVersionSettings, visited))
+                }
+                return result
+            }
 
             for (annotation in annotations) {
                 result.addIfNotNull(annotation.annotationClass?.loadExperimentalityForMarkerAnnotation())
+            }
+
+            if (this is CallableDescriptor && this !is ClassConstructorDescriptor) {
+                result.addAll(
+                    returnType.loadExperimentalities(moduleAnnotationsResolver, languageVersionSettings, visited)
+                )
+                result.addAll(
+                    extensionReceiverParameter?.type.loadExperimentalities(
+                        moduleAnnotationsResolver, languageVersionSettings, visited
+                    )
+                )
+                if (this is FunctionDescriptor) {
+                    valueParameters.forEach {
+                        result.addAll(
+                            it.type.loadExperimentalities(
+                                moduleAnnotationsResolver, languageVersionSettings, visited
+                            )
+                        )
+                    }
+                }
+            }
+
+            if (this is TypeAliasDescriptor) {
+                result.addAll(expandedType.loadExperimentalities(moduleAnnotationsResolver, languageVersionSettings, visited))
             }
 
             if (annotations.any { it.fqName == WAS_EXPERIMENTAL_FQ_NAME }) {
@@ -162,7 +210,7 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
 
             val container = containingDeclaration
             if (container is ClassDescriptor && this !is ConstructorDescriptor) {
-                result.addAll(container.loadExperimentalities(moduleAnnotationsResolver, languageVersionSettings))
+                result.addAll(container.loadExperimentalities(moduleAnnotationsResolver, languageVersionSettings, visited))
             }
 
             for (moduleAnnotationClassId in moduleAnnotationsResolver.getAnnotationsOnContainingModule(this)) {
@@ -172,6 +220,26 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
 
             return result
         }
+
+        private fun KotlinType?.loadExperimentalities(
+            moduleAnnotationsResolver: ModuleAnnotationsResolver,
+            languageVersionSettings: LanguageVersionSettings,
+            visitedClassifiers: MutableSet<DeclarationDescriptor>
+        ): Set<Experimentality> =
+            when {
+                this?.isError != false -> emptySet()
+                this is AbbreviatedType -> abbreviation.constructor.declarationDescriptor?.loadExperimentalities(
+                    moduleAnnotationsResolver, languageVersionSettings, visitedClassifiers
+                ).orEmpty() + expandedType.loadExperimentalities(
+                    moduleAnnotationsResolver, languageVersionSettings, visitedClassifiers
+                )
+                else -> constructor.declarationDescriptor?.loadExperimentalities(
+                    moduleAnnotationsResolver, languageVersionSettings, visitedClassifiers
+                ).orEmpty() + arguments.flatMap {
+                    if (it.isStarProjection) emptySet()
+                    else it.type.loadExperimentalities(moduleAnnotationsResolver, languageVersionSettings, visitedClassifiers)
+                }
+            }
 
         internal fun ClassDescriptor.loadExperimentalityForMarkerAnnotation(): Experimentality? {
             val experimental =
@@ -214,8 +282,7 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
             if (this !is KtDeclaration) return false
 
             val descriptor = bindingContext.get(BindingContext.DECLARATION_TO_DESCRIPTOR, this)
-            return descriptor != null && !DescriptorUtils.isLocal(descriptor) &&
-                    descriptor.annotations.hasAnnotation(annotationFqName)
+            return descriptor != null && descriptor.annotations.hasAnnotation(annotationFqName)
         }
 
         private fun PsiElement.isElementAnnotatedWithUseExperimentalOf(annotationFqName: FqName, bindingContext: BindingContext): Boolean {
@@ -250,8 +317,12 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
             // Ideally, we should run full resolution (with all classifier usage checkers) on classifiers used in "-Xexperimental" and
             // "-Xuse-experimental" arguments. However, it's not easy to do this. This should be solved in the future with the support of
             // module annotations. For now, we only check deprecations because this is needed to correctly retire unneeded compiler arguments.
-            val deprecationResolver =
-                DeprecationResolver(LockBasedStorageManager("ExperimentalUsageChecker"), languageVersionSettings, CoroutineCompatibilitySupport.ENABLED, DeprecationSettings.Default)
+            val deprecationResolver = DeprecationResolver(
+                LockBasedStorageManager("ExperimentalUsageChecker"),
+                languageVersionSettings,
+                CoroutineCompatibilitySupport.ENABLED,
+                DeprecationSettings.Default
+            )
 
             // Returns true if fqName resolves to a valid opt-in requirement marker.
             fun checkAnnotation(fqName: String): Boolean {
@@ -293,7 +364,8 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
         override fun check(targetDescriptor: ClassifierDescriptor, element: PsiElement, context: ClassifierUsageCheckerContext) {
             val name = targetDescriptor.name
             if (name == OLD_EXPERIMENTAL_FQ_NAME.shortName() || name == REQUIRES_OPT_IN_FQ_NAME.shortName() ||
-                name == OLD_USE_EXPERIMENTAL_FQ_NAME.shortName() || name == OPT_IN_FQ_NAME.shortName()) {
+                name == OLD_USE_EXPERIMENTAL_FQ_NAME.shortName() || name == OPT_IN_FQ_NAME.shortName()
+            ) {
                 val fqName = targetDescriptor.fqNameSafe
                 if (fqName in EXPERIMENTAL_FQ_NAMES || fqName in USE_EXPERIMENTAL_FQ_NAMES) {
                     checkUsageOfKotlinExperimentalOrUseExperimental(element, context)
@@ -317,7 +389,15 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
             }
 
             if (element.getParentOfType<KtImportDirective>(false) == null) {
-                val experimentalities = targetDescriptor.loadExperimentalities(moduleAnnotationsResolver, context.languageVersionSettings)
+                val experimentalities = mutableSetOf<Experimentality>()
+                experimentalities += targetDescriptor.loadExperimentalities(moduleAnnotationsResolver, context.languageVersionSettings)
+                if (targetDescriptor is TypeAliasDescriptor) {
+                    experimentalities.addAll(
+                        targetDescriptor.expandedType.loadExperimentalities(
+                            moduleAnnotationsResolver, context.languageVersionSettings, mutableSetOf(targetDescriptor)
+                        )
+                    )
+                }
                 reportNotAcceptedExperimentalities(experimentalities, element, context)
             }
         }
@@ -325,7 +405,8 @@ class ExperimentalUsageChecker(project: Project) : CallChecker {
         private fun checkUsageOfKotlinExperimentalOrUseExperimental(element: PsiElement, context: CheckerContext) {
             val useExperimentalFqNames = context.languageVersionSettings.getFlag(AnalysisFlags.useExperimental)
             if (REQUIRES_OPT_IN_FQ_NAME.asString() !in useExperimentalFqNames &&
-                OLD_EXPERIMENTAL_FQ_NAME.asString() !in useExperimentalFqNames) {
+                OLD_EXPERIMENTAL_FQ_NAME.asString() !in useExperimentalFqNames
+            ) {
                 context.trace.report(Errors.EXPERIMENTAL_IS_NOT_ENABLED.on(element))
             }
 

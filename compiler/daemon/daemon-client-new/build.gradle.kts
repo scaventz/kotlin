@@ -50,6 +50,7 @@ dependencies {
 tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<*>> {
     kotlinOptions {
         apiVersion = "1.3"
+        freeCompilerArgs += "-Xsuppress-version-warnings"
     }
 }
 
@@ -65,3 +66,11 @@ runtimeJar()
 sourcesJar()
 
 javadocJar()
+
+tasks {
+    val compileKotlin by existing(org.jetbrains.kotlin.gradle.tasks.KotlinCompile::class) {
+        kotlinOptions {
+            freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.DelicateCoroutinesApi"
+        }
+    }
+}

@@ -1,3 +1,5 @@
+// TARGET_BACKEND: JVM
+// WITH_RUNTIME
 // FILE: Pair.java
 
 public class Pair<A, B> {
@@ -25,8 +27,6 @@ public interface FilePath {
 }
 
 // FILE: typeParameterFromJavaClass.kt
-
-// WITH_RUNTIME
 
 fun foo(movedPaths: MutableList<Couple<FilePath>>) {
     movedPaths.forEach { it.second.name }

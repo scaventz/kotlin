@@ -6,49 +6,52 @@
 package org.jetbrains.kotlin.test.runners
 
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
-import org.jetbrains.kotlin.test.builders.Constructor
+import org.jetbrains.kotlin.test.Constructor
+import org.jetbrains.kotlin.test.TestJavacVersion
+import org.jetbrains.kotlin.test.TestJdkKind
 import org.jetbrains.kotlin.test.builders.TestConfigurationBuilder
 import org.jetbrains.kotlin.test.directives.DiagnosticsDirectives.REPORT_JVM_DIAGNOSTICS_ON_FRONTEND
 import org.jetbrains.kotlin.test.directives.DiagnosticsDirectives.SKIP_TXT
 import org.jetbrains.kotlin.test.directives.ForeignAnnotationsDirectives.ANNOTATIONS_PATH
-import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.SKIP_JAVA_SOURCES
-import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.USE_JAVAC
+import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.ALL_JAVA_AS_BINARY
+import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.COMPILE_JAVA_USING
+import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.JDK_KIND
 import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.USE_PSI_CLASS_FILES_READING
+import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.WITH_FOREIGN_ANNOTATIONS
+import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives.WITH_JSR305_TEST_ANNOTATIONS
 import org.jetbrains.kotlin.test.frontend.classic.ClassicFrontendFacade
 import org.jetbrains.kotlin.test.frontend.classic.handlers.ClassicDiagnosticsHandler
 import org.jetbrains.kotlin.test.frontend.classic.handlers.DeclarationsDumpHandler
+import org.jetbrains.kotlin.test.frontend.classic.handlers.JspecifyDiagnosticComplianceHandler
 import org.jetbrains.kotlin.test.frontend.classic.handlers.OldNewInferenceMetaInfoProcessor
-import org.jetbrains.kotlin.test.model.BackendKind
 import org.jetbrains.kotlin.test.model.DependencyKind
 import org.jetbrains.kotlin.test.model.FrontendKinds
-import org.jetbrains.kotlin.test.services.AdditionalDiagnosticsSourceFilesProvider
-import org.jetbrains.kotlin.test.services.CoroutineHelpersSourceFilesProvider
-import org.jetbrains.kotlin.test.services.configuration.JdkForeignAnnotationType
-import org.jetbrains.kotlin.test.services.configuration.JvmEnvironmentConfigurator
-import org.jetbrains.kotlin.test.services.configuration.JvmForeignAnnotationsAgainstCompiledJavaConfigurator
-import org.jetbrains.kotlin.test.services.configuration.JvmForeignAnnotationsConfigurator
+import org.jetbrains.kotlin.test.preprocessors.JspecifyMarksCleanupPreprocessor
+import org.jetbrains.kotlin.test.services.configuration.*
 import org.jetbrains.kotlin.test.services.jvm.ForeignAnnotationAgainstCompiledJavaTestSuppressor
+import org.jetbrains.kotlin.test.services.jvm.PsiClassFilesReadingForCompiledJavaTestSuppressor
+import org.jetbrains.kotlin.test.services.sourceProviders.AdditionalDiagnosticsSourceFilesProvider
+import org.jetbrains.kotlin.test.services.sourceProviders.CoroutineHelpersSourceFilesProvider
 
 abstract class AbstractForeignAnnotationsTestBase : AbstractKotlinCompilerTest() {
-    protected abstract val foreignAnnotationsConfigurator: Constructor<JvmForeignAnnotationsConfigurator>
-
     override fun TestConfigurationBuilder.configuration() {
         globalDefaults {
             frontend = FrontendKinds.ClassicFrontend
-            backend = BackendKind.NoBackend
             targetPlatform = JvmPlatforms.defaultJvmPlatform
             dependencyKind = DependencyKind.Source
         }
 
         defaultDirectives {
             +REPORT_JVM_DIAGNOSTICS_ON_FRONTEND
+            +WITH_FOREIGN_ANNOTATIONS
         }
 
         enableMetaInfoHandler()
 
         useConfigurators(
-            ::JvmEnvironmentConfigurator,
-            foreignAnnotationsConfigurator
+            ::CommonEnvironmentConfigurator,
+            ::JvmForeignAnnotationsConfigurator,
+            ::JvmEnvironmentConfigurator
         )
 
         useMetaInfoProcessors(::OldNewInferenceMetaInfoProcessor)
@@ -63,34 +66,42 @@ abstract class AbstractForeignAnnotationsTestBase : AbstractKotlinCompilerTest()
             ::ClassicDiagnosticsHandler,
         )
 
-        forTestsMatching("compiler/testData/foreignAnnotations/tests/*") {
+        forTestsMatching("compiler/testData/diagnostics/foreignAnnotationsTests/tests/*") {
             defaultDirectives {
-                ANNOTATIONS_PATH with JdkForeignAnnotationType.Annotations
+                ANNOTATIONS_PATH with JavaForeignAnnotationType.Annotations
+                +WITH_JSR305_TEST_ANNOTATIONS
             }
         }
 
-        forTestsMatching("compiler/testData/foreignAnnotations/java8Tests/*") {
+        forTestsMatching("compiler/testData/diagnostics/foreignAnnotationsTests/java8Tests/*") {
             defaultDirectives {
-                ANNOTATIONS_PATH with JdkForeignAnnotationType.Jdk8Annotations
+                ANNOTATIONS_PATH with JavaForeignAnnotationType.Java8Annotations
             }
+        }
+
+        forTestsMatching("compiler/testData/diagnostics/foreignAnnotationsTests/java9Tests/*") {
+            defaultDirectives {
+                ANNOTATIONS_PATH with JavaForeignAnnotationType.Java9Annotations
+                JDK_KIND with TestJdkKind.FULL_JDK_9
+                COMPILE_JAVA_USING with TestJavacVersion.JAVAC_9
+            }
+        }
+
+        forTestsMatching("compiler/testData/diagnostics/foreignAnnotationsTests/java8Tests/jspecify/*") {
+            useFrontendHandlers(::JspecifyDiagnosticComplianceHandler)
+            useSourcePreprocessor(::JspecifyMarksCleanupPreprocessor)
         }
     }
 }
 
-abstract class AbstractForeignAnnotationsTest : AbstractForeignAnnotationsTestBase() {
-    override val foreignAnnotationsConfigurator: Constructor<JvmForeignAnnotationsConfigurator>
-        get() = ::JvmForeignAnnotationsConfigurator
-}
+abstract class AbstractForeignAnnotationsSourceJavaTest : AbstractForeignAnnotationsTestBase()
 
-abstract class AbstractForeignAnnotationsNoAnnotationInClasspathTest : AbstractForeignAnnotationsTestBase() {
-    override val foreignAnnotationsConfigurator: Constructor<JvmForeignAnnotationsConfigurator>
-        get() = ::JvmForeignAnnotationsAgainstCompiledJavaConfigurator
-
+abstract class AbstractForeignAnnotationsCompiledJavaTest : AbstractForeignAnnotationsTestBase() {
     override fun configure(builder: TestConfigurationBuilder) {
         super.configure(builder)
         with(builder) {
             defaultDirectives {
-                +SKIP_JAVA_SOURCES
+                +ALL_JAVA_AS_BINARY
                 +SKIP_TXT
             }
 
@@ -99,13 +110,15 @@ abstract class AbstractForeignAnnotationsNoAnnotationInClasspathTest : AbstractF
     }
 }
 
-abstract class AbstractForeignAnnotationsNoAnnotationInClasspathWithPsiClassReadingTest : AbstractForeignAnnotationsNoAnnotationInClasspathTest() {
+abstract class AbstractForeignAnnotationsCompiledJavaWithPsiClassReadingTest : AbstractForeignAnnotationsCompiledJavaTest() {
     override fun configure(builder: TestConfigurationBuilder) {
         super.configure(builder)
         with(builder) {
             defaultDirectives {
                 +USE_PSI_CLASS_FILES_READING
             }
+
+            useMetaTestConfigurators(::PsiClassFilesReadingForCompiledJavaTestSuppressor)
         }
     }
 }

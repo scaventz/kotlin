@@ -27,7 +27,7 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
     }
 
     public void testAllFilesPresentInBox() throws Exception {
-        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true, "toArray", "classLiteral", "reflection", "contracts", "platformTypes", "ranges/stepped/unsigned", "coroutines", "parametersMetadata", "finally", "deadCodeElimination", "controlStructures/tryCatchInExpressions", "delegatedProperty", "oldLanguageVersions");
+        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true, "toArray", "classLiteral", "reflection", "contracts", "platformTypes", "ranges/stepped/unsigned", "coroutines", "parametersMetadata", "finally", "deadCodeElimination", "controlStructures/tryCatchInExpressions", "delegatedProperty", "compileKotlinAgainstKotlin");
     }
 
     @TestMetadata("compiler/testData/codegen/box/annotations")
@@ -40,6 +40,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
         public void testAllFilesPresentInAnnotations() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/annotations"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("genericAnnotations.kt")
+        public void testGenericAnnotations() throws Exception {
+            runTest("compiler/testData/codegen/box/annotations/genericAnnotations.kt");
         }
 
         @TestMetadata("nestedAnnotation.kt")
@@ -67,6 +72,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
             public void testAllFilesPresentInAnnotatedLambda() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/annotations/annotatedLambda"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/annotations/kClassMapping")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class KClassMapping extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInKClassMapping() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/annotations/kClassMapping"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
             }
         }
 
@@ -349,6 +367,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/arrays/kt238.kt");
         }
 
+        @TestMetadata("kt34291_16dimensions.kt")
+        public void testKt34291_16dimensions() throws Exception {
+            runTest("compiler/testData/codegen/box/arrays/kt34291_16dimensions.kt");
+        }
+
         @TestMetadata("kt3771.kt")
         public void testKt3771() throws Exception {
             runTest("compiler/testData/codegen/box/arrays/kt3771.kt");
@@ -357,6 +380,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt4118.kt")
         public void testKt4118() throws Exception {
             runTest("compiler/testData/codegen/box/arrays/kt4118.kt");
+        }
+
+        @TestMetadata("kt42932.kt")
+        public void testKt42932() throws Exception {
+            runTest("compiler/testData/codegen/box/arrays/kt42932.kt");
         }
 
         @TestMetadata("kt4348.kt")
@@ -668,6 +696,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/binaryOp/eqNullableDoublesWithTP.kt");
         }
 
+        @TestMetadata("eqNullableShortToShort.kt")
+        public void testEqNullableShortToShort() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/eqNullableShortToShort.kt");
+        }
+
+        @TestMetadata("eqNullableToPrimitiveWithSideEffects.kt")
+        public void testEqNullableToPrimitiveWithSideEffects() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/eqNullableToPrimitiveWithSideEffects.kt");
+        }
+
         @TestMetadata("intrinsic.kt")
         public void testIntrinsic() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/intrinsic.kt");
@@ -698,6 +736,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/binaryOp/kt23030_properIeee754comparisons.kt");
         }
 
+        @TestMetadata("kt44402.kt")
+        public void testKt44402() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/kt44402.kt");
+        }
+
         @TestMetadata("kt6747_identityEquals.kt")
         public void testKt6747_identityEquals() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/kt6747_identityEquals.kt");
@@ -716,6 +759,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("overflowLong.kt")
         public void testOverflowLong() throws Exception {
             runTest("compiler/testData/codegen/box/binaryOp/overflowLong.kt");
+        }
+
+        @TestMetadata("primitiveEqualsSafeCall.kt")
+        public void testPrimitiveEqualsSafeCall() throws Exception {
+            runTest("compiler/testData/codegen/box/binaryOp/primitiveEqualsSafeCall.kt");
         }
     }
 
@@ -789,6 +837,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt19767_chain.kt")
         public void testKt19767_chain() throws Exception {
             runTest("compiler/testData/codegen/box/boxingOptimization/kt19767_chain.kt");
+        }
+
+        @TestMetadata("kt46859.kt")
+        public void testKt46859() throws Exception {
+            runTest("compiler/testData/codegen/box/boxingOptimization/kt46859.kt");
         }
 
         @TestMetadata("kt5588.kt")
@@ -1232,9 +1285,34 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/callableReference"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("arrayConstructor.kt")
+        public void testArrayConstructor() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/arrayConstructor.kt");
+        }
+
+        @TestMetadata("arrayOf.kt")
+        public void testArrayOf() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/arrayOf.kt");
+        }
+
+        @TestMetadata("charArrayOf.kt")
+        public void testCharArrayOf() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/charArrayOf.kt");
+        }
+
+        @TestMetadata("inlineArrayConstructors.kt")
+        public void testInlineArrayConstructors() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/inlineArrayConstructors.kt");
+        }
+
         @TestMetadata("kt37604.kt")
         public void testKt37604() throws Exception {
             runTest("compiler/testData/codegen/box/callableReference/kt37604.kt");
+        }
+
+        @TestMetadata("kt46902.kt")
+        public void testKt46902() throws Exception {
+            runTest("compiler/testData/codegen/box/callableReference/kt46902.kt");
         }
 
         @TestMetadata("nested.kt")
@@ -1279,6 +1357,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/manyDefaultsAndVararg.kt");
             }
 
+            @TestMetadata("referenceToVarargWithDefaults.kt")
+            public void testReferenceToVarargWithDefaults() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/referenceToVarargWithDefaults.kt");
+            }
+
             @TestMetadata("simpleDefaultArgument.kt")
             public void testSimpleDefaultArgument() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/simpleDefaultArgument.kt");
@@ -1289,9 +1372,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/simpleEmptyVararg.kt");
             }
 
+            @TestMetadata("unboundReferences.kt")
+            public void testUnboundReferences() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/unboundReferences.kt");
+            }
+
             @TestMetadata("varargViewedAsArray.kt")
             public void testVarargViewedAsArray() throws Exception {
                 runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/varargViewedAsArray.kt");
+            }
+
+            @TestMetadata("varargViewedAsPrimitiveArray.kt")
+            public void testVarargViewedAsPrimitiveArray() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/adaptedReferences/varargViewedAsPrimitiveArray.kt");
             }
 
             @TestMetadata("varargWithDefaultValue.kt")
@@ -1397,6 +1490,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
             public void testAllFilesPresentInFunction() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/callableReference/function"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("argumentTypes.kt")
+            public void testArgumentTypes() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/function/argumentTypes.kt");
             }
 
             @TestMetadata("booleanNotIntrinsic.kt")
@@ -1701,6 +1799,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
             }
 
+            @TestMetadata("accessorForPropertyWithPrivateSetter.kt")
+            public void testAccessorForPropertyWithPrivateSetter() throws Exception {
+                runTest("compiler/testData/codegen/box/callableReference/property/accessorForPropertyWithPrivateSetter.kt");
+            }
+
             public void testAllFilesPresentInProperty() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/callableReference/property"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
             }
@@ -1785,6 +1888,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("lambdaToUnitCast.kt")
         public void testLambdaToUnitCast() throws Exception {
             runTest("compiler/testData/codegen/box/casts/lambdaToUnitCast.kt");
+        }
+
+        @TestMetadata("objectToPrimitiveWithAssertion.kt")
+        public void testObjectToPrimitiveWithAssertion() throws Exception {
+            runTest("compiler/testData/codegen/box/casts/objectToPrimitiveWithAssertion.kt");
         }
 
         @TestMetadata("compiler/testData/codegen/box/casts/functions")
@@ -2313,11 +2421,6 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("rightHandOverride.kt")
         public void testRightHandOverride() throws Exception {
             runTest("compiler/testData/codegen/box/classes/rightHandOverride.kt");
-        }
-
-        @TestMetadata("sealedInSameFile.kt")
-        public void testSealedInSameFile() throws Exception {
-            runTest("compiler/testData/codegen/box/classes/sealedInSameFile.kt");
         }
 
         @TestMetadata("selfcreate.kt")
@@ -2864,6 +2967,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 runTest("compiler/testData/codegen/box/closures/capturedVarsOptimization/kt17200.kt");
             }
 
+            @TestMetadata("kt44347.kt")
+            public void testKt44347() throws Exception {
+                runTest("compiler/testData/codegen/box/closures/capturedVarsOptimization/kt44347.kt");
+            }
+
             @TestMetadata("sharedSlotsWithCapturedVars.kt")
             public void testSharedSlotsWithCapturedVars() throws Exception {
                 runTest("compiler/testData/codegen/box/closures/capturedVarsOptimization/sharedSlotsWithCapturedVars.kt");
@@ -2939,6 +3047,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/collections"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("inheritFromAbstractMutableListInt.kt")
+        public void testInheritFromAbstractMutableListInt() throws Exception {
+            runTest("compiler/testData/codegen/box/collections/inheritFromAbstractMutableListInt.kt");
+        }
+
         @TestMetadata("internalRemove.kt")
         public void testInternalRemove() throws Exception {
             runTest("compiler/testData/codegen/box/collections/internalRemove.kt");
@@ -3003,9 +3116,24 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/constants/comparisonFalse.kt");
         }
 
+        @TestMetadata("constValFromAnotherModuleInConsVal.kt")
+        public void testConstValFromAnotherModuleInConsVal() throws Exception {
+            runTest("compiler/testData/codegen/box/constants/constValFromAnotherModuleInConsVal.kt");
+        }
+
         @TestMetadata("constantsInWhen.kt")
         public void testConstantsInWhen() throws Exception {
             runTest("compiler/testData/codegen/box/constants/constantsInWhen.kt");
+        }
+
+        @TestMetadata("foldingBinaryOpsUnsigned.kt")
+        public void testFoldingBinaryOpsUnsigned() throws Exception {
+            runTest("compiler/testData/codegen/box/constants/foldingBinaryOpsUnsigned.kt");
+        }
+
+        @TestMetadata("foldingBinaryOpsUnsignedConst.kt")
+        public void testFoldingBinaryOpsUnsignedConst() throws Exception {
+            runTest("compiler/testData/codegen/box/constants/foldingBinaryOpsUnsignedConst.kt");
         }
 
         @TestMetadata("long.kt")
@@ -3016,6 +3144,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("privateConst.kt")
         public void testPrivateConst() throws Exception {
             runTest("compiler/testData/codegen/box/constants/privateConst.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/constructor")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Constructor extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInConstructor() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/constructor"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
     }
 
@@ -3254,6 +3395,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/controlStructures/kt42455.kt");
         }
 
+        @TestMetadata("kt47245.kt")
+        public void testKt47245() throws Exception {
+            runTest("compiler/testData/codegen/box/controlStructures/kt47245.kt");
+        }
+
         @TestMetadata("kt772.kt")
         public void testKt772() throws Exception {
             runTest("compiler/testData/codegen/box/controlStructures/kt772.kt");
@@ -3299,6 +3445,21 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/controlStructures/quicksort.kt");
         }
 
+        @TestMetadata("tryCatchExpression.kt")
+        public void testTryCatchExpression() throws Exception {
+            runTest("compiler/testData/codegen/box/controlStructures/tryCatchExpression.kt");
+        }
+
+        @TestMetadata("tryCatchFinally.kt")
+        public void testTryCatchFinally() throws Exception {
+            runTest("compiler/testData/codegen/box/controlStructures/tryCatchFinally.kt");
+        }
+
+        @TestMetadata("tryFinally.kt")
+        public void testTryFinally() throws Exception {
+            runTest("compiler/testData/codegen/box/controlStructures/tryFinally.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/box/controlStructures/breakContinueInExpressions")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -3319,6 +3480,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             @TestMetadata("breakInExpr.kt")
             public void testBreakInExpr() throws Exception {
                 runTest("compiler/testData/codegen/box/controlStructures/breakContinueInExpressions/breakInExpr.kt");
+            }
+
+            @TestMetadata("breakInLoopConditions.kt")
+            public void testBreakInLoopConditions() throws Exception {
+                runTest("compiler/testData/codegen/box/controlStructures/breakContinueInExpressions/breakInLoopConditions.kt");
             }
 
             @TestMetadata("continueInDoWhile.kt")
@@ -3541,6 +3707,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("changingVarParam.kt")
         public void testChangingVarParam() throws Exception {
             runTest("compiler/testData/codegen/box/dataClasses/changingVarParam.kt");
+        }
+
+        @TestMetadata("dataClassWithManyFields.kt")
+        public void testDataClassWithManyFields() throws Exception {
+            runTest("compiler/testData/codegen/box/dataClasses/dataClassWithManyFields.kt");
         }
 
         @TestMetadata("genericParam.kt")
@@ -3826,6 +3997,41 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("inheritedFromInterfaceViaAbstractSuperclass.kt")
         public void testInheritedFromInterfaceViaAbstractSuperclass() throws Exception {
             runTest("compiler/testData/codegen/box/defaultArguments/inheritedFromInterfaceViaAbstractSuperclass.kt");
+        }
+
+        @TestMetadata("kt36853.kt")
+        public void testKt36853() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853.kt");
+        }
+
+        @TestMetadata("kt36853_fibonacci.kt")
+        public void testKt36853_fibonacci() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853_fibonacci.kt");
+        }
+
+        @TestMetadata("kt36853_nestedObject.kt")
+        public void testKt36853_nestedObject() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853_nestedObject.kt");
+        }
+
+        @TestMetadata("kt36853a.kt")
+        public void testKt36853a() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt36853a.kt");
+        }
+
+        @TestMetadata("kt46189.kt")
+        public void testKt46189() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt46189.kt");
+        }
+
+        @TestMetadata("kt47073.kt")
+        public void testKt47073() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt47073.kt");
+        }
+
+        @TestMetadata("kt47073_nested.kt")
+        public void testKt47073_nested() throws Exception {
+            runTest("compiler/testData/codegen/box/defaultArguments/kt47073_nested.kt");
         }
 
         @TestMetadata("kt6382.kt")
@@ -4206,6 +4412,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/delegation"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("delegationDifferentModule.kt")
+        public void testDelegationDifferentModule() throws Exception {
+            runTest("compiler/testData/codegen/box/delegation/delegationDifferentModule.kt");
+        }
+
         @TestMetadata("delegationWithPrivateConstructor.kt")
         public void testDelegationWithPrivateConstructor() throws Exception {
             runTest("compiler/testData/codegen/box/delegation/delegationWithPrivateConstructor.kt");
@@ -4221,14 +4432,42 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/delegation/hiddenSuperOverrideIn1.0.kt");
         }
 
+        @TestMetadata("inDataClass.kt")
+        public void testInDataClass() throws Exception {
+            runTest("compiler/testData/codegen/box/delegation/inDataClass.kt");
+        }
+
+        @TestMetadata("kt30102_comparable.kt")
+        public void testKt30102_comparable() throws Exception {
+            runTest("compiler/testData/codegen/box/delegation/kt30102_comparable.kt");
+        }
+
         @TestMetadata("kt8154.kt")
         public void testKt8154() throws Exception {
             runTest("compiler/testData/codegen/box/delegation/kt8154.kt");
         }
 
+        @TestMetadata("viaTypeAlias.kt")
+        public void testViaTypeAlias() throws Exception {
+            runTest("compiler/testData/codegen/box/delegation/viaTypeAlias.kt");
+        }
+
         @TestMetadata("withDefaultParameters.kt")
         public void testWithDefaultParameters() throws Exception {
             runTest("compiler/testData/codegen/box/delegation/withDefaultParameters.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/deprecated")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Deprecated extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInDeprecated() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/deprecated"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
     }
 
@@ -4450,6 +4689,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                     runTest("compiler/testData/codegen/box/diagnostics/functions/tailRecursion/realIteratorFoldl.kt");
                 }
 
+                @TestMetadata("recursiveCallInInlineLambda.kt")
+                public void testRecursiveCallInInlineLambda() throws Exception {
+                    runTest("compiler/testData/codegen/box/diagnostics/functions/tailRecursion/recursiveCallInInlineLambda.kt");
+                }
+
+                @TestMetadata("recursiveCallInInlineLambdaWithCapture.kt")
+                public void testRecursiveCallInInlineLambdaWithCapture() throws Exception {
+                    runTest("compiler/testData/codegen/box/diagnostics/functions/tailRecursion/recursiveCallInInlineLambdaWithCapture.kt");
+                }
+
                 @TestMetadata("recursiveInnerFunction.kt")
                 public void testRecursiveInnerFunction() throws Exception {
                     runTest("compiler/testData/codegen/box/diagnostics/functions/tailRecursion/recursiveInnerFunction.kt");
@@ -4496,6 +4745,69 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/box/directInvokeOptimization")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class DirectInvokeOptimization extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInDirectInvokeOptimization() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/directInvokeOptimization"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("boundInnerContructorRef.kt")
+        public void testBoundInnerContructorRef() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/boundInnerContructorRef.kt");
+        }
+
+        @TestMetadata("boundMemberRef.kt")
+        public void testBoundMemberRef() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/boundMemberRef.kt");
+        }
+
+        @TestMetadata("capturingLambda.kt")
+        public void testCapturingLambda() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/capturingLambda.kt");
+        }
+
+        @TestMetadata("contructorRef.kt")
+        public void testContructorRef() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/contructorRef.kt");
+        }
+
+        @TestMetadata("nestedLambdas.kt")
+        public void testNestedLambdas() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/nestedLambdas.kt");
+        }
+
+        @TestMetadata("simpleAnonymousFun.kt")
+        public void testSimpleAnonymousFun() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/simpleAnonymousFun.kt");
+        }
+
+        @TestMetadata("simpleFunRef.kt")
+        public void testSimpleFunRef() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/simpleFunRef.kt");
+        }
+
+        @TestMetadata("simpleLambda.kt")
+        public void testSimpleLambda() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/simpleLambda.kt");
+        }
+
+        @TestMetadata("unboundInnerContructorRef.kt")
+        public void testUnboundInnerContructorRef() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/unboundInnerContructorRef.kt");
+        }
+
+        @TestMetadata("unboundMemberRef.kt")
+        public void testUnboundMemberRef() throws Exception {
+            runTest("compiler/testData/codegen/box/directInvokeOptimization/unboundMemberRef.kt");
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/box/elvis")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -4521,6 +4833,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("nullNullOk.kt")
         public void testNullNullOk() throws Exception {
             runTest("compiler/testData/codegen/box/elvis/nullNullOk.kt");
+        }
+
+        @TestMetadata("ofNonNullableResultType.kt")
+        public void testOfNonNullableResultType() throws Exception {
+            runTest("compiler/testData/codegen/box/elvis/ofNonNullableResultType.kt");
         }
 
         @TestMetadata("primitive.kt")
@@ -4631,6 +4948,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/enum/enumShort.kt");
         }
 
+        @TestMetadata("enumValueOf.kt")
+        public void testEnumValueOf() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/enumValueOf.kt");
+        }
+
         @TestMetadata("enumWithLambdaParameter.kt")
         public void testEnumWithLambdaParameter() throws Exception {
             runTest("compiler/testData/codegen/box/enum/enumWithLambdaParameter.kt");
@@ -4649,6 +4971,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("initEntriesInCompanionObject.kt")
         public void testInitEntriesInCompanionObject() throws Exception {
             runTest("compiler/testData/codegen/box/enum/initEntriesInCompanionObject.kt");
+        }
+
+        @TestMetadata("initEntriesInCompanionObject2.kt")
+        public void testInitEntriesInCompanionObject2() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/initEntriesInCompanionObject2.kt");
         }
 
         @TestMetadata("initEntriesInValueOf.kt")
@@ -4731,6 +5058,21 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/enum/kt38996.kt");
         }
 
+        @TestMetadata("kt44744.kt")
+        public void testKt44744() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/kt44744.kt");
+        }
+
+        @TestMetadata("kt44744_innerClass.kt")
+        public void testKt44744_innerClass() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/kt44744_innerClass.kt");
+        }
+
+        @TestMetadata("kt46605.kt")
+        public void testKt46605() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/kt46605.kt");
+        }
+
         @TestMetadata("kt7257.kt")
         public void testKt7257() throws Exception {
             runTest("compiler/testData/codegen/box/enum/kt7257.kt");
@@ -4789,6 +5131,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("ordinal.kt")
         public void testOrdinal() throws Exception {
             runTest("compiler/testData/codegen/box/enum/ordinal.kt");
+        }
+
+        @TestMetadata("overloadedEnumValues.kt")
+        public void testOverloadedEnumValues() throws Exception {
+            runTest("compiler/testData/codegen/box/enum/overloadedEnumValues.kt");
         }
 
         @TestMetadata("refToThis.kt")
@@ -4908,6 +5255,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/extensionFunctions"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("classMethodCallExtensionSuper.kt")
+        public void testClassMethodCallExtensionSuper() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionFunctions/classMethodCallExtensionSuper.kt");
+        }
+
+        @TestMetadata("defaultMethodInterfaceCallExtensionSuper.kt")
+        public void testDefaultMethodInterfaceCallExtensionSuper() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionFunctions/defaultMethodInterfaceCallExtensionSuper.kt");
+        }
+
         @TestMetadata("executionOrder.kt")
         public void testExecutionOrder() throws Exception {
             runTest("compiler/testData/codegen/box/extensionFunctions/executionOrder.kt");
@@ -4971,6 +5328,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt5467.kt")
         public void testKt5467() throws Exception {
             runTest("compiler/testData/codegen/box/extensionFunctions/kt5467.kt");
+        }
+
+        @TestMetadata("memberExtensionEqualsHashCodeToStringInInterface.kt")
+        public void testMemberExtensionEqualsHashCodeToStringInInterface() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionFunctions/memberExtensionEqualsHashCodeToStringInInterface.kt");
         }
 
         @TestMetadata("nested2.kt")
@@ -5049,6 +5411,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("inClassWithSetter.kt")
         public void testInClassWithSetter() throws Exception {
             runTest("compiler/testData/codegen/box/extensionProperties/inClassWithSetter.kt");
+        }
+
+        @TestMetadata("kt46952.kt")
+        public void testKt46952() throws Exception {
+            runTest("compiler/testData/codegen/box/extensionProperties/kt46952.kt");
         }
 
         @TestMetadata("kt9897.kt")
@@ -5131,6 +5498,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         public void testPropertySetter() throws Exception {
             runTest("compiler/testData/codegen/box/fakeOverride/propertySetter.kt");
         }
+
+        @TestMetadata("varianceOverload.kt")
+        public void testVarianceOverload() throws Exception {
+            runTest("compiler/testData/codegen/box/fakeOverride/varianceOverload.kt");
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/fieldRename")
@@ -5153,6 +5525,29 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("genericPropertyWithItself.kt")
         public void testGenericPropertyWithItself() throws Exception {
             runTest("compiler/testData/codegen/box/fieldRename/genericPropertyWithItself.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/fir")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Fir extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInFir() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/fir"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("classCanNotBeCastedToVoid.kt")
+        public void testClassCanNotBeCastedToVoid() throws Exception {
+            runTest("compiler/testData/codegen/box/fir/classCanNotBeCastedToVoid.kt");
+        }
+
+        @TestMetadata("falsePositiveBoundSmartcast.kt")
+        public void testFalsePositiveBoundSmartcast() throws Exception {
+            runTest("compiler/testData/codegen/box/fir/falsePositiveBoundSmartcast.kt");
         }
     }
 
@@ -5210,6 +5605,26 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("basicFunInterface.kt")
         public void testBasicFunInterface() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/basicFunInterface.kt");
+        }
+
+        @TestMetadata("contravariantIntersectionType.kt")
+        public void testContravariantIntersectionType() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/contravariantIntersectionType.kt");
+        }
+
+        @TestMetadata("contravariantIntersectionTypeWithNonTrivialCommonSupertype.kt")
+        public void testContravariantIntersectionTypeWithNonTrivialCommonSupertype() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/contravariantIntersectionTypeWithNonTrivialCommonSupertype.kt");
+        }
+
+        @TestMetadata("contravariantIntersectionTypeWithNonTrivialCommonSupertype2.kt")
+        public void testContravariantIntersectionTypeWithNonTrivialCommonSupertype2() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/contravariantIntersectionTypeWithNonTrivialCommonSupertype2.kt");
+        }
+
+        @TestMetadata("kt46512_indyFunInterfaceOverCallableReference.kt")
+        public void testKt46512_indyFunInterfaceOverCallableReference() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/kt46512_indyFunInterfaceOverCallableReference.kt");
         }
 
         @TestMetadata("compiler/testData/codegen/box/funInterface/equality")
@@ -5373,6 +5788,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/functions/kt395.kt");
         }
 
+        @TestMetadata("kt47449.kt")
+        public void testKt47449() throws Exception {
+            runTest("compiler/testData/codegen/box/functions/kt47449.kt");
+        }
+
+        @TestMetadata("kt47527.kt")
+        public void testKt47527() throws Exception {
+            runTest("compiler/testData/codegen/box/functions/kt47527.kt");
+        }
+
         @TestMetadata("kt785.kt")
         public void testKt785() throws Exception {
             runTest("compiler/testData/codegen/box/functions/kt785.kt");
@@ -5391,6 +5816,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("localReturnInsideFunctionExpression.kt")
         public void testLocalReturnInsideFunctionExpression() throws Exception {
             runTest("compiler/testData/codegen/box/functions/localReturnInsideFunctionExpression.kt");
+        }
+
+        @TestMetadata("mutualInline.kt")
+        public void testMutualInline() throws Exception {
+            runTest("compiler/testData/codegen/box/functions/mutualInline.kt");
         }
 
         @TestMetadata("nothisnoclosure.kt")
@@ -6092,9 +6522,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inference/kt38664.kt");
         }
 
+        @TestMetadata("kt42042.kt")
+        public void testKt42042() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/kt42042.kt");
+        }
+
         @TestMetadata("kt42130.kt")
         public void testKt42130() throws Exception {
             runTest("compiler/testData/codegen/box/inference/kt42130.kt");
+        }
+
+        @TestMetadata("lambdaWithStarReturn.kt")
+        public void testLambdaWithStarReturn() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/lambdaWithStarReturn.kt");
         }
 
         @TestMetadata("lambdasWithExtensionFunctionType.kt")
@@ -6122,6 +6562,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inference/recursiveConstraintInsideTypeArgumentWithStarProjection.kt");
         }
 
+        @TestMetadata("sumOfOverloads.kt")
+        public void testSumOfOverloads() throws Exception {
+            runTest("compiler/testData/codegen/box/inference/sumOfOverloads.kt");
+        }
+
         @TestMetadata("unsafeVarianceCodegen.kt")
         public void testUnsafeVarianceCodegen() throws Exception {
             runTest("compiler/testData/codegen/box/inference/unsafeVarianceCodegen.kt");
@@ -6139,14 +6584,14 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inference/builderInference"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
             }
 
-            @TestMetadata("kt41164.kt")
-            public void testKt41164() throws Exception {
-                runTest("compiler/testData/codegen/box/inference/builderInference/kt41164.kt");
+            @TestMetadata("constraintsBetweenTwoStubVariables.kt")
+            public void testConstraintsBetweenTwoStubVariables() throws Exception {
+                runTest("compiler/testData/codegen/box/inference/builderInference/constraintsBetweenTwoStubVariables.kt");
             }
 
-            @TestMetadata("lackOfNullCheckOnNullableInsideBuild.kt")
-            public void testLackOfNullCheckOnNullableInsideBuild() throws Exception {
-                runTest("compiler/testData/codegen/box/inference/builderInference/lackOfNullCheckOnNullableInsideBuild.kt");
+            @TestMetadata("kt44241.kt")
+            public void testKt44241() throws Exception {
+                runTest("compiler/testData/codegen/box/inference/builderInference/kt44241.kt");
             }
 
             @TestMetadata("substituteStubTypeIntolambdaParameterDescriptor.kt")
@@ -6181,6 +6626,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("boundCallableReferencePassedToInlineFunction.kt")
         public void testBoundCallableReferencePassedToInlineFunction() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/boundCallableReferencePassedToInlineFunction.kt");
+        }
+
+        @TestMetadata("boxImplDoesNotExecuteInSecondaryConstructor.kt")
+        public void testBoxImplDoesNotExecuteInSecondaryConstructor() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/boxImplDoesNotExecuteInSecondaryConstructor.kt");
         }
 
         @TestMetadata("boxImplDoesNotExecuteInitBlock.kt")
@@ -6288,6 +6738,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inlineClasses/checkUnboxingResultFromTypeVariable.kt");
         }
 
+        @TestMetadata("classInInlineClassInit.kt")
+        public void testClassInInlineClassInit() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/classInInlineClassInit.kt");
+        }
+
         @TestMetadata("computablePropertyInsideInlineClass.kt")
         public void testComputablePropertyInsideInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/computablePropertyInsideInlineClass.kt");
@@ -6296,6 +6751,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("conformToComparableAndCallInterfaceMethod.kt")
         public void testConformToComparableAndCallInterfaceMethod() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/conformToComparableAndCallInterfaceMethod.kt");
+        }
+
+        @TestMetadata("constructorCallableReference.kt")
+        public void testConstructorCallableReference() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/constructorCallableReference.kt");
         }
 
         @TestMetadata("correctBoxingForBranchExpressions.kt")
@@ -6428,9 +6888,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inlineClasses/inlineClassEqualityShouldUseTotalOrderForFloatingPointData.kt");
         }
 
+        @TestMetadata("inlineClassFieldHandling.kt")
+        public void testInlineClassFieldHandling() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/inlineClassFieldHandling.kt");
+        }
+
         @TestMetadata("inlineClassFunctionInvoke.kt")
         public void testInlineClassFunctionInvoke() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/inlineClassFunctionInvoke.kt");
+        }
+
+        @TestMetadata("inlineClassInInitBlock.kt")
+        public void testInlineClassInInitBlock() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/inlineClassInInitBlock.kt");
         }
 
         @TestMetadata("inlineClassInStringTemplate.kt")
@@ -6598,6 +7068,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inlineClasses/kt27706.kt");
         }
 
+        @TestMetadata("kt31994.kt")
+        public void testKt31994() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt31994.kt");
+        }
+
         @TestMetadata("kt33119.kt")
         public void testKt33119() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/kt33119.kt");
@@ -6631,6 +7106,36 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt38680b.kt")
         public void testKt38680b() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/kt38680b.kt");
+        }
+
+        @TestMetadata("kt44141.kt")
+        public void testKt44141() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt44141.kt");
+        }
+
+        @TestMetadata("kt44867.kt")
+        public void testKt44867() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt44867.kt");
+        }
+
+        @TestMetadata("kt44978.kt")
+        public void testKt44978() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt44978.kt");
+        }
+
+        @TestMetadata("kt45084.kt")
+        public void testKt45084() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt45084.kt");
+        }
+
+        @TestMetadata("kt45991.kt")
+        public void testKt45991() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt45991.kt");
+        }
+
+        @TestMetadata("kt46554.kt")
+        public void testKt46554() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/kt46554.kt");
         }
 
         @TestMetadata("mangledDefaultParameterFunction.kt")
@@ -6678,6 +7183,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inlineClasses/passInlineClassAsVararg.kt");
         }
 
+        @TestMetadata("passInlineClassWithSpreadOperatorToVarargs.kt")
+        public void testPassInlineClassWithSpreadOperatorToVarargs() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/passInlineClassWithSpreadOperatorToVarargs.kt");
+        }
+
         @TestMetadata("propertyLoweringOrder.kt")
         public void testPropertyLoweringOrder() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/propertyLoweringOrder.kt");
@@ -6698,9 +7208,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/inlineClasses/referToUnderlyingPropertyOfInlineClass.kt");
         }
 
+        @TestMetadata("result.kt")
+        public void testResult() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/result.kt");
+        }
+
         @TestMetadata("resultInlining.kt")
         public void testResultInlining() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/resultInlining.kt");
+        }
+
+        @TestMetadata("safeAsOfTypeParameterWithInlineClassBound.kt")
+        public void testSafeAsOfTypeParameterWithInlineClassBound() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/safeAsOfTypeParameterWithInlineClassBound.kt");
         }
 
         @TestMetadata("secondaryConstructorWithVararg.kt")
@@ -6761,6 +7281,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("unboxReceiverOnCallingMethodFromInlineClass.kt")
         public void testUnboxReceiverOnCallingMethodFromInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/inlineClasses/unboxReceiverOnCallingMethodFromInlineClass.kt");
+        }
+
+        @TestMetadata("unboxResultParameterWhenCapturingToCrossinlineLambda.kt")
+        public void testUnboxResultParameterWhenCapturingToCrossinlineLambda() throws Exception {
+            runTest("compiler/testData/codegen/box/inlineClasses/unboxResultParameterWhenCapturingToCrossinlineLambda.kt");
         }
 
         @TestMetadata("useInlineClassesInsideElvisOperator.kt")
@@ -6856,6 +7381,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
             public void testAllFilesPresentInBoxReturnValueOnOverride() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses/boxReturnValueOnOverride"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("boxReturnValueInDefaultMethod.kt")
+            public void testBoxReturnValueInDefaultMethod() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/boxReturnValueOnOverride/boxReturnValueInDefaultMethod.kt");
             }
 
             @TestMetadata("covariantOverrideChainErasedToAny.kt")
@@ -7009,6 +7539,59 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             @TestMetadata("kt37986.kt")
             public void testKt37986() throws Exception {
                 runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/kt37986.kt");
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/inlineClasses/callableReferences/let")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Let extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInLet() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses/callableReferences/let"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+
+                @TestMetadata("any.kt")
+                public void testAny() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/any.kt");
+                }
+
+                @TestMetadata("anyN.kt")
+                public void testAnyN() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/anyN.kt");
+                }
+
+                @TestMetadata("int.kt")
+                public void testInt() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/int.kt");
+                }
+
+                @TestMetadata("intN.kt")
+                public void testIntN() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/intN.kt");
+                }
+
+                @TestMetadata("null.kt")
+                public void testNull() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/null.kt");
+                }
+
+                @TestMetadata("result.kt")
+                public void testResult() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/result.kt");
+                }
+
+                @TestMetadata("string.kt")
+                public void testString() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/string.kt");
+                }
+
+                @TestMetadata("stringN.kt")
+                public void testStringN() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/callableReferences/let/stringN.kt");
+                }
             }
         }
 
@@ -7193,6 +7776,44 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             }
         }
 
+        @TestMetadata("compiler/testData/codegen/box/inlineClasses/funInterface")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class FunInterface extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInFunInterface() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses/funInterface"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("argumentIC.kt")
+            public void testArgumentIC() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/funInterface/argumentIC.kt");
+            }
+
+            @TestMetadata("argumentResult.kt")
+            public void testArgumentResult() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/funInterface/argumentResult.kt");
+            }
+
+            @TestMetadata("mangledSamWrappers.kt")
+            public void testMangledSamWrappers() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/funInterface/mangledSamWrappers.kt");
+            }
+
+            @TestMetadata("returnIC.kt")
+            public void testReturnIC() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/funInterface/returnIC.kt");
+            }
+
+            @TestMetadata("returnResult.kt")
+            public void testReturnResult() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/funInterface/returnResult.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/inlineClasses/functionNameMangling")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -7341,6 +7962,34 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             @TestMetadata("secondaryConstructor.kt")
             public void testSecondaryConstructor() throws Exception {
                 runTest("compiler/testData/codegen/box/inlineClasses/hiddenConstructor/secondaryConstructor.kt");
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/inlineClasses/inlineClassCollection")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class InlineClassCollection extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInInlineClassCollection() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses/inlineClassCollection"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("inlineCollectionOfInlineClass.kt")
+            public void testInlineCollectionOfInlineClass() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/inlineClassCollection/inlineCollectionOfInlineClass.kt");
+            }
+
+            @TestMetadata("inlineListOfInlineClass.kt")
+            public void testInlineListOfInlineClass() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/inlineClassCollection/inlineListOfInlineClass.kt");
+            }
+
+            @TestMetadata("inlineMapOfInlineClass.kt")
+            public void testInlineMapOfInlineClass() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/inlineClassCollection/inlineMapOfInlineClass.kt");
             }
         }
 
@@ -7499,6 +8148,92 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             }
         }
 
+        @TestMetadata("compiler/testData/codegen/box/inlineClasses/result")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Result extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInResult() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses/result"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("directCall1.kt")
+            public void testDirectCall1() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/result/directCall1.kt");
+            }
+
+            @TestMetadata("directCall2.kt")
+            public void testDirectCall2() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/result/directCall2.kt");
+            }
+
+            @TestMetadata("doubleOverride.kt")
+            public void testDoubleOverride() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/result/doubleOverride.kt");
+            }
+
+            @TestMetadata("extensionOverride.kt")
+            public void testExtensionOverride() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/result/extensionOverride.kt");
+            }
+
+            @TestMetadata("inlineMethodOnResult.kt")
+            public void testInlineMethodOnResult() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/result/inlineMethodOnResult.kt");
+            }
+
+            @TestMetadata("lambdaTakesResultThroughBridge.kt")
+            public void testLambdaTakesResultThroughBridge() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/result/lambdaTakesResultThroughBridge.kt");
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/inlineClasses/returnResult")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ReturnResult extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInReturnResult() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/inlineClasses/returnResult"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("class.kt")
+            public void testClass() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/returnResult/class.kt");
+            }
+
+            @TestMetadata("classAnyOverride.kt")
+            public void testClassAnyOverride() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/returnResult/classAnyOverride.kt");
+            }
+
+            @TestMetadata("classGenericOverride.kt")
+            public void testClassGenericOverride() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/returnResult/classGenericOverride.kt");
+            }
+
+            @TestMetadata("classResultOverride.kt")
+            public void testClassResultOverride() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/returnResult/classResultOverride.kt");
+            }
+
+            @TestMetadata("interface.kt")
+            public void testInterface() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/returnResult/interface.kt");
+            }
+
+            @TestMetadata("topLevel.kt")
+            public void testTopLevel() throws Exception {
+                runTest("compiler/testData/codegen/box/inlineClasses/returnResult/topLevel.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -7556,6 +8291,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                     runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/lambda/ifaceChild.kt");
                 }
 
+                @TestMetadata("nullableResult.kt")
+                public void testNullableResult() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/lambda/nullableResult.kt");
+                }
+
                 @TestMetadata("primitive.kt")
                 public void testPrimitive() throws Exception {
                     runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/lambda/primitive.kt");
@@ -7564,6 +8304,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 @TestMetadata("result.kt")
                 public void testResult() throws Exception {
                     runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/lambda/result.kt");
+                }
+
+                @TestMetadata("resultAny.kt")
+                public void testResultAny() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/lambda/resultAny.kt");
                 }
 
                 @TestMetadata("string.kt")
@@ -7604,6 +8349,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                     runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/objectLiteral/ifaceChild.kt");
                 }
 
+                @TestMetadata("nullableResult.kt")
+                public void testNullableResult() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/objectLiteral/nullableResult.kt");
+                }
+
                 @TestMetadata("primitive.kt")
                 public void testPrimitive() throws Exception {
                     runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/objectLiteral/primitive.kt");
@@ -7612,6 +8362,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 @TestMetadata("result.kt")
                 public void testResult() throws Exception {
                     runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/objectLiteral/result.kt");
+                }
+
+                @TestMetadata("resultAny.kt")
+                public void testResultAny() throws Exception {
+                    runTest("compiler/testData/codegen/box/inlineClasses/unboxGenericParameter/objectLiteral/resultAny.kt");
                 }
 
                 @TestMetadata("string.kt")
@@ -7642,6 +8397,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("createdNestedInOuterMember.kt")
         public void testCreatedNestedInOuterMember() throws Exception {
             runTest("compiler/testData/codegen/box/innerNested/createdNestedInOuterMember.kt");
+        }
+
+        @TestMetadata("extenderNestedClass.kt")
+        public void testExtenderNestedClass() throws Exception {
+            runTest("compiler/testData/codegen/box/innerNested/extenderNestedClass.kt");
         }
 
         @TestMetadata("extensionFun.kt")
@@ -7997,6 +8757,136 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/box/invokedynamic")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Invokedynamic extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInInvokedynamic() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/invokedynamic/lambdas")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Lambdas extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInLambdas() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/lambdas"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/lambdas/inlineClassInSignature")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class InlineClassInSignature extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInInlineClassInSignature() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/lambdas/inlineClassInSignature"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Sam extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInSam() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionExprToJavaInterface")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class FunctionExprToJavaInterface extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInFunctionExprToJavaInterface() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionExprToJavaInterface"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class FunctionRefToJavaInterface extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInFunctionRefToJavaInterface() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+
+                @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/specialFunctions")
+                @TestDataPath("$PROJECT_ROOT")
+                @RunWith(JUnit3RunnerWithInners.class)
+                public static class SpecialFunctions extends AbstractIrCodegenBoxWasmTest {
+                    private void runTest(String testDataFilePath) throws Exception {
+                        KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                    }
+
+                    public void testAllFilesPresentInSpecialFunctions() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/specialFunctions"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                    }
+                }
+
+                @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/withAccessor")
+                @TestDataPath("$PROJECT_ROOT")
+                @RunWith(JUnit3RunnerWithInners.class)
+                public static class WithAccessor extends AbstractIrCodegenBoxWasmTest {
+                    private void runTest(String testDataFilePath) throws Exception {
+                        KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                    }
+
+                    public void testAllFilesPresentInWithAccessor() throws Exception {
+                        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/functionRefToJavaInterface/withAccessor"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                    }
+                }
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/inlineClassInSignature")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class InlineClassInSignature extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInInlineClassInSignature() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/inlineClassInSignature"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/invokedynamic/sam/specializedGenerics")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class SpecializedGenerics extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInSpecializedGenerics() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/invokedynamic/sam/specializedGenerics"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+            }
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/box/ir")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -8160,6 +9050,24 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             }
         }
 
+        @TestMetadata("compiler/testData/codegen/box/ir/privateSignatures")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class PrivateSignatures extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInPrivateSignatures() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/ir/privateSignatures"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("enumEntryArguments.kt")
+            public void testEnumEntryArguments() throws Exception {
+                runTest("compiler/testData/codegen/box/ir/privateSignatures/enumEntryArguments.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/ir/serializationRegressions")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -8263,6 +9171,58 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
             public void testAllFilesPresentInObjectMethods() throws Exception {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/javaInterop/objectMethods"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/javaVisibility")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class JavaVisibility extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInJavaVisibility() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/javaVisibility"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/javaVisibility/package")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Package extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInPackage() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/javaVisibility/package"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/javaVisibility/protectedAndPackage")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ProtectedAndPackage extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProtectedAndPackage() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/javaVisibility/protectedAndPackage"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/javaVisibility/protectedStatic")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ProtectedStatic extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProtectedStatic() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/javaVisibility/protectedStatic"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
             }
         }
     }
@@ -8525,6 +9485,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         public void testAllFilesPresentInJvmStatic() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/jvmStatic"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
+
+        @TestMetadata("compiler/testData/codegen/box/jvmStatic/protectedInSuperClass")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ProtectedInSuperClass extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProtectedInSuperClass() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/jvmStatic/protectedInSuperClass"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
     }
 
     @TestMetadata("compiler/testData/codegen/box/labels")
@@ -8723,6 +9696,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/localClasses/closureOfLambdaInLocalClass.kt");
         }
 
+        @TestMetadata("defaultParameterInConstructor.kt")
+        public void testDefaultParameterInConstructor() throws Exception {
+            runTest("compiler/testData/codegen/box/localClasses/defaultParameterInConstructor.kt");
+        }
+
         @TestMetadata("inExtensionFunction.kt")
         public void testInExtensionFunction() throws Exception {
             runTest("compiler/testData/codegen/box/localClasses/inExtensionFunction.kt");
@@ -8791,6 +9769,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt4174.kt")
         public void testKt4174() throws Exception {
             runTest("compiler/testData/codegen/box/localClasses/kt4174.kt");
+        }
+
+        @TestMetadata("kt45383.kt")
+        public void testKt45383() throws Exception {
+            runTest("compiler/testData/codegen/box/localClasses/kt45383.kt");
         }
 
         @TestMetadata("localClass.kt")
@@ -8922,6 +9905,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("simple.kt")
         public void testSimple() throws Exception {
             runTest("compiler/testData/codegen/box/mixedNamedPosition/simple.kt");
+        }
+
+        @TestMetadata("varargs.kt")
+        public void testVarargs() throws Exception {
+            runTest("compiler/testData/codegen/box/mixedNamedPosition/varargs.kt");
+        }
+
+        @TestMetadata("varargsEvaluationOrder.kt")
+        public void testVarargsEvaluationOrder() throws Exception {
+            runTest("compiler/testData/codegen/box/mixedNamedPosition/varargsEvaluationOrder.kt");
         }
     }
 
@@ -9384,6 +10377,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/multiplatform"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("expectProperty.kt")
+        public void testExpectProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/multiplatform/expectProperty.kt");
+        }
+
         @TestMetadata("optionalExpectation.kt")
         public void testOptionalExpectation() throws Exception {
             runTest("compiler/testData/codegen/box/multiplatform/optionalExpectation.kt");
@@ -9497,6 +10495,32 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             }
         }
 
+        @TestMetadata("compiler/testData/codegen/box/multiplatform/exhaustiveness")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Exhaustiveness extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInExhaustiveness() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/multiplatform/exhaustiveness"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/multiplatform/hmpp")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Hmpp extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInHmpp() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/multiplatform/hmpp"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/multiplatform/multiModule")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -9551,6 +10575,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("returnInsideTwoLambdas.kt")
         public void testReturnInsideTwoLambdas() throws Exception {
             runTest("compiler/testData/codegen/box/nonLocalReturns/returnInsideTwoLambdas.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/notNullAssertions")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class NotNullAssertions extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInNotNullAssertions() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/notNullAssertions"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
     }
 
@@ -9760,6 +10797,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/objects/kt2822.kt");
         }
 
+        @TestMetadata("kt32749.kt")
+        public void testKt32749() throws Exception {
+            runTest("compiler/testData/codegen/box/objects/kt32749.kt");
+        }
+
         @TestMetadata("kt3684.kt")
         public void testKt3684() throws Exception {
             runTest("compiler/testData/codegen/box/objects/kt3684.kt");
@@ -9768,6 +10810,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt4086.kt")
         public void testKt4086() throws Exception {
             runTest("compiler/testData/codegen/box/objects/kt4086.kt");
+        }
+
+        @TestMetadata("kt45170.kt")
+        public void testKt45170() throws Exception {
+            runTest("compiler/testData/codegen/box/objects/kt45170.kt");
         }
 
         @TestMetadata("kt694.kt")
@@ -10237,6 +11284,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/operatorConventions/kt4152.kt");
         }
 
+        @TestMetadata("kt45022.kt")
+        public void testKt45022() throws Exception {
+            runTest("compiler/testData/codegen/box/operatorConventions/kt45022.kt");
+        }
+
         @TestMetadata("kt4987.kt")
         public void testKt4987() throws Exception {
             runTest("compiler/testData/codegen/box/operatorConventions/kt4987.kt");
@@ -10595,6 +11647,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt446.kt")
         public void testKt446() throws Exception {
             runTest("compiler/testData/codegen/box/primitiveTypes/kt446.kt");
+        }
+
+        @TestMetadata("kt46864_double.kt")
+        public void testKt46864_double() throws Exception {
+            runTest("compiler/testData/codegen/box/primitiveTypes/kt46864_double.kt");
+        }
+
+        @TestMetadata("kt46864_long.kt")
+        public void testKt46864_long() throws Exception {
+            runTest("compiler/testData/codegen/box/primitiveTypes/kt46864_long.kt");
         }
 
         @TestMetadata("kt518.kt")
@@ -11227,6 +12289,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/properties/typeInferredFromGetter.kt");
         }
 
+        @TestMetadata("unreachableUninitializedProperty.kt")
+        public void testUnreachableUninitializedProperty() throws Exception {
+            runTest("compiler/testData/codegen/box/properties/unreachableUninitializedProperty.kt");
+        }
+
         @TestMetadata("compiler/testData/codegen/box/properties/const")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -11290,6 +12357,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             @TestMetadata("privateSetterViaSubclass.kt")
             public void testPrivateSetterViaSubclass() throws Exception {
                 runTest("compiler/testData/codegen/box/properties/lateinit/privateSetterViaSubclass.kt");
+            }
+
+            @TestMetadata("privateVarInCompanion.kt")
+            public void testPrivateVarInCompanion() throws Exception {
+                runTest("compiler/testData/codegen/box/properties/lateinit/privateVarInCompanion.kt");
             }
 
             @TestMetadata("simpleVar.kt")
@@ -11438,6 +12510,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/ranges/forByteProgressionWithIntIncrement.kt");
         }
 
+        @TestMetadata("forInDoubleRangeWithCustomIterator.kt")
+        public void testForInDoubleRangeWithCustomIterator() throws Exception {
+            runTest("compiler/testData/codegen/box/ranges/forInDoubleRangeWithCustomIterator.kt");
+        }
+
+        @TestMetadata("forInFloatRangeWithCustomIterator.kt")
+        public void testForInFloatRangeWithCustomIterator() throws Exception {
+            runTest("compiler/testData/codegen/box/ranges/forInFloatRangeWithCustomIterator.kt");
+        }
+
         @TestMetadata("forInRangeLiteralWithMixedTypeBounds.kt")
         public void testForInRangeLiteralWithMixedTypeBounds() throws Exception {
             runTest("compiler/testData/codegen/box/ranges/forInRangeLiteralWithMixedTypeBounds.kt");
@@ -11558,6 +12640,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             @TestMetadata("rangeContainsString.kt")
             public void testRangeContainsString() throws Exception {
                 runTest("compiler/testData/codegen/box/ranges/contains/rangeContainsString.kt");
+            }
+
+            @TestMetadata("smartCastOnBothEnds.kt")
+            public void testSmartCastOnBothEnds() throws Exception {
+                runTest("compiler/testData/codegen/box/ranges/contains/smartCastOnBothEnds.kt");
             }
 
             @TestMetadata("userDefinedContainsExtension.kt")
@@ -12573,6 +13660,19 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/box/recursiveRawTypes")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class RecursiveRawTypes extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInRecursiveRawTypes() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/recursiveRawTypes"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/box/regressions")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -12838,6 +13938,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/reified/instanceof.kt");
         }
 
+        @TestMetadata("kt16445.kt")
+        public void testKt16445() throws Exception {
+            runTest("compiler/testData/codegen/box/reified/kt16445.kt");
+        }
+
         @TestMetadata("newArrayInt.kt")
         public void testNewArrayInt() throws Exception {
             runTest("compiler/testData/codegen/box/reified/newArrayInt.kt");
@@ -12977,6 +14082,65 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/sam"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("compiler/testData/codegen/box/sam/adapters")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Adapters extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInAdapters() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/sam/adapters"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("compiler/testData/codegen/box/sam/adapters/operators")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class Operators extends AbstractIrCodegenBoxWasmTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInOperators() throws Exception {
+                    KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/sam/adapters/operators"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+                }
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/sam/approximation")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Approximation extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInApproximation() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/sam/approximation"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("approxToIntermediateType.kt")
+            public void testApproxToIntermediateType() throws Exception {
+                runTest("compiler/testData/codegen/box/sam/approximation/approxToIntermediateType.kt");
+            }
+
+            @TestMetadata("approxToSingleUpperBound.kt")
+            public void testApproxToSingleUpperBound() throws Exception {
+                runTest("compiler/testData/codegen/box/sam/approximation/approxToSingleUpperBound.kt");
+            }
+
+            @TestMetadata("impossibleToApproxToRepresentable.kt")
+            public void testImpossibleToApproxToRepresentable() throws Exception {
+                runTest("compiler/testData/codegen/box/sam/approximation/impossibleToApproxToRepresentable.kt");
+            }
+
+            @TestMetadata("impossibleToApproxToRepresentable2.kt")
+            public void testImpossibleToApproxToRepresentable2() throws Exception {
+                runTest("compiler/testData/codegen/box/sam/approximation/impossibleToApproxToRepresentable2.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/box/sam/constructors")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -13004,6 +14168,72 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         }
     }
 
+    @TestMetadata("compiler/testData/codegen/box/sameFileInSourceAndDependencies")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class SameFileInSourceAndDependencies extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInSameFileInSourceAndDependencies() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/sameFileInSourceAndDependencies"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("classDeclaration.kt")
+        public void testClassDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/classDeclaration.kt");
+        }
+
+        @TestMetadata("functionDeclaration.kt")
+        public void testFunctionDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/functionDeclaration.kt");
+        }
+
+        @TestMetadata("lateinitMemberPropertyDeclaration.kt")
+        public void testLateinitMemberPropertyDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/lateinitMemberPropertyDeclaration.kt");
+        }
+
+        @TestMetadata("memberFunctionDeclaration.kt")
+        public void testMemberFunctionDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/memberFunctionDeclaration.kt");
+        }
+
+        @TestMetadata("memberFunctionWithDefaultArgumentsDeclaration.kt")
+        public void testMemberFunctionWithDefaultArgumentsDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/memberFunctionWithDefaultArgumentsDeclaration.kt");
+        }
+
+        @TestMetadata("memberPropertyDeclaration.kt")
+        public void testMemberPropertyDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/memberPropertyDeclaration.kt");
+        }
+
+        @TestMetadata("nestedClassDeclaration.kt")
+        public void testNestedClassDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/nestedClassDeclaration.kt");
+        }
+
+        @TestMetadata("propertyDeclaration.kt")
+        public void testPropertyDeclaration() throws Exception {
+            runTest("compiler/testData/codegen/box/sameFileInSourceAndDependencies/propertyDeclaration.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/script")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Script extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInScript() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/script"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+    }
+
     @TestMetadata("compiler/testData/codegen/box/sealed")
     @TestDataPath("$PROJECT_ROOT")
     @RunWith(JUnit3RunnerWithInners.class)
@@ -13016,6 +14246,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/sealed"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("delegatingConstructor.kt")
+        public void testDelegatingConstructor() throws Exception {
+            runTest("compiler/testData/codegen/box/sealed/delegatingConstructor.kt");
+        }
+
         @TestMetadata("multipleFiles_enabled.kt")
         public void testMultipleFiles_enabled() throws Exception {
             runTest("compiler/testData/codegen/box/sealed/multipleFiles_enabled.kt");
@@ -13024,6 +14259,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("objects.kt")
         public void testObjects() throws Exception {
             runTest("compiler/testData/codegen/box/sealed/objects.kt");
+        }
+
+        @TestMetadata("sealedInSameFile.kt")
+        public void testSealedInSameFile() throws Exception {
+            runTest("compiler/testData/codegen/box/sealed/sealedInSameFile.kt");
         }
 
         @TestMetadata("simple.kt")
@@ -13164,22 +14404,14 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/secondaryConstructors/superCallSecondary.kt");
         }
 
+        @TestMetadata("varargs.kt")
+        public void testVarargs() throws Exception {
+            runTest("compiler/testData/codegen/box/secondaryConstructors/varargs.kt");
+        }
+
         @TestMetadata("withoutPrimarySimple.kt")
         public void testWithoutPrimarySimple() throws Exception {
             runTest("compiler/testData/codegen/box/secondaryConstructors/withoutPrimarySimple.kt");
-        }
-    }
-
-    @TestMetadata("compiler/testData/codegen/box/signatureAnnotations")
-    @TestDataPath("$PROJECT_ROOT")
-    @RunWith(JUnit3RunnerWithInners.class)
-    public static class SignatureAnnotations extends AbstractIrCodegenBoxWasmTest {
-        private void runTest(String testDataFilePath) throws Exception {
-            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
-        }
-
-        public void testAllFilesPresentInSignatureAnnotations() throws Exception {
-            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/signatureAnnotations"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
     }
 
@@ -13206,6 +14438,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
 
         public void testAllFilesPresentInSmartCasts() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/smartCasts"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+        }
+
+        @TestMetadata("complexExplicitReceiver.kt")
+        public void testComplexExplicitReceiver() throws Exception {
+            runTest("compiler/testData/codegen/box/smartCasts/complexExplicitReceiver.kt");
+        }
+
+        @TestMetadata("complexImplicitReceiver.kt")
+        public void testComplexImplicitReceiver() throws Exception {
+            runTest("compiler/testData/codegen/box/smartCasts/complexImplicitReceiver.kt");
         }
 
         @TestMetadata("falseSmartCast.kt")
@@ -13256,6 +14498,26 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt19100.kt")
         public void testKt19100() throws Exception {
             runTest("compiler/testData/codegen/box/smartCasts/kt19100.kt");
+        }
+
+        @TestMetadata("kt44804.kt")
+        public void testKt44804() throws Exception {
+            runTest("compiler/testData/codegen/box/smartCasts/kt44804.kt");
+        }
+
+        @TestMetadata("kt44814.kt")
+        public void testKt44814() throws Exception {
+            runTest("compiler/testData/codegen/box/smartCasts/kt44814.kt");
+        }
+
+        @TestMetadata("kt44932.kt")
+        public void testKt44932() throws Exception {
+            runTest("compiler/testData/codegen/box/smartCasts/kt44932.kt");
+        }
+
+        @TestMetadata("kt44942.kt")
+        public void testKt44942() throws Exception {
+            runTest("compiler/testData/codegen/box/smartCasts/kt44942.kt");
         }
 
         @TestMetadata("multipleSmartCast.kt")
@@ -13725,6 +14987,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
                 runTest("compiler/testData/codegen/box/super/superConstructor/kt18356.kt");
             }
 
+            @TestMetadata("kt18356_2.kt")
+            public void testKt18356_2() throws Exception {
+                runTest("compiler/testData/codegen/box/super/superConstructor/kt18356_2.kt");
+            }
+
             @TestMetadata("objectExtendsInner.kt")
             public void testObjectExtendsInner() throws Exception {
                 runTest("compiler/testData/codegen/box/super/superConstructor/objectExtendsInner.kt");
@@ -13788,6 +15055,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/syntheticAccessors/accessorForProtectedInvokeVirtual.kt");
         }
 
+        @TestMetadata("accessorForProtectedPropertyReference.kt")
+        public void testAccessorForProtectedPropertyReference() throws Exception {
+            runTest("compiler/testData/codegen/box/syntheticAccessors/accessorForProtectedPropertyReference.kt");
+        }
+
         public void testAllFilesPresentInSyntheticAccessors() throws Exception {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/syntheticAccessors"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
@@ -13845,6 +15117,65 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("superCallFromMultipleSubclasses.kt")
         public void testSuperCallFromMultipleSubclasses() throws Exception {
             runTest("compiler/testData/codegen/box/syntheticAccessors/superCallFromMultipleSubclasses.kt");
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/syntheticAccessors/protectedJavaFieldAccessor")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ProtectedJavaFieldAccessor extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProtectedJavaFieldAccessor() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/syntheticAccessors/protectedJavaFieldAccessor"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/box/syntheticAccessors/protectedMemberReferenceAccessor")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class ProtectedMemberReferenceAccessor extends AbstractIrCodegenBoxWasmTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInProtectedMemberReferenceAccessor() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/syntheticAccessors/protectedMemberReferenceAccessor"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
+            }
+
+            @TestMetadata("kt46597_crossinline_method.kt")
+            public void testKt46597_crossinline_method() throws Exception {
+                runTest("compiler/testData/codegen/box/syntheticAccessors/protectedMemberReferenceAccessor/kt46597_crossinline_method.kt");
+            }
+
+            @TestMetadata("kt46597_crossinline_property.kt")
+            public void testKt46597_crossinline_property() throws Exception {
+                runTest("compiler/testData/codegen/box/syntheticAccessors/protectedMemberReferenceAccessor/kt46597_crossinline_property.kt");
+            }
+
+            @TestMetadata("kt46597_method.kt")
+            public void testKt46597_method() throws Exception {
+                runTest("compiler/testData/codegen/box/syntheticAccessors/protectedMemberReferenceAccessor/kt46597_method.kt");
+            }
+
+            @TestMetadata("kt46597_property.kt")
+            public void testKt46597_property() throws Exception {
+                runTest("compiler/testData/codegen/box/syntheticAccessors/protectedMemberReferenceAccessor/kt46597_property.kt");
+            }
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/box/syntheticExtensions")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class SyntheticExtensions extends AbstractIrCodegenBoxWasmTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.WASM, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInSyntheticExtensions() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/syntheticExtensions"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
     }
 
@@ -14034,6 +15365,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/traits/receiverOfIntersectionType.kt");
         }
 
+        @TestMetadata("sameNameMethodFromInterface.kt")
+        public void testSameNameMethodFromInterface() throws Exception {
+            runTest("compiler/testData/codegen/box/traits/sameNameMethodFromInterface.kt");
+        }
+
         @TestMetadata("syntheticAccessor.kt")
         public void testSyntheticAccessor() throws Exception {
             runTest("compiler/testData/codegen/box/traits/syntheticAccessor.kt");
@@ -14168,6 +15504,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/typealias/enumEntryQualifier.kt");
         }
 
+        @TestMetadata("extensionFunction.kt")
+        public void testExtensionFunction() throws Exception {
+            runTest("compiler/testData/codegen/box/typealias/extensionFunction.kt");
+        }
+
         @TestMetadata("genericTypeAliasConstructor.kt")
         public void testGenericTypeAliasConstructor() throws Exception {
             runTest("compiler/testData/codegen/box/typealias/genericTypeAliasConstructor.kt");
@@ -14191,6 +15532,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt15109.kt")
         public void testKt15109() throws Exception {
             runTest("compiler/testData/codegen/box/typealias/kt15109.kt");
+        }
+
+        @TestMetadata("kt45308.kt")
+        public void testKt45308() throws Exception {
+            runTest("compiler/testData/codegen/box/typealias/kt45308.kt");
         }
 
         @TestMetadata("objectLiteralConstructor.kt")
@@ -14231,6 +15577,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("typeAliasConstructorInSuperCall.kt")
         public void testTypeAliasConstructorInSuperCall() throws Exception {
             runTest("compiler/testData/codegen/box/typealias/typeAliasConstructorInSuperCall.kt");
+        }
+
+        @TestMetadata("typeAliasFunction.kt")
+        public void testTypeAliasFunction() throws Exception {
+            runTest("compiler/testData/codegen/box/typealias/typeAliasFunction.kt");
         }
 
         @TestMetadata("typeAliasInAnonymousObjectType.kt")
@@ -14352,6 +15703,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/unsignedTypes/checkBasicUnsignedLiterals.kt");
         }
 
+        @TestMetadata("defaultArguments.kt")
+        public void testDefaultArguments() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/defaultArguments.kt");
+        }
+
         @TestMetadata("equalsImplForInlineClassWrappingNullableInlineClass.kt")
         public void testEqualsImplForInlineClassWrappingNullableInlineClass() throws Exception {
             runTest("compiler/testData/codegen/box/unsignedTypes/equalsImplForInlineClassWrappingNullableInlineClass.kt");
@@ -14380,11 +15736,6 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("iterateOverListOfBoxedUnsignedValues.kt")
         public void testIterateOverListOfBoxedUnsignedValues() throws Exception {
             runTest("compiler/testData/codegen/box/unsignedTypes/iterateOverListOfBoxedUnsignedValues.kt");
-        }
-
-        @TestMetadata("kt30402.kt")
-        public void testKt30402() throws Exception {
-            runTest("compiler/testData/codegen/box/unsignedTypes/kt30402.kt");
         }
 
         @TestMetadata("kt43286.kt")
@@ -14430,6 +15781,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("unsignedLiteralsForMaxLongValue.kt")
         public void testUnsignedLiteralsForMaxLongValue() throws Exception {
             runTest("compiler/testData/codegen/box/unsignedTypes/unsignedLiteralsForMaxLongValue.kt");
+        }
+
+        @TestMetadata("unsignedLiteralsInApiVersion14.kt")
+        public void testUnsignedLiteralsInApiVersion14() throws Exception {
+            runTest("compiler/testData/codegen/box/unsignedTypes/unsignedLiteralsInApiVersion14.kt");
         }
 
         @TestMetadata("unsignedLiteralsWithSignedOverflow.kt")
@@ -14506,6 +15862,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/box/vararg"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.WASM, true);
         }
 
+        @TestMetadata("doNotCopyImmediatelyCreatedArrays.kt")
+        public void testDoNotCopyImmediatelyCreatedArrays() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/doNotCopyImmediatelyCreatedArrays.kt");
+        }
+
         @TestMetadata("evaluationOrder.kt")
         public void testEvaluationOrder() throws Exception {
             runTest("compiler/testData/codegen/box/vararg/evaluationOrder.kt");
@@ -14514,6 +15875,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt1978.kt")
         public void testKt1978() throws Exception {
             runTest("compiler/testData/codegen/box/vararg/kt1978.kt");
+        }
+
+        @TestMetadata("kt37779.kt")
+        public void testKt37779() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/kt37779.kt");
+        }
+
+        @TestMetadata("kt6192.kt")
+        public void testKt6192() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/kt6192.kt");
         }
 
         @TestMetadata("kt796_797.kt")
@@ -14529,6 +15900,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("singleAssignmentToVarargsInFunction.kt")
         public void testSingleAssignmentToVarargsInFunction() throws Exception {
             runTest("compiler/testData/codegen/box/vararg/singleAssignmentToVarargsInFunction.kt");
+        }
+
+        @TestMetadata("spreadCopiesArray.kt")
+        public void testSpreadCopiesArray() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/spreadCopiesArray.kt");
+        }
+
+        @TestMetadata("varargInFunParam.kt")
+        public void testVarargInFunParam() throws Exception {
+            runTest("compiler/testData/codegen/box/vararg/varargInFunParam.kt");
         }
 
         @TestMetadata("varargsAndFunctionLiterals.kt")
@@ -14589,6 +15970,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
             runTest("compiler/testData/codegen/box/when/implicitExhaustiveAndReturn.kt");
         }
 
+        @TestMetadata("inferredTypeParameters.kt")
+        public void testInferredTypeParameters() throws Exception {
+            runTest("compiler/testData/codegen/box/when/inferredTypeParameters.kt");
+        }
+
         @TestMetadata("kt2457.kt")
         public void testKt2457() throws Exception {
             runTest("compiler/testData/codegen/box/when/kt2457.kt");
@@ -14597,6 +15983,16 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("kt2466.kt")
         public void testKt2466() throws Exception {
             runTest("compiler/testData/codegen/box/when/kt2466.kt");
+        }
+
+        @TestMetadata("kt45081.kt")
+        public void testKt45081() throws Exception {
+            runTest("compiler/testData/codegen/box/when/kt45081.kt");
+        }
+
+        @TestMetadata("kt47365.kt")
+        public void testKt47365() throws Exception {
+            runTest("compiler/testData/codegen/box/when/kt47365.kt");
         }
 
         @TestMetadata("kt5307.kt")
@@ -14662,6 +16058,11 @@ public class IrCodegenBoxWasmTestGenerated extends AbstractIrCodegenBoxWasmTest 
         @TestMetadata("switchOptimizationDuplicates.kt")
         public void testSwitchOptimizationDuplicates() throws Exception {
             runTest("compiler/testData/codegen/box/when/switchOptimizationDuplicates.kt");
+        }
+
+        @TestMetadata("switchOptimizationMultipleMixedConditions.kt")
+        public void testSwitchOptimizationMultipleMixedConditions() throws Exception {
+            runTest("compiler/testData/codegen/box/when/switchOptimizationMultipleMixedConditions.kt");
         }
 
         @TestMetadata("switchOptimizationSingleStatementCase.kt")

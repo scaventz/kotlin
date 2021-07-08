@@ -1,4 +1,3 @@
-
 plugins {
     kotlin("jvm")
     id("jps-compatible")
@@ -12,6 +11,7 @@ dependencies {
     compile(project(":core:descriptors.jvm"))
     compile(project(":compiler:frontend"))
     compile(project(":compiler:frontend.java"))
+    compile(project(":compiler:frontend:cfg"))
     compile(project(":compiler:light-classes"))
     compile(project(":compiler:util"))
     compile(project(":idea:ide-common"))
@@ -24,6 +24,7 @@ dependencies {
     compile(project(":compiler:fir:fir2ir"))
     compile(project(":compiler:fir:resolve"))
     compile(project(":compiler:fir:checkers"))
+    compile(project(":compiler:fir:checkers:checkers.jvm"))
     compile(project(":compiler:fir:java"))
     compile(project(":compiler:fir:jvm"))
     compile(commonDep("org.jetbrains.kotlinx", "kotlinx-coroutines-core")) { isTransitive = false }

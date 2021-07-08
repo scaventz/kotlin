@@ -5,9 +5,11 @@
 
 package org.jetbrains.kotlin.test.directives
 
+import org.jetbrains.kotlin.cli.common.arguments.JavaTypeEnhancementStateParser
 import org.jetbrains.kotlin.test.directives.model.SimpleDirectivesContainer
-import org.jetbrains.kotlin.test.services.configuration.JdkForeignAnnotationType
-import org.jetbrains.kotlin.utils.ReportLevel
+import org.jetbrains.kotlin.test.services.configuration.JavaForeignAnnotationType
+import org.jetbrains.kotlin.load.java.ReportLevel
+import org.jetbrains.kotlin.name.FqName
 
 @Suppress("RemoveExplicitTypeArguments")
 object ForeignAnnotationsDirectives : SimpleDirectivesContainer() {
@@ -30,11 +32,20 @@ object ForeignAnnotationsDirectives : SimpleDirectivesContainer() {
         additionalParser = ReportLevel.Companion::findByDescription
     )
 
-    val ANNOTATIONS_PATH by enumDirective<JdkForeignAnnotationType>(
+    val NULLABILITY_ANNOTATIONS by valueDirective<Pair<FqName, ReportLevel>>(
+        description = "List of annotations with their report levels",
+        parser = JavaTypeEnhancementStateParser.Companion::parsePlainNullabilityAnnotationReportLevels
+    )
+
+    val ANNOTATIONS_PATH by enumDirective<JavaForeignAnnotationType>(
         description = "Path to foreign annotations"
     )
 
     val SOURCE_RETENTION_ANNOTATIONS by directive(
         description = "Skip test against compiled annotation because of their Source retention"
+    )
+
+    val MUTE_FOR_PSI_CLASS_FILES_READING by directive(
+        description = "Skip test if psi class files reading is used"
     )
 }

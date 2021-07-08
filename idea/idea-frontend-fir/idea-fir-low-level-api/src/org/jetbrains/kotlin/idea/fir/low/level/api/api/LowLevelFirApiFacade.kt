@@ -5,19 +5,14 @@
 
 package org.jetbrains.kotlin.idea.fir.low.level.api.api
 
-import org.jetbrains.kotlin.diagnostics.Diagnostic
+import com.intellij.openapi.project.Project
+import org.jetbrains.kotlin.analyzer.ModuleInfo
 import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.analysis.diagnostics.FirPsiDiagnostic
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.psi
-import org.jetbrains.kotlin.fir.render
-import org.jetbrains.kotlin.fir.unwrapFakeOverrides
-import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
-import org.jetbrains.kotlin.idea.caches.project.getModuleInfo
 import org.jetbrains.kotlin.idea.fir.low.level.api.FirIdeResolveStateService
 import org.jetbrains.kotlin.idea.fir.low.level.api.annotations.InternalForInline
-import org.jetbrains.kotlin.idea.fir.low.level.api.sessions.FirIdeSourcesSession
-import org.jetbrains.kotlin.idea.fir.low.level.api.util.ktDeclaration
-import org.jetbrains.kotlin.idea.util.getElementTextInContext
+import org.jetbrains.kotlin.idea.fir.low.level.api.lazy.resolve.ResolveType
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
@@ -28,13 +23,13 @@ import kotlin.reflect.KClass
  * Returns [FirModuleResolveState] which corresponds to containing module
  */
 fun KtElement.getResolveState(): FirModuleResolveState =
-    getModuleInfo().getResolveState()
+    getModuleInfo().getResolveState(project)
 
 /**
  * Returns [FirModuleResolveState] which corresponds to containing module
  */
-fun IdeaModuleInfo.getResolveState(): FirModuleResolveState =
-    FirIdeResolveStateService.getInstance(project!!).getResolveState(this)
+fun ModuleInfo.getResolveState(project: Project): FirModuleResolveState =
+    FirIdeResolveStateService.getInstance(project).getResolveState(this)
 
 
 /**
@@ -50,8 +45,36 @@ inline fun <R> KtDeclaration.withFirDeclaration(
     phase: FirResolvePhase = FirResolvePhase.RAW_FIR,
     action: (FirDeclaration) -> R
 ): R {
+    val firDeclaration = if (containingKtFile.isCompiled) {
+        resolveState.findSourceFirCompiledDeclaration(this)
+    } else {
+        resolveState.findSourceFirDeclaration(this)
+    }
+
+    val resolvedDeclaration = if (firDeclaration.resolvePhase < phase) {
+        firDeclaration.resolvedFirToPhase(phase, resolveState)
+    } else {
+        firDeclaration
+    }
+
+    return action(resolvedDeclaration)
+}
+
+/**
+ * Creates [FirDeclaration] by [KtDeclaration] and executes an [action] on it
+ * [FirDeclaration] passed to [action] will be resolved at least to [resolveType] when executing [action] on it
+ *
+ * [FirDeclaration] passed to [action] should not be leaked outside [action] lambda
+ * Otherwise, some threading problems may arise,
+ */
+@OptIn(InternalForInline::class)
+inline fun <R> KtDeclaration.withFirDeclaration(
+    resolveState: FirModuleResolveState,
+    resolveType: ResolveType = ResolveType.NoResolve,
+    action: (FirDeclaration) -> R
+): R {
     val firDeclaration = resolveState.findSourceFirDeclaration(this)
-    firDeclaration.resolvedFirToPhase(phase, resolveState)
+    firDeclaration.resolvedFirToType(resolveType, resolveState)
     return action(firDeclaration)
 }
 
@@ -75,13 +98,13 @@ inline fun <reified F : FirDeclaration, R> KtDeclaration.withFirDeclarationOfTyp
 }
 
 /**
-* Creates [FirDeclaration] by [KtLambdaExpression] and executes an [action] on it
-*
-* If resulted [FirDeclaration] is not [F] throws [InvalidFirElementTypeException]
-*
-* [FirDeclaration] passed to [action] should not be leaked outside [action] lambda
-* Otherwise, some threading problems may arise,
-*/
+ * Creates [FirDeclaration] by [KtLambdaExpression] and executes an [action] on it
+ *
+ * If resulted [FirDeclaration] is not [F] throws [InvalidFirElementTypeException]
+ *
+ * [FirDeclaration] passed to [action] should not be leaked outside [action] lambda
+ * Otherwise, some threading problems may arise,
+ */
 @OptIn(InternalForInline::class)
 inline fun <reified F : FirDeclaration, R> KtLambdaExpression.withFirDeclarationOfType(
     resolveState: FirModuleResolveState,
@@ -93,7 +116,7 @@ inline fun <reified F : FirDeclaration, R> KtLambdaExpression.withFirDeclaration
 }
 
 /**
- * Executes [action] with given [FirDeclaration]
+ * Executes [action] with given [FirDeclaration] under read action, so resolve **is not possible** inside [action]
  * [FirDeclaration] passed to [action] will be resolved at least to [phase] when executing [action] on it
  */
 fun <D : FirDeclaration, R> D.withFirDeclaration(
@@ -102,32 +125,62 @@ fun <D : FirDeclaration, R> D.withFirDeclaration(
     action: (D) -> R,
 ): R {
     resolvedFirToPhase(phase, resolveState)
-    val originalDeclaration = (this as? FirCallableDeclaration<*>)?.unwrapFakeOverrides() ?: this
-    val session = originalDeclaration.session
-    return when {
-        originalDeclaration.origin == FirDeclarationOrigin.Source
-                && session is FirIdeSourcesSession
-        -> {
-            val cache = session.cache
-            val file = resolveState.getFirFile(this, cache)
-                ?: error("Fir file was not found for\n${render()}\n${(psi as? KtElement)?.getElementTextInContext()}")
-            cache.firFileLockProvider.withReadLock(file) { action(this) }
-        }
-        else -> action(this)
-    }
+    return resolveState.withLock(this, DeclarationLockType.READ_LOCK, action)
+}
+
+/**
+ * Executes [action] with given [FirDeclaration] under read action, so resolve **is not possible** inside [action]
+ * [FirDeclaration] passed to [action] will be resolved at least to [phase] when executing [action] on it
+ */
+fun <D : FirDeclaration, R> D.withFirDeclaration(
+    type: ResolveType,
+    resolveState: FirModuleResolveState,
+    action: (D) -> R,
+): R {
+    resolvedFirToType(type, resolveState)
+    return resolveState.withLock(this, DeclarationLockType.READ_LOCK, action)
+}
+
+/**
+ * Executes [action] with given [FirDeclaration] under write lock, so resolve **is possible** inside [action]
+ */
+fun <D : FirDeclaration, R> D.withFirDeclarationInWriteLock(
+    resolveState: FirModuleResolveState,
+    phase: FirResolvePhase = FirResolvePhase.RAW_FIR,
+    action: (D) -> R,
+): R {
+    resolvedFirToPhase(phase, resolveState)
+    return resolveState.withLock(this, DeclarationLockType.WRITE_LOCK, action)
+}
+
+/**
+ * Executes [action] with given [FirDeclaration] under write lock, so resolve **is possible** inside [action]
+ */
+fun <D : FirDeclaration, R> D.withFirDeclarationInWriteLock(
+    resolveState: FirModuleResolveState,
+    resolveType: ResolveType = ResolveType.BodyResolveWithChildren,
+    action: (D) -> R,
+): R {
+    resolvedFirToType(resolveType, resolveState)
+    return resolveState.withLock(this, DeclarationLockType.WRITE_LOCK, action)
 }
 
 /**
  * Returns a list of Diagnostics compiler finds for given [KtElement]
+ * This operation could be performance affective because it create FIleStructureElement and resolve non-local declaration into BODY phase
  */
-fun KtElement.getDiagnostics(resolveState: FirModuleResolveState): Collection<Diagnostic> =
-    resolveState.getDiagnostics(this)
+fun KtElement.getDiagnostics(resolveState: FirModuleResolveState, filter: DiagnosticCheckerFilter): Collection<FirPsiDiagnostic> =
+    resolveState.getDiagnostics(this, filter)
 
 /**
  * Returns a list of Diagnostics compiler finds for given [KtFile]
+ * This operation could be performance affective because it create FIleStructureElement and resolve non-local declaration into BODY phase
  */
-fun KtFile.collectDiagnosticsForFile(resolveState: FirModuleResolveState): Collection<Diagnostic> =
-    resolveState.collectDiagnosticsForFile(this)
+fun KtFile.collectDiagnosticsForFile(
+    resolveState: FirModuleResolveState,
+    filter: DiagnosticCheckerFilter
+): Collection<FirPsiDiagnostic> =
+    resolveState.collectDiagnosticsForFile(this, filter)
 
 /**
  * Resolves a given [FirDeclaration] to [phase] and returns resolved declaration
@@ -138,12 +191,24 @@ fun <D : FirDeclaration> D.resolvedFirToPhase(
     phase: FirResolvePhase,
     resolveState: FirModuleResolveState
 ): D =
-    resolveState.resolvedFirToPhase(this, phase)
+    resolveState.resolveFirToPhase(this, phase)
+
+/**
+ * Resolves a given [FirDeclaration] to [phase] and returns resolved declaration
+ *
+ * Should not be called form [withFirDeclaration], [withFirDeclarationOfType] functions, as it it may cause deadlock
+ */
+fun <D : FirDeclaration> D.resolvedFirToType(
+    type: ResolveType,
+    resolveState: FirModuleResolveState
+): D =
+    resolveState.resolveFirToResolveType(this, type)
 
 
 /**
  * Get a [FirElement] which was created by [KtElement]
  * Returned [FirElement] is guaranteed to be resolved to [FirResolvePhase.BODY_RESOLVE] phase
+ * This operation could be performance affective because it create FIleStructureElement and resolve non-local declaration into BODY phase
  */
 fun KtElement.getOrBuildFir(
     resolveState: FirModuleResolveState,
@@ -152,6 +217,7 @@ fun KtElement.getOrBuildFir(
 /**
  * Get a [FirElement] which was created by [KtElement], but only if it is subtype of [E], `null` otherwise
  * Returned [FirElement] is guaranteed to be resolved to [FirResolvePhase.BODY_RESOLVE] phase
+ * This operation could be performance affective because it create FIleStructureElement and resolve non-local declaration into BODY phase
  */
 inline fun <reified E : FirElement> KtElement.getOrBuildFirSafe(
     resolveState: FirModuleResolveState,
@@ -160,6 +226,7 @@ inline fun <reified E : FirElement> KtElement.getOrBuildFirSafe(
 /**
  * Get a [FirElement] which was created by [KtElement], but only if it is subtype of [E], throws [InvalidFirElementTypeException] otherwise
  * Returned [FirElement] is guaranteed to be resolved to [FirResolvePhase.BODY_RESOLVE] phase
+ * This operation could be performance affective because it create FIleStructureElement and resolve non-local declaration into BODY phase
  */
 inline fun <reified E : FirElement> KtElement.getOrBuildFirOfType(
     resolveState: FirModuleResolveState,
@@ -173,8 +240,8 @@ inline fun <reified E : FirElement> KtElement.getOrBuildFirOfType(
  * Get a [FirFile] which was created by [KtElement]
  * Returned [FirFile] can be resolved to any phase from [FirResolvePhase.RAW_FIR] to [FirResolvePhase.BODY_RESOLVE]
  */
-fun KtFile.getFirFile(resolveState: FirModuleResolveState): FirFile =
-    resolveState.getFirFile(this)
+fun KtFile.getOrBuildFirFile(resolveState: FirModuleResolveState): FirFile =
+    resolveState.getOrBuildFirFile(this)
 
 class InvalidFirElementTypeException(
     ktElement: KtElement,

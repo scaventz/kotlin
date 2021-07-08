@@ -5,8 +5,11 @@
 
 package org.jetbrains.kotlin.fir.lazy
 
+import org.jetbrains.kotlin.descriptors.DescriptorVisibility
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.PropertyDescriptor
+import org.jetbrains.kotlin.fir.backend.ConversionTypeContext
+import org.jetbrains.kotlin.fir.backend.ConversionTypeOrigin
 import org.jetbrains.kotlin.fir.backend.Fir2IrComponents
 import org.jetbrains.kotlin.fir.backend.toIrConst
 import org.jetbrains.kotlin.fir.declarations.*
@@ -14,6 +17,7 @@ import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyGetter
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertySetter
 import org.jetbrains.kotlin.fir.expressions.FirConstExpression
 import org.jetbrains.kotlin.fir.symbols.Fir2IrPropertySymbol
+import org.jetbrains.kotlin.fir.symbols.Fir2IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.lazy.lazyVar
@@ -23,10 +27,9 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.util.isInterface
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
-import org.jetbrains.kotlin.descriptors.DescriptorVisibility
-import org.jetbrains.kotlin.fir.backend.ConversionTypeContext
-import org.jetbrains.kotlin.fir.backend.ConversionTypeOrigin
-import org.jetbrains.kotlin.fir.symbols.Fir2IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.fir.backend.*
+import org.jetbrains.kotlin.fir.declarations.utils.*
+import org.jetbrains.kotlin.ir.symbols.IrPropertySymbol
 
 class Fir2IrLazyProperty(
     components: Fir2IrComponents,
@@ -86,7 +89,7 @@ class Fir2IrLazyProperty(
     }
 
     @OptIn(ObsoleteDescriptorBasedAPI::class)
-    override var backingField: IrField? by lazyVar {
+    override var backingField: IrField? by lazyVar(lock) {
         // TODO: this checks are very preliminary, FIR resolve should determine backing field presence itself
         val parent = parent
         when {
@@ -96,7 +99,7 @@ class Fir2IrLazyProperty(
             fir.initializer != null || fir.getter is FirDefaultPropertyGetter || fir.isVar && fir.setter is FirDefaultPropertySetter -> {
                 with(declarationStorage) {
                     createBackingField(
-                        fir, IrDeclarationOrigin.PROPERTY_BACKING_FIELD, descriptor,
+                        fir, IrDeclarationOrigin.PROPERTY_BACKING_FIELD,
                         components.visibilityConverter.convertToDescriptorVisibility(fir.visibility), fir.name, fir.isVal, fir.initializer,
                         type
                     ).also { field ->
@@ -112,7 +115,7 @@ class Fir2IrLazyProperty(
             fir.delegate != null -> {
                 with(declarationStorage) {
                     createBackingField(
-                        fir, IrDeclarationOrigin.PROPERTY_DELEGATE, descriptor,
+                        fir, IrDeclarationOrigin.PROPERTY_DELEGATE,
                         components.visibilityConverter.convertToDescriptorVisibility(fir.visibility),
                         Name.identifier("${fir.name}\$delegate"), true, fir.delegate
                     )
@@ -126,7 +129,8 @@ class Fir2IrLazyProperty(
         }
     }
 
-    override var getter: IrSimpleFunction? by lazyVar {
+    override var getter: IrSimpleFunction? by lazyVar(lock) {
+        if (fir.isConst) return@lazyVar null
         Fir2IrLazyPropertyAccessor(
             components, startOffset, endOffset,
             when {
@@ -154,7 +158,7 @@ class Fir2IrLazyProperty(
         }
     }
 
-    override var setter: IrSimpleFunction? by lazyVar {
+    override var setter: IrSimpleFunction? by lazyVar(lock) {
         if (!fir.isVar) null else Fir2IrLazyPropertyAccessor(
             components, startOffset, endOffset,
             when {
@@ -180,6 +184,16 @@ class Fir2IrLazyProperty(
                 )
             }
         }
+    }
+
+    override var overriddenSymbols: List<IrPropertySymbol> by lazyVar(lock) {
+        fir.generateOverriddenPropertySymbols(
+            containingClass,
+            session,
+            scopeSession,
+            declarationStorage,
+            fakeOverrideGenerator
+        )
     }
 
     override var metadata: MetadataSource?

@@ -34,6 +34,7 @@ internal class FirErrorResolvedQualifierImpl(
     override val diagnostic: ConeDiagnostic,
 ) : FirErrorResolvedQualifier() {
     override var typeRef: FirTypeRef = FirImplicitTypeRefImpl(null)
+    override val resolvedToCompanionObject: Boolean get() = false
 
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {
         typeRef.accept(visitor, data)
@@ -42,7 +43,7 @@ internal class FirErrorResolvedQualifierImpl(
     }
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirErrorResolvedQualifierImpl {
-        typeRef = typeRef.transformSingle(transformer, data)
+        typeRef = typeRef.transform(transformer, data)
         transformAnnotations(transformer, data)
         transformTypeArguments(transformer, data)
         return this
@@ -65,6 +66,8 @@ internal class FirErrorResolvedQualifierImpl(
     override fun replaceIsNullableLHSForCallableReference(newIsNullableLHSForCallableReference: Boolean) {
         isNullableLHSForCallableReference = newIsNullableLHSForCallableReference
     }
+
+    override fun replaceResolvedToCompanionObject(newResolvedToCompanionObject: Boolean) {}
 
     override fun replaceTypeArguments(newTypeArguments: List<FirTypeProjection>) {
         typeArguments.clear()

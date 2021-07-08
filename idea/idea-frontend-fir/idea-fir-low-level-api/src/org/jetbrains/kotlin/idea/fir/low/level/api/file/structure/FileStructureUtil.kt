@@ -10,8 +10,10 @@ import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.idea.fir.low.level.api.file.builder.ModuleFileCache
+import org.jetbrains.kotlin.idea.fir.low.level.api.lazy.resolve.declarationCanBeLazilyResolved
 import org.jetbrains.kotlin.idea.fir.low.level.api.util.replaceFirst
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
@@ -21,16 +23,17 @@ internal object FileStructureUtil {
         ktDeclaration !is KtClassOrObject && ktDeclaration !is KtDeclarationWithBody && ktDeclaration !is KtProperty && ktDeclaration !is KtTypeAlias -> false
         ktDeclaration is KtEnumEntry -> false
         ktDeclaration.containingClassOrObject is KtEnumEntry -> false
-        else -> !KtPsiUtil.isLocal(ktDeclaration)
+        ktDeclaration is KtNamedDeclaration -> !declarationCanBeLazilyResolved(ktDeclaration)
+        else -> false
     }
 
-    fun replaceDeclaration(firFile: FirFile, from: FirCallableDeclaration<*>, to: FirCallableDeclaration<*>) {
+    fun replaceDeclaration(firFile: FirFile, from: FirCallableDeclaration, to: FirCallableDeclaration) {
         val declarations = if (from.symbol.callableId.className == null) {
             firFile.declarations as MutableList<FirDeclaration>
         } else {
             val classLikeLookupTag = from.containingClass()
-                ?: error("Class name should not be null for non-top-level & non-local declarations")
-            val containingClass = classLikeLookupTag.toSymbol(firFile.session)?.fir as FirRegularClass
+                ?: error("Class name should not be null for non-top-level & non-local declarations, but was null for\n${from.render()}")
+            val containingClass = classLikeLookupTag.toSymbol(firFile.moduleData.session)?.fir as FirRegularClass
             containingClass.declarations as MutableList<FirDeclaration>
         }
         declarations.replaceFirst(from, to)
@@ -39,8 +42,8 @@ internal object FileStructureUtil {
     inline fun <R> withDeclarationReplaced(
         firFile: FirFile,
         cache: ModuleFileCache,
-        from: FirCallableDeclaration<*>,
-        to: FirCallableDeclaration<*>,
+        from: FirCallableDeclaration,
+        to: FirCallableDeclaration,
         action: () -> R,
     ): R {
         cache.firFileLockProvider.withWriteLock(firFile) { replaceDeclaration(firFile, from, to) }

@@ -137,7 +137,7 @@ class JavaToJKTreeBuilder constructor(
         val name =
             target.safeAs<KtLightElement<*, *>>()?.kotlinOrigin?.getKotlinFqName()?.asString()
                 ?: target.safeAs<KtLightClass>()?.containingFile?.safeAs<KtFile>()?.packageFqName?.asString()?.let { "$it.*" }
-                ?: target.safeAs<KtLightClassForFacade>()?.fqName?.parent()?.asString()?.let { "$it.*" }
+                ?: target.safeAs<KtLightClassForFacade>()?.facadeClassFqName?.parent()?.asString()?.let { "$it.*" }
                 ?: target.safeAs<KtLightClassForDecompiledDeclaration>()?.fqName()?.parent()?.asString()?.let { "$it.*" }
                 ?: rawName
 

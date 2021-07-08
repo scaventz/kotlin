@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !DIAGNOSTICS: -UNREACHABLE_CODE
 package kt770_351_735
 
@@ -15,7 +14,7 @@ fun main() {
 }
 
 //KT-351 Distinguish statement and expression positions
-val w = <!EXPRESSION_REQUIRED!>while (true) {}<!>
+val w = <!EXPRESSION_EXPECTED!>while (true) {}<!>
 
 fun foo() {
     var z = 2
@@ -27,7 +26,7 @@ fun foo() {
             z = 34
         }
     }
-    val f: ()-> Int = r
+    val f: ()-> Int = <!INITIALIZER_TYPE_MISMATCH!>r<!>
     val g: ()-> Any = r
 }
 
@@ -80,7 +79,7 @@ fun testCoercionToUnit() {
             45
         }
     }
-    val f : () -> String = checkType
+    val f : () -> String = <!INITIALIZER_TYPE_MISMATCH!>checkType<!>
 }
 
 fun doSmth(i: Int) {}
@@ -99,17 +98,17 @@ fun testImplicitCoercion() {
         else -> z--
     }
 
-    var iff = if (true) {
+    var iff = <!INVALID_IF_AS_EXPRESSION!>if<!> (true) {
         z = 34
     }
-    val g = if (true) 4
+    val g = <!INVALID_IF_AS_EXPRESSION!>if<!> (true) 4
     val h = if (false) 4 else {}
 
-    <!INAPPLICABLE_CANDIDATE!>bar<!>(if (true) {
+    bar(<!ARGUMENT_TYPE_MISMATCH!>if (true) {
         4
     } else {
         z = 342
-    })
+    }<!>)
 }
 
 fun fooWithAnyArg(arg: Any) {}
@@ -149,12 +148,12 @@ fun bar(a: Unit) {}
 
 fun testStatementInExpressionContext() {
     var z = 34
-    val a1: Unit = <!EXPRESSION_REQUIRED!>z = 334<!>
+    val a1: Unit = <!ASSIGNMENT_IN_EXPRESSION_CONTEXT!>z = 334<!>
     val f = for (i in 1..10) {}
-    if (true) return <!EXPRESSION_REQUIRED!>z = 34<!>
-    return <!EXPRESSION_REQUIRED!>while (true) {}<!>
+    if (true) return <!ASSIGNMENT_IN_EXPRESSION_CONTEXT!>z = 34<!>
+    return <!EXPRESSION_EXPECTED!>while (true) {}<!>
 }
 
 fun testStatementInExpressionContext2() {
-    val a2: Unit = <!EXPRESSION_REQUIRED!>while(true) {}<!>
+    val a2: Unit = <!EXPRESSION_EXPECTED!>while(true) {}<!>
 }

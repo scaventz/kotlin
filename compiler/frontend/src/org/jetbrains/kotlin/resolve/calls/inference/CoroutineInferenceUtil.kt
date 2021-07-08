@@ -14,10 +14,7 @@ import org.jetbrains.kotlin.descriptors.CallableDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
 import org.jetbrains.kotlin.descriptors.annotations.Annotations
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtFunction
-import org.jetbrains.kotlin.psi.KtLambdaExpression
-import org.jetbrains.kotlin.psi.ValueArgument
+import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.renderer.DescriptorRenderer
 import org.jetbrains.kotlin.renderer.DescriptorRendererOptions
 import org.jetbrains.kotlin.resolve.calls.ArgumentTypeResolver
@@ -299,9 +296,11 @@ class CoroutineInferenceSupport(
     }
 }
 
-private fun KotlinType.containsTypeTemplate() = contains { it is TypeTemplate || it is StubType }
+private fun KotlinType.containsTypeTemplate() = contains { it is TypeTemplate || it is StubTypeForBuilderInference }
 
 fun isApplicableCallForBuilderInference(descriptor: CallableDescriptor, languageVersionSettings: LanguageVersionSettings): Boolean {
+    if (languageVersionSettings.supportsFeature(LanguageFeature.UnrestrictedBuilderInference)) return true
+
     if (!languageVersionSettings.supportsFeature(LanguageFeature.ExperimentalBuilderInference)) {
         return isGoodCallForOldCoroutines(descriptor)
     }
@@ -335,8 +334,11 @@ fun isCoroutineCallWithAdditionalInference(
     else
         parameterDescriptor.hasSuspendFunctionType
 
+    val pureExpression = argument.getArgumentExpression()
+    val baseExpression = if (pureExpression is KtLabeledExpression) pureExpression.baseExpression else pureExpression
+
     return parameterHasOptIn &&
-            argument.getArgumentExpression() is KtLambdaExpression &&
+            baseExpression is KtLambdaExpression &&
             parameterDescriptor.type.let { it.isBuiltinFunctionalType && it.getReceiverTypeFromFunctionType() != null }
 }
 

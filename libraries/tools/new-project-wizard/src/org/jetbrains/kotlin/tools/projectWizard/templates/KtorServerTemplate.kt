@@ -51,7 +51,7 @@ class KtorServerTemplate : Template() {
                 +ktorArtifactDependency(serverEngine.reference.settingValue.dependencyName, kotlinVersion)
                 +ktorArtifactDependency("ktor-html-builder", kotlinVersion)
                 +ArtifactBasedLibraryDependencyIR(
-                    MavenArtifact(Repositories.KOTLINX, "org.jetbrains.kotlinx", "kotlinx-html-jvm"),
+                    MavenArtifact(Repositories.KOTLINX_HTML, "org.jetbrains.kotlinx", "kotlinx-html-jvm"),
                     Versions.KOTLINX.KOTLINX_HTML,
                     DependencyType.MAIN
                 )
@@ -59,7 +59,7 @@ class KtorServerTemplate : Template() {
         }
 
     override fun Writer.getIrsToAddToBuildFile(module: ModuleIR): List<BuildSystemIR> = buildList {
-        +RepositoryIR(Repositories.KTOR_BINTRAY)
+        +RepositoryIR(Repositories.KTOR)
         +RepositoryIR(DefaultRepository.JCENTER)
         +runTaskIrs(mainClass = "ServerKt")
     }
@@ -89,7 +89,7 @@ class KtorServerTemplate : Template() {
 }
 
 private fun ktorArtifactDependency(@NonNls name: String, kotlinVersion: Version) = ArtifactBasedLibraryDependencyIR(
-    MavenArtifact(Repositories.KTOR_BINTRAY, "io.ktor", name),
+    MavenArtifact(Repositories.KTOR, "io.ktor", name),
     Versions.KTOR,
     DependencyType.MAIN
 )
@@ -111,8 +111,8 @@ enum class KtorServerEngine(val engineName: String, val dependencyName: String) 
     );
 
     override val text: String
-        get() = engineName.capitalize()
+        get() = engineName.replaceFirstChar(Char::uppercaseChar)
 
     val import: String
-        get() = "io.ktor.server.${engineName.decapitalize(Locale.US)}.${engineName.capitalize(Locale.US)}"
+        get() = "io.ktor.server.${engineName.replaceFirstChar(Char::lowercaseChar)}.${engineName.replaceFirstChar(Char::uppercaseChar)}"
 }

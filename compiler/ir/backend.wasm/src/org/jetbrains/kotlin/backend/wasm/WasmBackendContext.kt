@@ -14,19 +14,23 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.impl.EmptyPackageFragmentDescriptor
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.SourceManager
+import org.jetbrains.kotlin.ir.IrFileEntry
 import org.jetbrains.kotlin.ir.SourceRangeInfo
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.backend.js.JsCommonBackendContext
 import org.jetbrains.kotlin.ir.backend.js.JsMapping
 import org.jetbrains.kotlin.ir.backend.js.lower.JsInnerClassesSupport
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
-import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.IrFactory
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.IrPackageFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrExternalPackageFragmentImpl
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
-import org.jetbrains.kotlin.ir.declarations.persistent.PersistentIrFactory
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.impl.DescriptorlessExternalPackageFragmentSymbol
+import org.jetbrains.kotlin.ir.types.IrTypeSystemContext
+import org.jetbrains.kotlin.ir.types.IrTypeSystemContextImpl
 import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -37,13 +41,13 @@ class WasmBackendContext(
     @Suppress("UNUSED_PARAMETER") symbolTable: SymbolTable,
     @Suppress("UNUSED_PARAMETER") irModuleFragment: IrModuleFragment,
     val additionalExportedDeclarations: Set<FqName>,
-    override val configuration: CompilerConfiguration
+    override val configuration: CompilerConfiguration,
 ) : JsCommonBackendContext {
     override val builtIns = module.builtIns
+    override val typeSystem: IrTypeSystemContext = IrTypeSystemContextImpl(irBuiltIns)
     override var inVerbosePhase: Boolean = false
     override val scriptMode = false
-    override val extractedLocalClasses: MutableSet<IrClass> = hashSetOf()
-    override val irFactory: IrFactory = PersistentIrFactory
+    override val irFactory: IrFactory = symbolTable.irFactory
 
     // Place to store declarations excluded from code generation
     private val excludedDeclarations = mutableMapOf<FqName, IrPackageFragment>()
@@ -55,7 +59,7 @@ class WasmBackendContext(
         )
     }
 
-    override val mapping = JsMapping()
+    override val mapping = JsMapping(irFactory)
 
     val innerClassesSupport = JsInnerClassesSupport(mapping, irFactory)
 
@@ -64,7 +68,7 @@ class WasmBackendContext(
     private val internalPackageFragmentDescriptor = EmptyPackageFragmentDescriptor(builtIns.builtInsModule, FqName("kotlin.wasm.internal"))
     // TODO: Merge with JS IR Backend context lazy file
     val internalPackageFragment by lazy {
-        IrFileImpl(object : SourceManager.FileEntry {
+        IrFileImpl(object : IrFileEntry {
             override val name = "<implicitDeclarations>"
             override val maxOffset = UNDEFINED_OFFSET
 
@@ -81,7 +85,7 @@ class WasmBackendContext(
 
             override fun getLineNumber(offset: Int) = UNDEFINED_OFFSET
             override fun getColumnNumber(offset: Int) = UNDEFINED_OFFSET
-        }, internalPackageFragmentDescriptor).also {
+        }, internalPackageFragmentDescriptor, irModuleFragment).also {
             irModuleFragment.files += it
         }
     }

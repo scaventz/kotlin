@@ -9,13 +9,17 @@ import org.jetbrains.kotlin.backend.common.ir.allParametersCount
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.intrinsics.SignatureString
 import org.jetbrains.kotlin.backend.jvm.lower.FunctionReferenceLowering
+import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.codegen.AsmUtil
 import org.jetbrains.kotlin.codegen.inline.ReifiedTypeInliner
+import org.jetbrains.kotlin.codegen.state.GenerationState
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.descriptors.toIrBasedKotlinType
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.util.defaultType
+import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes.*
 import org.jetbrains.kotlin.types.KotlinType
@@ -29,6 +33,9 @@ class IrInlineIntrinsicsSupport(
     private val context: JvmBackendContext,
     private val typeMapper: IrTypeMapper
 ) : ReifiedTypeInliner.IntrinsicsSupport<IrType> {
+    override val state: GenerationState
+        get() = context.state
+
     override fun putClassInstance(v: InstructionAdapter, type: IrType) {
         ExpressionCodegen.generateClassInstance(v, type, typeMapper)
     }
@@ -77,13 +84,13 @@ class IrInlineIntrinsicsSupport(
         v.anew(implClass)
         v.dup()
         if (withArity) {
-            v.aconst(function.allParametersCount)
+            v.iconst(function.allParametersCount)
         }
         putClassInstance(v, FunctionReferenceLowering.getOwnerKClassType(declaration.parent, context))
         v.aconst(declaration.name.asString())
         // TODO: generate correct signature for functions and property accessors which have inline class types in the signature.
         SignatureString.generateSignatureString(v, function, context)
-        v.aconst(FunctionReferenceLowering.getCallableReferenceTopLevelFlag(declaration))
+        v.iconst(FunctionReferenceLowering.getCallableReferenceTopLevelFlag(declaration))
         val parameterTypes =
             (if (withArity) listOf(INT_TYPE) else emptyList()) +
                     listOf(JAVA_CLASS_TYPE, JAVA_STRING_TYPE, JAVA_STRING_TYPE, INT_TYPE)
@@ -92,6 +99,11 @@ class IrInlineIntrinsicsSupport(
             Type.getMethodDescriptor(VOID_TYPE, *parameterTypes.toTypedArray()),
             false
         )
+    }
+
+    override fun isMutableCollectionType(type: IrType): Boolean {
+        val classifier = type.classOrNull
+        return classifier != null && JavaToKotlinClassMap.isMutable(classifier.owner.fqNameWhenAvailable?.toUnsafe())
     }
 
     override fun toKotlinType(type: IrType): KotlinType = type.toIrBasedKotlinType()

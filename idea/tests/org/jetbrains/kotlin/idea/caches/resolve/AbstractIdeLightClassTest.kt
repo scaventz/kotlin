@@ -15,11 +15,11 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.annotations.NotNull
 import org.jetbrains.annotations.Nullable
 import org.jetbrains.kotlin.asJava.LightClassTestCommon
+import org.jetbrains.kotlin.asJava.PsiClassRenderer
 import org.jetbrains.kotlin.asJava.builder.LightClassConstructionContext
 import org.jetbrains.kotlin.asJava.builder.StubComputationTracker
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
 import org.jetbrains.kotlin.asJava.classes.KtLightClassForFacade
-import org.jetbrains.kotlin.asJava.classes.KtLightClassForSourceDeclaration
 import org.jetbrains.kotlin.asJava.elements.*
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.codegen.forTestCompile.ForTestCompileRuntime
@@ -29,8 +29,10 @@ import org.jetbrains.kotlin.idea.caches.resolve.LightClassLazinessChecker.Tracke
 import org.jetbrains.kotlin.idea.completion.test.withServiceRegistered
 import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.perf.forceUsingOldLightClassesForTest
+import org.jetbrains.kotlin.idea.test.CompilerTestDirectives
 import org.jetbrains.kotlin.idea.test.KotlinLightCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.idea.test.KotlinWithJdkAndRuntimeLightProjectDescriptor
+import org.jetbrains.kotlin.idea.test.withCustomCompilerOptions
 import org.jetbrains.kotlin.load.java.JvmAnnotationNames
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
@@ -39,14 +41,13 @@ import org.jetbrains.kotlin.test.MockLibraryUtilExt
 import org.jetbrains.kotlin.test.util.KtTestUtil
 import org.jetbrains.kotlin.utils.keysToMap
 import org.jetbrains.plugins.groovy.lang.psi.impl.stringValue
-import org.junit.Assert
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 abstract class AbstractIdeLightClassTest : KotlinLightCodeInsightFixtureTestCase() {
-    fun doTest(unused: String) {
+    fun doTest(@Suppress("UNUSED_PARAMETER") unused: String) {
         forceUsingOldLightClassesForTest()
         val fileName = fileName()
         val extraFilePath = when {
@@ -54,30 +55,31 @@ abstract class AbstractIdeLightClassTest : KotlinLightCodeInsightFixtureTestCase
             else -> error("Invalid test data extension")
         }
 
-        val testFiles = if (File(testDataPath, extraFilePath).isFile) listOf(fileName, extraFilePath) else listOf(fileName)
+        withCustomCompilerOptions(File(testDataPath, fileName).readText(), project, module) {
+            val testFiles = if (File(testDataPath, extraFilePath).isFile) listOf(fileName, extraFilePath) else listOf(fileName)
+            val lazinessMode = lazinessModeByFileText()
+            myFixture.configureByFiles(*testFiles.toTypedArray())
+            if ((myFixture.file as? KtFile)?.isScript() == true) {
+                ScriptConfigurationManager.updateScriptDependenciesSynchronously(myFixture.file)
+            }
 
-        val lazinessMode = lazinessModeByFileText()
-        myFixture.configureByFiles(*testFiles.toTypedArray())
-        if ((myFixture.file as? KtFile)?.isScript() == true) {
-            ScriptConfigurationManager.updateScriptDependenciesSynchronously(myFixture.file)
-        }
-
-        val ktFile = myFixture.file as KtFile
-        val testData = testDataFile()
-        testLightClass(
-            KotlinTestUtils.replaceExtension(testData, "java"),
-            testData,
-            { LightClassTestCommon.removeEmptyDefaultImpls(it) },
-            { fqName ->
-                val tracker = LightClassLazinessChecker.Tracker(fqName)
-                project.withServiceRegistered<StubComputationTracker, PsiClass?>(tracker) {
-                    findClass(fqName, ktFile, project)?.apply {
-                        LightClassLazinessChecker.check(this as KtLightClass, tracker, lazinessMode)
-                        tracker.allowLevel(EXACT)
-                        PsiElementChecker.checkPsiElementStructure(this)
+            val ktFile = myFixture.file as KtFile
+            val testData = testDataFile()
+            testLightClass(
+                KotlinTestUtils.replaceExtension(testData, "java"),
+                testData,
+                { LightClassTestCommon.removeEmptyDefaultImpls(it) },
+                { fqName ->
+                    val tracker = LightClassLazinessChecker.Tracker(fqName)
+                    project.withServiceRegistered<StubComputationTracker, PsiClass?>(tracker) {
+                        findClass(fqName, ktFile, project)?.apply {
+                            LightClassLazinessChecker.check(this as KtLightClass, tracker, lazinessMode)
+                            tracker.allowLevel(EXACT)
+                            PsiElementChecker.checkPsiElementStructure(this)
+                        }
                     }
-                }
-            })
+                })
+        }
     }
 
     private fun lazinessModeByFileText(): LightClassLazinessChecker.Mode {
@@ -105,11 +107,16 @@ abstract class AbstractIdeCompiledLightClassTest : KotlinDaemonAnalyzerTestCase(
         val filePathWithoutExtension = "${KtTestUtil.getTestsRoot(this::class.java)}/${getTestName(false)}"
         val testFile =
             File("$filePathWithoutExtension.kt").takeIf { it.exists() } ?: File("$filePathWithoutExtension.kts").takeIf { it.exists() }
+            ?: error("Test file not found!")
 
-        Assert.assertNotNull("Test file not found!", testFile)
-
+        val extraOptions = KotlinTestUtils.parseDirectives(testFile.readText())[
+                CompilerTestDirectives.JVM_TARGET_DIRECTIVE.substringBefore(":")
+        ]?.let { jvmTarget ->
+            listOf("-jvm-target", jvmTarget)
+        } ?: emptyList()
         val libraryJar = MockLibraryUtilExt.compileJvmLibraryToJar(
-            testFile!!.canonicalPath, libName(),
+            testFile.canonicalPath, libName(),
+            extraOptions = extraOptions,
             extraClasspath = listOf(ForTestCompileRuntime.jetbrainsAnnotationsForTests().path)
         )
         val jarUrl = "jar://" + FileUtilRt.toSystemIndependentName(libraryJar.absolutePath) + "!/"
@@ -120,18 +127,48 @@ abstract class AbstractIdeCompiledLightClassTest : KotlinDaemonAnalyzerTestCase(
 
     fun doTest(testDataPath: String) {
         val testDataFile = File(testDataPath)
-        val expectedFile = KotlinTestUtils.replaceExtension(
-            testDataFile, "compiled.java"
-        ).let { if (it.exists()) it else KotlinTestUtils.replaceExtension(testDataFile, "java") }
-        testLightClass(expectedFile, testDataFile, { it }, {
-            findClass(it, null, project)?.apply {
-                PsiElementChecker.checkPsiElementStructure(this)
+        val expectedFile = KotlinTestUtils.replaceExtension(testDataFile, "compiled.java").let {
+            if (it.exists()) it else KotlinTestUtils.replaceExtension(testDataFile, "java")
+        }
+        withCustomCompilerOptions(testDataFile.readText(), project, module) {
+            testLightClass(
+                expectedFile,
+                testDataFile,
+                { it },
+                {
+                    findClass(it, null, project)?.apply {
+                        PsiElementChecker.checkPsiElementStructure(this)
+                    }
+                },
+                MembersFilterForCompiledClasses
+            )
+        }
+    }
+
+    private object MembersFilterForCompiledClasses : PsiClassRenderer.MembersFilter {
+        override fun includeMethod(psiMethod: PsiMethod): Boolean {
+            // Exclude methods for local functions.
+            // JVM_IR generates local functions (and some lambdas) as private methods in the surrounding class.
+            // Such methods are private and have names such as 'foo$...'.
+            // They are not a part of the public API, and are not represented in the light classes.
+            // NB this is a heuristic, and it will obviously fail for declarations such as 'private fun `foo$bar`() {}'.
+            // However, it allows writing code in more or less "idiomatic" style in the light class tests
+            // without thinking about private ABI and compiler optimizations.
+            if (psiMethod.modifierList.hasExplicitModifier(PsiModifier.PRIVATE)) {
+                return '$' !in psiMethod.name
             }
-        })
+            return super.includeMethod(psiMethod)
+        }
     }
 }
 
-private fun testLightClass(expected: File, testData: File, normalize: (String) -> String, findLightClass: (String) -> PsiClass?) {
+private fun testLightClass(
+    expected: File,
+    testData: File,
+    normalize: (String) -> String,
+    findLightClass: (String) -> PsiClass?,
+    membersFilter: PsiClassRenderer.MembersFilter = PsiClassRenderer.MembersFilter.DEFAULT
+) {
     val actual = LightClassTestCommon.getActualLightClassText(
         testData,
         findLightClass = findLightClass,
@@ -145,7 +182,8 @@ private fun testLightClass(expected: File, testData: File, normalize: (String) -
                 .replace("java.lang.String[] strings", "java.lang.String[] p")
                 .removeLinesStartingWith("@" + JvmAnnotationNames.METADATA_FQ_NAME.asString())
                 .run(normalize)
-        }
+        },
+        membersFilter = membersFilter
     )
     KotlinTestUtils.assertEqualsToFile(expected, actual)
 }

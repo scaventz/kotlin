@@ -6,23 +6,21 @@
 package org.jetbrains.kotlin.idea.frontend.api.fir
 
 import com.intellij.openapi.project.Project
-import org.jetbrains.kotlin.fir.declarations.FirFile
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
-import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.fir.low.level.api.api.LowLevelFirApiFacadeForCompletion
-import org.jetbrains.kotlin.idea.fir.low.level.api.api.getFirFile
-import org.jetbrains.kotlin.idea.fir.low.level.api.api.getResolveState
+import com.intellij.psi.search.GlobalSearchScope
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.moduleData
+import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.symbolProvider
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.*
+import org.jetbrains.kotlin.idea.frontend.api.InvalidWayOfUsingAnalysisSession
 import org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSession
-import org.jetbrains.kotlin.idea.frontend.api.ReadActionConfinementValidityToken
-import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
-import org.jetbrains.kotlin.idea.frontend.api.assertIsValidAndAccessible
 import org.jetbrains.kotlin.idea.frontend.api.components.*
 import org.jetbrains.kotlin.idea.frontend.api.fir.components.*
+import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.KtFirOverrideInfoProvider
 import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.KtFirSymbolProvider
-import org.jetbrains.kotlin.idea.frontend.api.fir.utils.EnclosingDeclarationContext
-import org.jetbrains.kotlin.idea.frontend.api.fir.utils.buildCompletionContext
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.threadLocal
-import org.jetbrains.kotlin.idea.frontend.api.symbols.KtSymbolProvider
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ValidityToken
+import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
 
@@ -32,57 +30,96 @@ private constructor(
     val firResolveState: FirModuleResolveState,
     internal val firSymbolBuilder: KtSymbolByFirBuilder,
     token: ValidityToken,
-    val context: KtFirAnalysisSessionContext,
+    element: KtElement,
+    private val mode: AnalysisSessionMode,
 ) : KtAnalysisSession(token) {
-    init {
-        assertIsValidAndAccessible()
+
+    private enum class AnalysisSessionMode {
+        REGULAR,
+        DEPENDENT_COPY
     }
 
-    internal val towerDataContextProvider: TowerDataContextProvider = TowerDataContextProvider(this)
+    override val smartCastProviderImpl = KtFirSmartcastProvider(this, token)
 
-    override val smartCastProvider: KtSmartCastProvider = KtFirSmartcastProvider(this, token)
-    override val expressionTypeProvider: KtExpressionTypeProvider = KtFirExpressionTypeProvider(this, token)
-    override val diagnosticProvider: KtDiagnosticProvider = KtFirDiagnosticProvider(this, token)
-    override val containingDeclarationProvider = KtFirSymbolContainingDeclarationProvider(this, token)
-    override val callResolver: KtCallResolver = KtFirCallResolver(this, token)
-    override val scopeProvider by threadLocal { KtFirScopeProvider(this, firSymbolBuilder, project, firResolveState, token) }
-    override val symbolProvider: KtSymbolProvider =
-        KtFirSymbolProvider(this, firResolveState.rootModuleSession.firSymbolProvider, firResolveState, firSymbolBuilder, token)
-    override val completionCandidateChecker: KtCompletionCandidateChecker = KtFirCompletionCandidateChecker(this, token)
-    override val symbolDeclarationOverridesProvider: KtSymbolDeclarationOverridesProvider =
+    override val expressionTypeProviderImpl = KtFirExpressionTypeProvider(this, token)
+
+    override val diagnosticProviderImpl = KtFirDiagnosticProvider(this, token)
+
+    override val containingDeclarationProviderImpl = KtFirSymbolContainingDeclarationProvider(this, token)
+
+    override val callResolverImpl = KtFirCallResolver(this, token)
+
+    override val scopeProviderImpl by threadLocal { KtFirScopeProvider(this, firSymbolBuilder, project, firResolveState, token) }
+
+    override val symbolProviderImpl =
+        KtFirSymbolProvider(this, firResolveState.rootModuleSession.symbolProvider, firResolveState, firSymbolBuilder, token)
+
+    override val completionCandidateCheckerImpl = KtFirCompletionCandidateChecker(this, token)
+
+    override val symbolDeclarationOverridesProviderImpl =
         KtFirSymbolDeclarationOverridesProvider(this, token)
 
-    override val expressionHandlingComponent: KtExpressionHandlingComponent = KtFirExpressionHandlingComponent(this, token)
-    override val typeProvider: KtTypeProvider = KtFirTypeProvider(this, token)
-    override val subtypingComponent: KtSubtypingComponent = KtFirSubtypingComponent(this, token)
+    override val referenceShortenerImpl = KtFirReferenceShortener(this, token, firResolveState)
 
-    override fun createContextDependentCopy(originalKtFile: KtFile, fakeKtElement: KtElement): KtAnalysisSession {
-        check(context == KtFirAnalysisSessionContext.DefaultContext) {
+    override val symbolDeclarationRendererProviderImpl: KtSymbolDeclarationRendererProvider =
+        KtFirSymbolDeclarationRendererProvider(this, token)
+
+    override val expressionInfoProviderImpl = KtFirExpressionInfoProvider(this, token)
+
+    override val compileTimeConstantProviderImpl: KtCompileTimeConstantProvider = KtFirCompileTimeConstantProvider(this, token)
+
+    override val overrideInfoProviderImpl = KtFirOverrideInfoProvider(this, token)
+
+    override val visibilityCheckerImpl: KtVisibilityChecker = KtFirVisibilityChecker(this, token)
+
+    override val psiTypeProviderImpl = KtFirPsiTypeProvider(this, token)
+
+    override val typeProviderImpl = KtFirTypeProvider(this, token)
+
+    override val typeInfoProviderImpl = KtFirTypeInfoProvider(this, token)
+
+    override val subtypingComponentImpl = KtFirSubtypingComponent(this, token)
+
+    override val inheritorsProviderImpl: KtInheritorsProvider = KtFirInheritorsProvider(this, token)
+
+    override val typesCreatorImpl: KtTypeCreator = KtFirTypeCreator(this, token)
+
+    override fun createContextDependentCopy(originalKtFile: KtFile, elementToReanalyze: KtElement): KtAnalysisSession {
+        check(mode == AnalysisSessionMode.REGULAR) {
             "Cannot create context-dependent copy of KtAnalysis session from a context dependent one"
         }
-        val contextResolveState = LowLevelFirApiFacadeForCompletion.getResolveStateForCompletion(firResolveState)
-        val originalFirFile = originalKtFile.getFirFile(firResolveState)
-        val context = KtFirAnalysisSessionContext.FakeFileContext(originalKtFile, originalFirFile, fakeKtElement, contextResolveState)
+        require(!elementToReanalyze.isPhysical) { "Depended context should be build only for non-physical elements" }
+
+        val contextResolveState = LowLevelFirApiFacadeForResolveOnAir.getResolveStateForDependentCopy(
+            originalState = firResolveState,
+            originalKtFile = originalKtFile,
+            elementToAnalyze = elementToReanalyze
+        )
+
         return KtFirAnalysisSession(
             project,
             contextResolveState,
             firSymbolBuilder.createReadOnlyCopy(contextResolveState),
             token,
-            context
+            originalKtFile,
+            AnalysisSessionMode.DEPENDENT_COPY
         )
     }
 
-    companion object {
-        @Deprecated("Please use org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSessionProviderKt.analyze")
-        internal fun createForElement(element: KtElement): KtFirAnalysisSession {
-            val firResolveState = element.getResolveState()
-            return createAnalysisSessionByResolveState(firResolveState)
-        }
+    val rootModuleSession: FirSession get() = firResolveState.rootModuleSession
+    val firSymbolProvider: FirSymbolProvider get() = rootModuleSession.symbolProvider
+    val targetPlatform: TargetPlatform get() = rootModuleSession.moduleData.platform
+    val searchScope: GlobalSearchScope = element.resolveScope//todo
 
+    companion object {
+        @InvalidWayOfUsingAnalysisSession
         @Deprecated("Please use org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSessionProviderKt.analyze")
-        internal fun createAnalysisSessionByResolveState(firResolveState: FirModuleResolveState): KtFirAnalysisSession {
+        internal fun createAnalysisSessionByResolveState(
+            firResolveState: FirModuleResolveState,
+            token: ValidityToken,
+            element: KtElement,
+        ): KtFirAnalysisSession {
             val project = firResolveState.project
-            val token = ReadActionConfinementValidityToken(project)
             val firSymbolBuilder = KtSymbolByFirBuilder(
                 firResolveState,
                 project,
@@ -93,31 +130,9 @@ private constructor(
                 firResolveState,
                 firSymbolBuilder,
                 token,
-                KtFirAnalysisSessionContext.DefaultContext
+                element,
+                AnalysisSessionMode.REGULAR,
             )
         }
     }
 }
-
-internal sealed class KtFirAnalysisSessionContext {
-    object DefaultContext : KtFirAnalysisSessionContext()
-
-    class FakeFileContext(
-        originalFile: KtFile,
-        firFile: FirFile,
-        fakeContextElement: KtElement,
-        fakeModuleResolveState: FirModuleResolveState
-    ) : KtFirAnalysisSessionContext() {
-        init {
-            require(!fakeContextElement.isPhysical)
-        }
-
-        val completionContext = run {
-            val enclosingContext = EnclosingDeclarationContext.detect(originalFile, fakeContextElement)
-            enclosingContext.buildCompletionContext(firFile, fakeModuleResolveState)
-        }
-
-        val fakeKtFile = fakeContextElement.containingKtFile
-    }
-}
-

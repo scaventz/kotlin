@@ -11,11 +11,13 @@ dependencies {
     compile(project(":compiler:backend-common"))
     compile(project(":compiler:ir.backend.common"))
     compile(project(":compiler:ir.serialization.js"))
+    compile(project(":compiler:ir.tree.impl"))
     compile(project(":compiler:backend.js"))
     compile(project(":compiler:backend.wasm"))
     compile(project(":js:js.translator"))
     compile(project(":js:js.serializer"))
     compile(project(":js:js.dce"))
+    compile(project(":js:js.sourcemap"))
 
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
 }

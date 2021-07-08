@@ -7,8 +7,7 @@ package org.jetbrains.kotlin.fir.resolve.calls.tower
 
 import org.jetbrains.kotlin.fir.resolve.calls.*
 import org.jetbrains.kotlin.fir.scopes.FirScope
-import org.jetbrains.kotlin.fir.scopes.ProcessorAction
-import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 
@@ -22,7 +21,7 @@ internal class CandidateFactoriesAndCollectors(
 internal class TowerLevelHandler {
 
     // Try to avoid adding additional state here
-    private var processResult = ProcessorAction.NONE
+    private var processResult = ProcessResult.SCOPE_EMPTY
 
     fun handleLevel(
         collector: CandidateCollector,
@@ -31,8 +30,8 @@ internal class TowerLevelHandler {
         explicitReceiverKind: ExplicitReceiverKind,
         group: TowerGroup,
         towerLevel: SessionBasedTowerLevel
-    ): ProcessorAction {
-        processResult = ProcessorAction.NONE
+    ): ProcessResult {
+        processResult = ProcessResult.SCOPE_EMPTY
         val processor =
             TowerScopeLevelProcessor(
                 info,
@@ -44,18 +43,18 @@ internal class TowerLevelHandler {
 
         when (info.callKind) {
             CallKind.VariableAccess -> {
-                processResult += towerLevel.processPropertiesByName(info.name, processor)
+                processResult += towerLevel.processPropertiesByName(info, processor)
 
                 if (!collector.isSuccess() && towerLevel is ScopeTowerLevel && towerLevel.extensionReceiver == null) {
-                    processResult += towerLevel.processObjectsByName(info.name, processor)
+                    processResult += towerLevel.processObjectsByName(info, processor)
                 }
             }
             CallKind.Function -> {
-                processResult += towerLevel.processFunctionsByName(info.name, processor)
+                processResult += towerLevel.processFunctionsByName(info, processor)
             }
             CallKind.CallableReference -> {
-                processResult += towerLevel.processFunctionsByName(info.name, processor)
-                processResult += towerLevel.processPropertiesByName(info.name, processor)
+                processResult += towerLevel.processFunctionsByName(info, processor)
+                processResult += towerLevel.processPropertiesByName(info, processor)
             }
             else -> {
                 throw AssertionError("Unsupported call kind in tower resolver: ${info.callKind}")
@@ -71,9 +70,9 @@ private class TowerScopeLevelProcessor(
     val resultCollector: CandidateCollector,
     val candidateFactory: CandidateFactory,
     val group: TowerGroup
-) : TowerScopeLevel.TowerScopeLevelProcessor<AbstractFirBasedSymbol<*>> {
+) : TowerScopeLevel.TowerScopeLevelProcessor<FirBasedSymbol<*>> {
     override fun consumeCandidate(
-        symbol: AbstractFirBasedSymbol<*>,
+        symbol: FirBasedSymbol<*>,
         dispatchReceiverValue: ReceiverValue?,
         extensionReceiverValue: ReceiverValue?,
         scope: FirScope,

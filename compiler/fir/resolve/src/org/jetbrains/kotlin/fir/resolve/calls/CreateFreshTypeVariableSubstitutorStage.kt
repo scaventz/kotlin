@@ -10,15 +10,17 @@ import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
 import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.renderWithType
 import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
-import org.jetbrains.kotlin.fir.resolve.inference.TypeParameterBasedTypeVariable
+import org.jetbrains.kotlin.fir.resolve.inference.ConeTypeParameterBasedTypeVariable
 import org.jetbrains.kotlin.fir.resolve.inference.inferenceComponents
 import org.jetbrains.kotlin.fir.resolve.inference.model.ConeDeclaredUpperBoundConstraintPosition
+import org.jetbrains.kotlin.fir.resolve.inference.model.ConeExplicitTypeParameterConstraintPosition
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.substitutorByMap
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.symbols.impl.FirTypeParameterSymbol
+import org.jetbrains.kotlin.fir.symbols.ConeTypeParameterLookupTag
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.FirTypePlaceholderProjection
+import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.resolve.calls.inference.ConstraintSystemOperation
 import org.jetbrains.kotlin.resolve.calls.inference.model.SimpleConstraintSystemConstraintPosition
 
@@ -32,7 +34,7 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
         }
         val csBuilder = candidate.system.getBuilder()
         val (substitutor, freshVariables) =
-            createToFreshVariableSubstitutorAndAddInitialConstraints(declaration, candidate, csBuilder, callInfo.session)
+            createToFreshVariableSubstitutorAndAddInitialConstraints(declaration, csBuilder, context.session)
         candidate.substitutor = substitutor
         candidate.freshVariables = freshVariables
 
@@ -68,9 +70,9 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
                     getTypePreservingFlexibilityWrtTypeVariable(
                         typeArgument.typeRef.coneType,
                         typeParameter,
-                        context.session.inferenceComponents.ctx
+                        context.session
                     ).fullyExpandedType(context.session),
-                    SimpleConstraintSystemConstraintPosition // TODO
+                    ConeExplicitTypeParameterConstraintPosition(typeArgument)
                 )
                 is FirStarProjection -> csBuilder.addEqualityConstraint(
                     freshVariable.defaultType,
@@ -88,11 +90,11 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
     private fun getTypePreservingFlexibilityWrtTypeVariable(
         type: ConeKotlinType,
         typeParameter: FirTypeParameterRef,
-        context: ConeTypeContext
+        session: FirSession,
     ): ConeKotlinType {
-        return if (typeParameter.shouldBeFlexible(context)) {
-            val notNullType = type.withNullability(ConeNullability.NOT_NULL)
-            ConeFlexibleType(notNullType, notNullType.withNullability(ConeNullability.NULLABLE))
+        return if (typeParameter.shouldBeFlexible(session.typeContext)) {
+            val notNullType = type.withNullability(ConeNullability.NOT_NULL, session.typeContext)
+            ConeFlexibleType(notNullType, notNullType.withNullability(ConeNullability.NULLABLE, session.typeContext))
         } else {
             type
         }
@@ -102,7 +104,7 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
         return symbol.fir.bounds.any {
             val type = it.coneType
             type is ConeFlexibleType || with(context) {
-                (type.typeConstructor() as? FirTypeParameterSymbol)?.fir?.shouldBeFlexible(context) ?: false
+                (type.typeConstructor() as? ConeTypeParameterLookupTag)?.symbol?.fir?.shouldBeFlexible(context) ?: false
             }
         }
     }
@@ -111,22 +113,21 @@ internal object CreateFreshTypeVariableSubstitutorStage : ResolutionStage() {
 
 private fun createToFreshVariableSubstitutorAndAddInitialConstraints(
     declaration: FirTypeParameterRefsOwner,
-    candidate: Candidate,
     csBuilder: ConstraintSystemOperation,
     session: FirSession
 ): Pair<ConeSubstitutor, List<ConeTypeVariable>> {
 
     val typeParameters = declaration.typeParameters
 
-    val freshTypeVariables = typeParameters.map { TypeParameterBasedTypeVariable(it.symbol) }
+    val freshTypeVariables = typeParameters.map { ConeTypeParameterBasedTypeVariable(it.symbol) }
 
-    val toFreshVariables = substitutorByMap(freshTypeVariables.associate { it.typeParameterSymbol to it.defaultType })
+    val toFreshVariables = substitutorByMap(freshTypeVariables.associate { it.typeParameterSymbol to it.defaultType }, session)
 
     for (freshVariable in freshTypeVariables) {
         csBuilder.registerVariable(freshVariable)
     }
 
-    fun TypeParameterBasedTypeVariable.addSubtypeConstraint(
+    fun ConeTypeParameterBasedTypeVariable.addSubtypeConstraint(
         upperBound: ConeKotlinType//,
         //position: DeclaredUpperBoundConstraintPosition
     ) {
@@ -153,26 +154,5 @@ private fun createToFreshVariableSubstitutorAndAddInitialConstraints(
         }
     }
 
-//    if (candidateDescriptor is TypeAliasConstructorDescriptor) {
-//        val typeAliasDescriptor = candidateDescriptor.typeAliasDescriptor
-//        val originalTypes = typeAliasDescriptor.underlyingType.arguments.map { it.type }
-//        val originalTypeParameters = candidateDescriptor.underlyingConstructorDescriptor.typeParameters
-//        for (index in typeParameters.indices) {
-//            val typeParameter = typeParameters[index]
-//            val freshVariable = freshTypeVariables[index]
-//            val typeMapping = originalTypes.mapIndexedNotNull { i: Int, kotlinType: KotlinType ->
-//                if (kotlinType == typeParameter.defaultType) i else null
-//            }
-//            for (originalIndex in typeMapping) {
-//                // there can be null in case we already captured type parameter in outer class (in case of inner classes)
-//                // see test innerClassTypeAliasConstructor.kt
-//                val originalTypeParameter = originalTypeParameters.getOrNull(originalIndex) ?: continue
-//                val position = DeclaredUpperBoundConstraintPosition(originalTypeParameter)
-//                for (upperBound in originalTypeParameter.upperBounds) {
-//                    freshVariable.addSubtypeConstraint(upperBound, position)
-//                }
-//            }
-//        }
-//    }
     return toFreshVariables to freshTypeVariables
 }

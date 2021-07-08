@@ -5,127 +5,106 @@
 
 package org.jetbrains.kotlin.test.services.configuration
 
-import com.intellij.mock.MockProject
-import org.jetbrains.kotlin.cli.jvm.config.JvmContentRoot
-import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoots
-import org.jetbrains.kotlin.codegen.CodegenTestUtil
+import org.jetbrains.kotlin.cli.jvm.addModularRootIfNotNull
+import org.jetbrains.kotlin.cli.jvm.config.addJvmClasspathRoot
+import org.jetbrains.kotlin.cli.jvm.config.jvmClasspathRoots
 import org.jetbrains.kotlin.codegen.forTestCompile.ForTestCompileRuntime
-import org.jetbrains.kotlin.config.AnalysisFlag
-import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.config.JvmAnalysisFlags
+import org.jetbrains.kotlin.config.*
+import org.jetbrains.kotlin.load.java.*
 import org.jetbrains.kotlin.test.MockLibraryUtil
+import org.jetbrains.kotlin.test.TestJavacVersion
 import org.jetbrains.kotlin.test.directives.ForeignAnnotationsDirectives
 import org.jetbrains.kotlin.test.directives.ForeignAnnotationsDirectives.JSPECIFY_STATE
 import org.jetbrains.kotlin.test.directives.ForeignAnnotationsDirectives.JSR305_GLOBAL_REPORT
 import org.jetbrains.kotlin.test.directives.ForeignAnnotationsDirectives.JSR305_MIGRATION_REPORT
 import org.jetbrains.kotlin.test.directives.ForeignAnnotationsDirectives.JSR305_SPECIAL_REPORT
+import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives
 import org.jetbrains.kotlin.test.directives.model.DirectivesContainer
 import org.jetbrains.kotlin.test.directives.model.RegisteredDirectives
 import org.jetbrains.kotlin.test.directives.model.singleOrZeroValue
 import org.jetbrains.kotlin.test.model.TestModule
 import org.jetbrains.kotlin.test.services.*
 import org.jetbrains.kotlin.test.util.KtTestUtil
-import org.jetbrains.kotlin.utils.JavaTypeEnhancementState
-import org.jetbrains.kotlin.utils.ReportLevel
+import org.jetbrains.kotlin.name.FqName
 import java.io.File
+import kotlin.io.path.createTempDirectory
 
-enum class JdkForeignAnnotationType(val path: String) {
+enum class JavaForeignAnnotationType(val path: String) {
     Annotations("third-party/annotations"),
-    Jdk8Annotations("third-party/jdk8-annotations");
-
-    companion object {
-        val FOREIGN_ANNOTATIONS_SOURCES_PATH = Annotations.path
-        val FOREIGN_JDK8_ANNOTATIONS_SOURCES_PATH = Jdk8Annotations.path
-    }
+    Java8Annotations("third-party/java8-annotations"),
+    Java9Annotations("third-party/java9-annotations");
 }
 
 open class JvmForeignAnnotationsConfigurator(testServices: TestServices) : EnvironmentConfigurator(testServices) {
     companion object {
-        private const val TEST_ANNOTATIONS_SOURCE_PATH = "compiler/testData/foreignAnnotations/testAnnotations"
+        const val JSR_305_TEST_ANNOTATIONS_PATH = "compiler/testData/diagnostics/helpers/jsr305_test_annotations"
     }
 
     override val directivesContainers: List<DirectivesContainer>
         get() = listOf(ForeignAnnotationsDirectives)
 
     @OptIn(ExperimentalStdlibApi::class)
-    override fun configureCompilerConfiguration(configuration: CompilerConfiguration, module: TestModule, project: MockProject) {
-        val extraClassPath = buildList {
-            val foreignAnnotations = createJarWithForeignAnnotations(module)
-            addAll(foreignAnnotations)
-            addAll(compileTestAnnotations(foreignAnnotations))
-        }
-        configuration.addJvmClasspathRoots(extraClassPath)
-    }
-
-    protected fun createJarWithForeignAnnotations(module: TestModule): List<File> {
-        val directive = ForeignAnnotationsDirectives.ANNOTATIONS_PATH
-        val annotationsPath = module.directives.singleOrZeroValue(directive)
-            ?.path
-            ?: error("${directive.name} should be specified in test or test runner")
-
-        return listOf(
-            MockLibraryUtil.compileJavaFilesLibraryToJar(annotationsPath, "foreign-annotations", assertions = JUnit5Assertions),
-            ForTestCompileRuntime.jvmAnnotationsForTests()
-        )
-    }
-
-    protected fun compileTestAnnotations(extraClassPath: List<File>): List<File> =
-        listOf(
-            MockLibraryUtil.compileJavaFilesLibraryToJar(
-                TEST_ANNOTATIONS_SOURCE_PATH,
-                "test-foreign-annotations",
-                extraOptions = listOf("-Xallow-kotlin-package"),
-                extraClasspath = extraClassPath.map { it.path },
-                assertions = JUnit5Assertions
-            )
-        )
-
-    override fun provideAdditionalAnalysisFlags(directives: RegisteredDirectives): Map<AnalysisFlag<*>, Any?> {
-        val globalState = directives.singleOrZeroValue(JSR305_GLOBAL_REPORT) ?: ReportLevel.STRICT
-        val migrationState = directives.singleOrZeroValue(JSR305_MIGRATION_REPORT)
+    override fun provideAdditionalAnalysisFlags(
+        directives: RegisteredDirectives,
+        languageVersion: LanguageVersion
+    ): Map<AnalysisFlag<*>, Any?> {
+        val defaultJsr305Settings = getDefaultJsr305Settings(languageVersion.toKotlinVersion())
+        val globalState = directives.singleOrZeroValue(JSR305_GLOBAL_REPORT) ?: defaultJsr305Settings.globalLevel
+        val migrationState = directives.singleOrZeroValue(JSR305_MIGRATION_REPORT) ?: defaultJsr305Settings.migrationLevel
         val userAnnotationsState = directives[JSR305_SPECIAL_REPORT].mapNotNull {
             val (name, stateDescription) = it.split(":").takeIf { it.size == 2 } ?: return@mapNotNull null
             val state = ReportLevel.findByDescription(stateDescription) ?: return@mapNotNull null
-            name to state
+            FqName(name) to state
         }.toMap()
-        val jSpecifyReportLevel = directives.singleOrZeroValue(JSPECIFY_STATE) ?: ReportLevel.STRICT
+        val configuredReportLevels = NullabilityAnnotationStatesImpl(
+            buildMap<FqName, ReportLevel> {
+                directives.singleOrZeroValue(JSPECIFY_STATE)?.let { put(JSPECIFY_ANNOTATIONS_PACKAGE, it) }
+                for ((fqname, reportLevel) in directives[ForeignAnnotationsDirectives.NULLABILITY_ANNOTATIONS]) {
+                    put(fqname, reportLevel)
+                }
+            }
+        )
+
         return mapOf(
             JvmAnalysisFlags.javaTypeEnhancementState to JavaTypeEnhancementState(
-                globalState,
-                migrationState,
-                userAnnotationsState,
-                jspecifyReportLevel = jSpecifyReportLevel
+                Jsr305Settings(globalState, migrationState, userAnnotationsState),
+                getReportLevelForAnnotation = { getReportLevelForAnnotation(it, configuredReportLevels) }
             )
         )
     }
-}
 
-class JvmForeignAnnotationsAgainstCompiledJavaConfigurator(testServices: TestServices) : JvmForeignAnnotationsConfigurator(testServices) {
-    @OptIn(ExperimentalStdlibApi::class)
-    override fun configureCompilerConfiguration(configuration: CompilerConfiguration, module: TestModule, project: MockProject) {
-        val compiledJavaPath = KtTestUtil.tmpDir("java-compiled-files")
-
-        val foreignAnnotations = createJarWithForeignAnnotations(module)
-        val testAnnotations = compileTestAnnotations(foreignAnnotations)
-        val additionalClasspath = buildList {
-            addAll(foreignAnnotations)
-            addAll(testAnnotations)
-        }.map { it.path }
-
-        module.javaFiles.forEach { testServices.sourceFileProvider.getRealFileForSourceFile(it) }
-        CodegenTestUtil.compileJava(
-            CodegenTestUtil.findJavaSourcesInDirectory(testServices.sourceFileProvider.javaSourceDirectory),
-            additionalClasspath,
-            emptyList(),
-            compiledJavaPath,
-            JUnit5Assertions
-        )
-
-        val extraClassPath = buildList {
-            add(compiledJavaPath)
-            addAll(testAnnotations)
+    override fun configureCompilerConfiguration(configuration: CompilerConfiguration, module: TestModule) {
+        val registeredDirectives = module.directives
+        val javaVersionToCompile = registeredDirectives[JvmEnvironmentConfigurationDirectives.COMPILE_JAVA_USING].singleOrNull()
+        val useJava9ToCompileIncludedJavaFiles = javaVersionToCompile == TestJavacVersion.JAVAC_9
+        val annotationPath = registeredDirectives[ForeignAnnotationsDirectives.ANNOTATIONS_PATH].singleOrNull()
+            ?: JavaForeignAnnotationType.Java8Annotations
+        val javaFilesDir = createTempDirectory().toFile().also {
+            File(annotationPath.path).copyRecursively(it)
         }
+        val foreignAnnotationsJar = MockLibraryUtil.compileJavaFilesLibraryToJar(
+            javaFilesDir.path,
+            "foreign-annotations",
+            assertions = JUnit5Assertions,
+            extraClasspath = configuration.jvmClasspathRoots.map { it.absolutePath },
+            useJava9 = useJava9ToCompileIncludedJavaFiles
+        )
+        configuration.addModularRootIfNotNull(useJava9ToCompileIncludedJavaFiles, "java9_annotations", foreignAnnotationsJar)
+        configuration.addJvmClasspathRoot(ForTestCompileRuntime.jvmAnnotationsForTests())
 
-        configuration.addJvmClasspathRoots(extraClassPath)
+        if (JvmEnvironmentConfigurationDirectives.WITH_JSR305_TEST_ANNOTATIONS in registeredDirectives) {
+            val jsr305AnnotationsDir = createTempDirectory().toFile().also {
+                File(JSR_305_TEST_ANNOTATIONS_PATH).copyRecursively(it)
+            }
+            configuration.addJvmClasspathRoot(
+                MockLibraryUtil.compileJavaFilesLibraryToJar(
+                    jsr305AnnotationsDir.path,
+                    "jsr-305-test-annotations",
+                    assertions = JUnit5Assertions,
+                    extraClasspath = configuration.jvmClasspathRoots.map { it.absolutePath }
+                )
+            )
+            configuration.addJvmClasspathRoot(KtTestUtil.getAnnotationsJar())
+        }
     }
 }

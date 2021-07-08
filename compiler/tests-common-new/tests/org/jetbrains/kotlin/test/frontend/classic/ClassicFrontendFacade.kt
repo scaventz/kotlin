@@ -32,6 +32,7 @@ import org.jetbrains.kotlin.incremental.components.LookupTracker
 import org.jetbrains.kotlin.js.analyze.TopDownAnalyzerFacadeForJS
 import org.jetbrains.kotlin.js.config.JsConfig
 import org.jetbrains.kotlin.load.java.lazy.SingleModuleClassResolver
+import org.jetbrains.kotlin.load.kotlin.ModuleVisibilityManager
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.native.FakeTopDownAnalyzerFacadeForNative
 import org.jetbrains.kotlin.platform.isCommon
@@ -46,13 +47,11 @@ import org.jetbrains.kotlin.resolve.TopDownAnalysisMode
 import org.jetbrains.kotlin.resolve.jvm.JavaDescriptorResolver
 import org.jetbrains.kotlin.resolve.lazy.KotlinCodeAnalyzer
 import org.jetbrains.kotlin.resolve.lazy.declarations.FileBasedDeclarationProviderFactory
+import org.jetbrains.kotlin.resolve.multiplatform.isCommonSource
 import org.jetbrains.kotlin.serialization.deserialization.MetadataPartProvider
 import org.jetbrains.kotlin.storage.StorageManager
 import org.jetbrains.kotlin.test.directives.JvmEnvironmentConfigurationDirectives
-import org.jetbrains.kotlin.test.model.DependencyKind
-import org.jetbrains.kotlin.test.model.FrontendFacade
-import org.jetbrains.kotlin.test.model.FrontendKinds
-import org.jetbrains.kotlin.test.model.TestModule
+import org.jetbrains.kotlin.test.model.*
 import org.jetbrains.kotlin.test.services.*
 import org.jetbrains.kotlin.test.util.KtTestUtil
 import org.jetbrains.kotlin.utils.addToStdlib.runIf
@@ -75,25 +74,37 @@ class ClassicFrontendFacade(
         val ktFilesMap = testServices.sourceFileProvider.getKtFilesForSourceFiles(module.files, project).toMutableMap()
         val languageVersionSettings = module.languageVersionSettings
 
-        val sourceDependencies = module.dependencies.filter { it.kind == DependencyKind.Source }
-        val dependentDescriptors = sourceDependencies.map {
+        val sourceDependencies = module.allDependencies.filter { it.kind == DependencyKind.Source }
+        val dependentDescriptors = sourceDependencies.mapNotNull {
             val testModule = dependencyProvider.getTestModule(it.moduleName)
+            if (testModule.targetPlatform.isCommon()) return@mapNotNull null
             moduleDescriptorProvider.getModuleDescriptor(testModule)
         }
 
+        val friendDescriptors = module.friendDependencies.filter { it.kind == DependencyKind.Source }.map {
+            moduleDescriptorProvider.getModuleDescriptor(dependencyProvider.getTestModule(it.moduleName))
+        }
+
         var hasCommonModules = false
-        sourceDependencies.forEach {
-            val dependencyModule = dependencyProvider.getTestModule(it.moduleName)
-            if (dependencyModule.targetPlatform.isCommon()) {
+
+        fun addDependsOnSources(dependencies: List<DependencyDescription>) {
+            if (dependencies.isEmpty()) return
+            hasCommonModules = true
+            for (dependency in dependencies) {
+                val dependencyModule = dependencyProvider.getTestModule(dependency.moduleName)
                 val artifact = dependencyProvider.getArtifact(dependencyModule, FrontendKinds.ClassicFrontend)
                 /*
                  * We need create KtFiles again with new project because otherwise we can access to some caches using
                  *   old project as key which may leads to missing services in core environment
                  */
-                ktFilesMap.putAll(testServices.sourceFileProvider.getKtFilesForSourceFiles(artifact.allKtFiles.keys, project))
-                hasCommonModules = true
+                val ktFiles = testServices.sourceFileProvider.getKtFilesForSourceFiles(artifact.allKtFiles.keys, project)
+                ktFiles.values.forEach { ktFile -> ktFile.isCommonSource = true }
+                ktFilesMap.putAll(ktFiles)
+                addDependsOnSources(dependencyModule.dependsOnDependencies)
             }
         }
+
+        addDependsOnSources(module.dependsOnDependencies)
 
         val ktFiles = ktFilesMap.values.toList()
         setupJavacIfNeeded(module, ktFiles, configuration)
@@ -104,6 +115,7 @@ class ClassicFrontendFacade(
             packagePartProviderFactory,
             ktFiles,
             dependentDescriptors,
+            friendDescriptors,
             hasCommonModules
         )
         moduleDescriptorProvider.replaceModuleDescriptorForModule(module, analysisResult.moduleDescriptor)
@@ -135,6 +147,7 @@ class ClassicFrontendFacade(
         packagePartProviderFactory: (GlobalSearchScope) -> JvmPackagePartProvider,
         files: List<KtFile>,
         dependentDescriptors: List<ModuleDescriptorImpl>,
+        friendsDescriptors: List<ModuleDescriptorImpl>,
         hasCommonModules: Boolean
     ): AnalysisResult {
         val targetPlatform = module.targetPlatform
@@ -146,6 +159,7 @@ class ClassicFrontendFacade(
                 packagePartProviderFactory,
                 files,
                 dependentDescriptors,
+                friendsDescriptors,
                 hasCommonModules
             )
             targetPlatform.isJs() -> performJsModuleResolve(project, configuration, files, dependentDescriptors)
@@ -163,8 +177,12 @@ class ClassicFrontendFacade(
         packagePartProviderFactory: (GlobalSearchScope) -> JvmPackagePartProvider,
         files: List<KtFile>,
         dependentDescriptors: List<ModuleDescriptorImpl>,
+        friendsDescriptors: List<ModuleDescriptorImpl>,
         hasCommonModules: Boolean
     ): AnalysisResult {
+        val moduleVisibilityManager = ModuleVisibilityManager.SERVICE.getInstance(project)
+        configuration.getList(JVMConfigurationKeys.FRIEND_PATHS).forEach { moduleVisibilityManager.addFriendPath(it) }
+
         val moduleTrace = NoScopeRecordCliBindingTrace()
         if (!hasCommonModules) {
             return TopDownAnalyzerFacadeForJVM.analyzeFilesWithJavaIntegration(
@@ -173,13 +191,14 @@ class ClassicFrontendFacade(
                 moduleTrace,
                 configuration.copy(),
                 packagePartProviderFactory,
-                explicitModuleDependencyList = dependentDescriptors
+                explicitModuleDependencyList = dependentDescriptors,
+                explicitModuleFriendsList = friendsDescriptors
             )
         }
 
         val moduleContentScope = GlobalSearchScope.allScope(project)
         val moduleClassResolver = SingleModuleClassResolver()
-        val moduleContext = createModuleContext(module, project, dependentDescriptors) {
+        val moduleContext = createModuleContext(module, project, dependentDescriptors, friendsDescriptors) {
             JvmBuiltIns(it, JvmBuiltIns.Kind.FROM_CLASS_LOADER)
         }
         val moduleDescriptor = moduleContext.module as ModuleDescriptorImpl
@@ -206,7 +225,8 @@ class ClassicFrontendFacade(
                 listOf(
                     container.get<KotlinCodeAnalyzer>().packageFragmentProvider,
                     container.get<JavaDescriptorResolver>().packageFragmentProvider
-                )
+                ),
+                "CompositeProvider@ClassicFrontendFacade for $moduleDescriptor"
             )
         )
 
@@ -222,7 +242,7 @@ class ClassicFrontendFacade(
         files: List<KtFile>,
         dependentDescriptors: List<ModuleDescriptorImpl>
     ): AnalysisResult {
-        val jsConfig = JsConfig(project, configuration)
+        val jsConfig = JsConfig(project, configuration, CompilerEnvironment)
         val dependentDescriptorsIncludingLibraries = buildList {
             addAll(dependentDescriptors)
             addAll(jsConfig.moduleDescriptors)
@@ -232,7 +252,8 @@ class ClassicFrontendFacade(
             project,
             configuration,
             moduleDescriptors = dependentDescriptorsIncludingLibraries,
-            friendModuleDescriptors = emptyList()
+            friendModuleDescriptors = emptyList(),
+            CompilerEnvironment,
         )
     }
 
@@ -242,7 +263,7 @@ class ClassicFrontendFacade(
         files: List<KtFile>,
     ): AnalysisResult {
         val moduleTrace = NoScopeRecordCliBindingTrace()
-        val moduleContext = createModuleContext(module, project, dependentDescriptors = emptyList()) {
+        val moduleContext = createModuleContext(module, project, dependentDescriptors = emptyList(), friendsDescriptors = emptyList()) {
             DefaultBuiltIns()
         }
         return FakeTopDownAnalyzerFacadeForNative.analyzeFilesWithGivenTrace(
@@ -263,8 +284,9 @@ class ClassicFrontendFacade(
             dependOnBuiltIns = true,
             module.languageVersionSettings,
             module.targetPlatform,
+            CompilerEnvironment,
             // TODO: add dependency manager
-        ) { _ ->
+        ) {
             // TODO
             MetadataPartProvider.Empty
         }
@@ -275,6 +297,7 @@ class ClassicFrontendFacade(
         module: TestModule,
         project: Project,
         dependentDescriptors: List<ModuleDescriptorImpl>,
+        friendsDescriptors: List<ModuleDescriptorImpl>,
         builtInsFactory: (StorageManager) -> KotlinBuiltIns,
     ): ModuleContext {
         val projectContext = ProjectContext(project, "test project context")
@@ -287,7 +310,7 @@ class ClassicFrontendFacade(
             add(moduleDescriptor.builtIns.builtInsModule)
             addAll(dependentDescriptors)
         }
-        moduleDescriptor.setDependencies(dependencies)
+        moduleDescriptor.setDependencies(dependencies, friendsDescriptors.toSet())
 
         return projectContext.withModule(moduleDescriptor)
     }

@@ -85,6 +85,9 @@ fun IrSimpleFunction.overrides(other: IrSimpleFunction): Boolean {
 private val IrConstructorCall.annotationClass
     get() = this.symbol.owner.constructedClass
 
+fun IrConstructorCall.isAnnotationWithEqualFqName(fqName: FqName): Boolean =
+    annotationClass.hasEqualFqName(fqName)
+
 val IrClass.packageFqName: FqName?
     get() = symbol.signature?.packageFqName() ?: parent.getPackageFragment()?.fqName
 
@@ -101,7 +104,7 @@ fun List<IrConstructorCall>.hasAnnotation(fqName: FqName): Boolean =
 fun List<IrConstructorCall>.findAnnotation(fqName: FqName): IrConstructorCall? =
     firstOrNull { it.annotationClass.hasEqualFqName(fqName) }
 
-val IrDeclaration.fileEntry: SourceManager.FileEntry
+val IrDeclaration.fileEntry: IrFileEntry
     get() = parent.let {
         when (it) {
             is IrFile -> it.fileEntry
@@ -130,6 +133,8 @@ val IrDeclaration.isTopLevelDeclaration get() =
     parent !is IrDeclaration && !this.isPropertyAccessor && !this.isPropertyField
 
 val IrDeclaration.isAnonymousObject get() = this is IrClass && name == SpecialNames.NO_NAME_PROVIDED
+
+val IrDeclaration.isAnonymousFunction get() = this is IrSimpleFunction && name == SpecialNames.NO_NAME_PROVIDED
 
 val IrDeclaration.isLocal: Boolean
     get() {
@@ -172,7 +177,7 @@ val File.lineStartOffsets: IntArray
         return buffer.toIntArray()
     }
 
-val SourceManager.FileEntry.lineStartOffsets
+val IrFileEntry.lineStartOffsets
     get() = File(name).let {
         if (it.exists() && it.isFile) it.lineStartOffsets else IntArray(0)
     }
@@ -180,7 +185,7 @@ val SourceManager.FileEntry.lineStartOffsets
 class NaiveSourceBasedFileEntryImpl(
     override val name: String,
     private val lineStartOffsets: IntArray = intArrayOf()
-) : SourceManager.FileEntry {
+) : IrFileEntry {
 
     private val MAX_SAVED_LINE_NUMBERS = 50
 
@@ -228,7 +233,7 @@ private fun IrClass.getPropertyDeclaration(name: String): IrProperty? {
     return properties.firstOrNull()
 }
 
-private fun IrClass.getSimpleFunction(name: String): IrSimpleFunctionSymbol? =
+fun IrClass.getSimpleFunction(name: String): IrSimpleFunctionSymbol? =
     findDeclaration<IrSimpleFunction> { it.name.asString() == name }?.symbol
 
 fun IrClass.getPropertyGetter(name: String): IrSimpleFunctionSymbol? =

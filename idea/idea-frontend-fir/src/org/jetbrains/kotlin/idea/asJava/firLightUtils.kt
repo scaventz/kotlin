@@ -16,26 +16,33 @@ import org.jetbrains.kotlin.asJava.elements.KtLightMember
 import org.jetbrains.kotlin.codegen.signature.BothSignatureWriter
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibilities
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.backend.jvm.jvmTypeMapper
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.utils.modality
+import org.jetbrains.kotlin.fir.declarations.utils.superConeTypes
 import org.jetbrains.kotlin.fir.isPrimitiveType
 import org.jetbrains.kotlin.fir.resolve.substitution.AbstractConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.toSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
+import org.jetbrains.kotlin.fir.typeContext
 import org.jetbrains.kotlin.fir.types.*
-import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
-import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.withFirDeclaration
-import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.KtFirClassOrObjectSymbol
+import org.jetbrains.kotlin.idea.frontend.api.components.DefaultTypeClassIds
+import org.jetbrains.kotlin.idea.frontend.api.fir.analyzeWithSymbolAsContext
 import org.jetbrains.kotlin.idea.frontend.api.fir.symbols.KtFirSymbol
-import org.jetbrains.kotlin.idea.frontend.api.fir.types.KtFirClassType
 import org.jetbrains.kotlin.idea.frontend.api.fir.types.KtFirType
 import org.jetbrains.kotlin.idea.frontend.api.symbols.*
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.*
-import org.jetbrains.kotlin.idea.frontend.api.types.*
+import org.jetbrains.kotlin.idea.frontend.api.types.KtNonErrorClassType
+import org.jetbrains.kotlin.idea.frontend.api.types.KtType
+import org.jetbrains.kotlin.idea.frontend.api.types.KtTypeNullability
+import org.jetbrains.kotlin.idea.frontend.api.types.KtTypeWithNullability
 import org.jetbrains.kotlin.load.kotlin.TypeMappingMode
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.types.model.SimpleTypeMarker
 import java.text.StringCharacterIterator
@@ -48,7 +55,7 @@ internal fun <L : Any> L.invalidAccess(): Nothing =
 private fun PsiElement.nonExistentType() = JavaPsiFacade.getElementFactory(project)
     .createTypeFromText("error.NonExistentClass", this)
 
-internal fun KtTypedSymbol.asPsiType(parent: PsiElement, phase: FirResolvePhase): PsiType =
+internal fun KtCallableSymbol.asPsiType(parent: PsiElement, phase: FirResolvePhase): PsiType =
     annotatedType.asPsiType(this, parent, phase)
 
 internal fun KtTypeAndAnnotations.asPsiType(
@@ -59,24 +66,26 @@ internal fun KtTypeAndAnnotations.asPsiType(
     val type = this.type
     require(type is KtFirType)
     require(context is KtFirSymbol<*>)
-    val session = context.firRef.withFir(phase) { it.session }
+    val session = context.firRef.withFir(phase) { it.moduleData.session }
     return type.coneType.asPsiType(session, context.firRef.resolveState, TypeMappingMode.DEFAULT, parent)
 }
 
-internal fun KtClassOrObjectSymbol.typeForClassSymbol(psiElement: PsiElement): PsiType {
-    require(this is KtFirClassOrObjectSymbol)
-    val (session, type) = firRef.withFir(FirResolvePhase.TYPES) { firClass ->
-        firClass.session to ConeClassLikeTypeImpl(
-            firClass.symbol.toLookupTag(),
-            firClass.typeParameters.map { ConeTypeParameterTypeImpl(it.symbol.toLookupTag(), isNullable = false) }.toTypedArray(),
-            isNullable = false
-        )
+internal fun KtNamedClassOrObjectSymbol.typeForClassSymbol(psiElement: PsiElement): PsiType {
+    require(this is KtFirSymbol<*>)
+
+    val types = analyzeWithSymbolAsContext(this) {
+        this@typeForClassSymbol.buildSelfClassType()
     }
-    return type.asPsiType(session, this.firRef.resolveState, TypeMappingMode.DEFAULT, psiElement)
+    require(types is KtFirType)
+
+    val session = firRef.withFir { it.moduleData.session }
+    return types.coneType.asPsiType(session, firRef.resolveState, TypeMappingMode.DEFAULT, psiElement)
 }
 
-private class AnonymousTypesSubstitutor(private val session: FirSession, private val state: FirModuleResolveState) :
-    AbstractConeSubstitutor() {
+private class AnonymousTypesSubstitutor(
+    private val session: FirSession,
+    private val state: FirModuleResolveState,
+) : AbstractConeSubstitutor(session.typeContext) {
     override fun substituteType(type: ConeKotlinType): ConeKotlinType? {
 
         if (type !is ConeClassLikeType) return null
@@ -105,8 +114,7 @@ private class AnonymousTypesSubstitutor(private val session: FirSession, private
     }
 }
 
-
-private fun ConeKotlinType.asPsiType(
+internal fun ConeKotlinType.asPsiType(
     session: FirSession,
     state: FirModuleResolveState,
     mode: TypeMappingMode,
@@ -161,12 +169,12 @@ internal fun KtType.mapSupertype(
     kotlinCollectionAsIs: Boolean = false,
     annotations: List<KtAnnotationCall>
 ): PsiClassType? {
-    if (this !is KtClassType) return null
-    require(this is KtFirClassType)
+    if (this !is KtNonErrorClassType) return null
+    require(this is KtFirType)
     val contextSymbol = classSymbol
     require(contextSymbol is KtFirSymbol<*>)
 
-    val session = contextSymbol.firRef.withFir { it.session }
+    val session = contextSymbol.firRef.withFir { it.moduleData.session }
 
     return mapSupertype(
         psiContext,
@@ -203,15 +211,14 @@ internal fun FirMemberDeclaration.computeSimpleModality(): Set<String> {
     return modifier?.let { setOf(it) } ?: emptySet()
 }
 
-internal fun KtSymbolWithModality<*>.computeSimpleModality(): String? = when (modality) {
-    KtSymbolModality.SEALED -> PsiModifier.ABSTRACT
-    KtCommonSymbolModality.FINAL -> PsiModifier.FINAL
-    KtCommonSymbolModality.ABSTRACT -> PsiModifier.ABSTRACT
-    KtCommonSymbolModality.OPEN -> null
-    else -> throw NotImplementedError()
+internal fun KtSymbolWithModality.computeSimpleModality(): String? = when (modality) {
+    Modality.SEALED -> PsiModifier.ABSTRACT
+    Modality.FINAL -> PsiModifier.FINAL
+    Modality.ABSTRACT -> PsiModifier.ABSTRACT
+    Modality.OPEN -> null
 }
 
-internal fun KtSymbolWithModality<KtCommonSymbolModality>.computeModalityForMethod(
+internal fun KtSymbolWithModality.computeModalityForMethod(
     isTopLevel: Boolean,
     suppressFinal: Boolean,
     result: MutableSet<String>
@@ -239,14 +246,15 @@ internal fun KtSymbolWithVisibility.toPsiVisibilityForMember(isTopLevel: Boolean
 internal fun KtSymbolWithVisibility.toPsiVisibilityForClass(isTopLevel: Boolean): String =
     visibility.toPsiVisibility(isTopLevel, forClass = true)
 
-internal fun KtSymbolVisibility.toPsiVisibilityForMember(isTopLevel: Boolean): String =
+internal fun Visibility.toPsiVisibilityForMember(isTopLevel: Boolean): String =
     toPsiVisibility(isTopLevel, forClass = false)
 
-private fun KtSymbolVisibility.toPsiVisibility(isTopLevel: Boolean, forClass: Boolean): String = when (this) {
+private fun Visibility.toPsiVisibility(isTopLevel: Boolean, forClass: Boolean): String = when (this) {
     // Top-level private class has PACKAGE_LOCAL visibility in Java
     // Nested private class has PRIVATE visibility
-    KtSymbolVisibility.PRIVATE -> if (forClass && isTopLevel) PsiModifier.PACKAGE_LOCAL else PsiModifier.PRIVATE
-    KtSymbolVisibility.PROTECTED -> PsiModifier.PROTECTED
+    Visibilities.Private, Visibilities.PrivateToThis ->
+        if (forClass && isTopLevel) PsiModifier.PACKAGE_LOCAL else PsiModifier.PRIVATE
+    Visibilities.Protected -> PsiModifier.PROTECTED
     else -> PsiModifier.PUBLIC
 }
 
@@ -296,7 +304,7 @@ internal fun KtType.getTypeNullability(context: KtSymbol, phase: FirResolvePhase
     if (coneType.classId?.shortClassName?.asString() == SpecialNames.ANONYMOUS) return NullabilityType.NotNull
 
     val canonicalSignature = context.firRef.withFir(phase) {
-        it.session.jvmTypeMapper.mapType(coneType, TypeMappingMode.DEFAULT).descriptor
+        it.moduleData.session.jvmTypeMapper.mapType(coneType, TypeMappingMode.DEFAULT).descriptor
     }
 
     if (canonicalSignature == "[L<error>;") return NullabilityType.NotNull
@@ -306,6 +314,12 @@ internal fun KtType.getTypeNullability(context: KtSymbol, phase: FirResolvePhase
     return if (isNotPrimitiveType) NullabilityType.NotNull else NullabilityType.Unknown
 }
 
+internal val KtType.isUnit get() = isClassTypeWithClassId(DefaultTypeClassIds.UNIT)
+
+internal fun KtType.isClassTypeWithClassId(classId: ClassId): Boolean {
+    if (this !is KtNonErrorClassType) return false
+    return this.classId == classId
+}
 
 private fun escapeString(str: String): String = buildString {
     str.forEach { char ->
@@ -322,7 +336,7 @@ private fun escapeString(str: String): String = buildString {
 }
 
 private fun KtSimpleConstantValue<*>.asStringForPsiLiteral(): String =
-    when (val value = this.constant) {
+    when (val value = this.value) {
         is String -> "\"${escapeString(value)}\""
         is Long -> "${value}L"
         is Float -> "${value}f"

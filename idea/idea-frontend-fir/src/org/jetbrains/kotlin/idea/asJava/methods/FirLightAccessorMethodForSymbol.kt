@@ -15,8 +15,8 @@ import org.jetbrains.kotlin.asJava.elements.FirLightIdentifier
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.idea.asJava.parameters.FirLightSetterParameterForSymbol
+import org.jetbrains.kotlin.idea.frontend.api.isValid
 import org.jetbrains.kotlin.idea.frontend.api.symbols.*
-import org.jetbrains.kotlin.idea.util.ifTrue
 import org.jetbrains.kotlin.load.java.JvmAbi.getterName
 import org.jetbrains.kotlin.load.java.JvmAbi.setterName
 import org.jetbrains.kotlin.psi.KtDeclaration
@@ -186,4 +186,6 @@ internal class FirLightAccessorMethodForSymbol(
     }
 
     override fun getParameterList(): PsiParameterList = _parametersList
+
+    override fun isValid(): Boolean = super.isValid() && propertyAccessorSymbol.isValid()
 }

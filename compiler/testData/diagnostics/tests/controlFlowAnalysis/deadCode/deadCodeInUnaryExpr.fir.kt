@@ -5,11 +5,11 @@ fun testPrefix() {
 
 fun testPostfixWithCall(n: Nothing) {
     operator fun Nothing.inc(): Nothing = this
-    n++
+    <!VAL_REASSIGNMENT!>n<!>++
 }
 
 fun testPostfixSpecial() {
-    todo()!!
+    todo()<!UNNECESSARY_NOT_NULL_ASSERTION!>!!<!>
 }
 
 fun todo(): Nothing = throw Exception()

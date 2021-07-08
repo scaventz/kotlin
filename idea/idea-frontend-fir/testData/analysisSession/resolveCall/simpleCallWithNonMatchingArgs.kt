@@ -1,7 +1,7 @@
 fun x() {
-    <selection>foo(1)</selection>
+    <expr>foo(1)</expr>
 }
 
 fun foo(){}
 
-// CALL: KtFunctionCall: targetFunction = ERR<Inapplicable(INAPPLICABLE_ARGUMENTS_MAPPING_ERROR): /foo, [foo(): kotlin.Unit]>
+// CALL: KtFunctionCall: targetFunction = ERR<Too many arguments for public final fun /foo(): R|kotlin/Unit|, [/foo(): kotlin.Unit]>

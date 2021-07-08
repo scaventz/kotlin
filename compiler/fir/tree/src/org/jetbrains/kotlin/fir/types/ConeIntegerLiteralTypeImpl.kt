@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.fir.types
 
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
+import org.jetbrains.kotlin.name.StandardClassIds
 import org.jetbrains.kotlin.fir.symbols.impl.ConeClassLikeLookupTagImpl
 import org.jetbrains.kotlin.fir.types.impl.ConeClassLikeTypeImpl
 import org.jetbrains.kotlin.name.ClassId
@@ -62,7 +62,7 @@ class ConeIntegerLiteralTypeImpl : ConeIntegerLiteralType {
 
     override val supertypes: List<ConeClassLikeType> by lazy {
         listOf(
-            NUMBER_TYPE,
+            createType(StandardClassIds.Number),
             ConeClassLikeTypeImpl(COMPARABLE_TAG, arrayOf(ConeKotlinTypeProjectionIn(this)), false)
         )
     }
@@ -82,8 +82,6 @@ class ConeIntegerLiteralTypeImpl : ConeIntegerLiteralType {
         private fun createType(classId: ClassId): ConeClassLikeType {
             return ConeClassLikeTypeImpl(ConeClassLikeLookupTagImpl(classId), emptyArray(), false)
         }
-
-        private val NUMBER_TYPE = createType(StandardClassIds.Number)
 
         private val INT_RANGE = Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()
         private val BYTE_RANGE = Byte.MIN_VALUE.toLong()..Byte.MAX_VALUE.toLong()

@@ -7,6 +7,7 @@ package org.jetbrains.kotlin.idea.frontend.api.symbols
 
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.*
 import org.jetbrains.kotlin.idea.frontend.api.types.KtType
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -14,8 +15,8 @@ import java.lang.reflect.InvocationTargetException
 import kotlin.reflect.KProperty
 import kotlin.reflect.jvm.javaGetter
 
-object DebugSymbolRenderer {
-    fun render(symbol: KtSymbol): String = buildString {
+public object DebugSymbolRenderer {
+    public fun render(symbol: KtSymbol): String = buildString {
         val klass = symbol::class
         appendLine("${klass.simpleName}:")
         klass.members.filterIsInstance<KProperty<*>>().sortedBy { it.name }.forEach { property ->
@@ -39,6 +40,7 @@ object DebugSymbolRenderer {
         is Name -> value.asString()
         is FqName -> value.asString()
         is ClassId -> value.asString()
+        is CallableId -> value.toString()
         is Enum<*> -> value.name
         is List<*> -> buildString {
             append("[")
@@ -58,7 +60,7 @@ object DebugSymbolRenderer {
             }
             "${value::class.simpleName!!}($symbolTag)"
         }
-        is KtSimpleConstantValue<*> -> renderValue(value.constant)
+        is KtSimpleConstantValue<*> -> renderValue(value.value)
         is KtNamedConstantValue -> "${renderValue(value.name)} = ${renderValue(value.expression)}"
         is KtAnnotationCall ->
             "${renderValue(value.classId)}${value.arguments.joinToString(prefix = "(", postfix = ")") { renderValue(it) }}"
@@ -66,5 +68,5 @@ object DebugSymbolRenderer {
         else -> value::class.simpleName!!
     }
 
-    private val ignoredPropertyNames = setOf("firRef", "psi", "token")
+    private val ignoredPropertyNames = setOf("firRef", "psi", "token", "builder")
 }

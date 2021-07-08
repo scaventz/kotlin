@@ -10,22 +10,22 @@ import com.intellij.psi.tree.IElementType
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.fir.*
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
-import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirExpressionChecker
+import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirVariableAssignmentChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.getChildren
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
+import org.jetbrains.kotlin.fir.analysis.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
 import org.jetbrains.kotlin.fir.expressions.toResolvedCallableSymbol
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
-import org.jetbrains.kotlin.fir.symbols.StandardClassIds
-import org.jetbrains.kotlin.fir.types.classId
 import org.jetbrains.kotlin.fir.types.coneType
+import org.jetbrains.kotlin.fir.types.isPrimitive
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 
-object CanBeReplacedWithOperatorAssignmentChecker : FirExpressionChecker<FirVariableAssignment>() {
+object CanBeReplacedWithOperatorAssignmentChecker : FirVariableAssignmentChecker() {
     override fun check(expression: FirVariableAssignment, context: CheckerContext, reporter: DiagnosticReporter) {
         val lValue = expression.lValue
         if (lValue !is FirResolvedNamedReference) return
@@ -34,15 +34,14 @@ object CanBeReplacedWithOperatorAssignmentChecker : FirExpressionChecker<FirVari
         val rValue = expression.rValue as? FirFunctionCall ?: return
         if (rValue.source?.kind is FirFakeSourceElementKind) return
 
-        val rValueClassId = rValue.explicitReceiver?.typeRef?.coneType?.classId
-        if (rValueClassId !in StandardClassIds.primitiveTypes) return
+        if (rValue.explicitReceiver?.typeRef?.coneType?.isPrimitive != true) return
         val rValueResolvedSymbol = rValue.toResolvedCallableSymbol() ?: return
-        if (rValueResolvedSymbol.dispatchReceiverClassOrNull()?.classId !in StandardClassIds.primitiveTypes) return
+        if (rValueResolvedSymbol.dispatchReceiverTypeOrNull()?.isPrimitive != true) return
 
         var needToReport = false
         val assignmentSource = expression.source
 
-        if (assignmentSource is FirPsiSourceElement<*>) {
+        if (assignmentSource is FirPsiSourceElement) {
             val lValuePsi = lValue.psi as? KtNameReferenceExpression ?: return
             val rValuePsi = rValue.psi as? KtBinaryExpression ?: return
 
@@ -58,7 +57,7 @@ object CanBeReplacedWithOperatorAssignmentChecker : FirExpressionChecker<FirVari
         }
 
         if (needToReport) {
-            reporter.report(expression.source, FirErrors.CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT)
+            reporter.reportOn(expression.source, FirErrors.CAN_BE_REPLACED_WITH_OPERATOR_ASSIGNMENT, context)
         }
 
     }

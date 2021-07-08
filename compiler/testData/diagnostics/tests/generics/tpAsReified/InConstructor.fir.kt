@@ -1,10 +1,9 @@
-// !WITH_NEW_INFERENCE
-class C<reified T>
+class C<<!REIFIED_TYPE_PARAMETER_NO_INLINE!>reified<!> T>
 
 fun <T> id(p: T): T = p
 
 fun <A> main() {
-    C()
+    <!NEW_INFERENCE_NO_INFORMATION_FOR_PARAMETER!>C<!>()
 
     val a: C<A> = C()
     C<A>()

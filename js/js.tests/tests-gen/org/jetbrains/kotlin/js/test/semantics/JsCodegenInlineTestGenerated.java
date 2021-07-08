@@ -102,6 +102,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             runTest("compiler/testData/codegen/boxInline/anonymousObject/changingReturnType.kt");
         }
 
+        @TestMetadata("constructOriginalInRegenerated.kt")
+        public void testConstructOriginalInRegenerated() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/anonymousObject/constructOriginalInRegenerated.kt");
+        }
+
         @TestMetadata("constructorVisibility.kt")
         public void testConstructorVisibility() throws Exception {
             runTest("compiler/testData/codegen/boxInline/anonymousObject/constructorVisibility.kt");
@@ -235,6 +240,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
         @TestMetadata("kt42815_delegated.kt")
         public void testKt42815_delegated() throws Exception {
             runTest("compiler/testData/codegen/boxInline/anonymousObject/kt42815_delegated.kt");
+        }
+
+        @TestMetadata("kt6007.kt")
+        public void testKt6007() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/anonymousObject/kt6007.kt");
         }
 
         @TestMetadata("kt6552.kt")
@@ -494,6 +504,16 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             @TestMetadata("kt8668_3.kt")
             public void testKt8668_3() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/anonymousObject/twoCapturedReceivers/kt8668_3.kt");
+            }
+
+            @TestMetadata("kt8668_nested.kt")
+            public void testKt8668_nested() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/anonymousObject/twoCapturedReceivers/kt8668_nested.kt");
+            }
+
+            @TestMetadata("kt8668_nested_2.kt")
+            public void testKt8668_nested_2() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/anonymousObject/twoCapturedReceivers/kt8668_nested_2.kt");
             }
 
             @TestMetadata("twoDifferentDispatchReceivers.kt")
@@ -760,6 +780,44 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             runTest("compiler/testData/codegen/boxInline/callableReference/topLevelProperty.kt");
         }
 
+        @TestMetadata("compiler/testData/codegen/boxInline/callableReference/adaptedReferences")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class AdaptedReferences extends AbstractJsCodegenInlineTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInAdaptedReferences() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/callableReference/adaptedReferences"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
+            }
+
+            @TestMetadata("inlineBound.kt")
+            public void testInlineBound() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/adaptedReferences/inlineBound.kt");
+            }
+
+            @TestMetadata("inlineDefault.kt")
+            public void testInlineDefault() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/adaptedReferences/inlineDefault.kt");
+            }
+
+            @TestMetadata("inlineVararg.kt")
+            public void testInlineVararg() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/adaptedReferences/inlineVararg.kt");
+            }
+
+            @TestMetadata("inlineVarargAndDefault.kt")
+            public void testInlineVarargAndDefault() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/adaptedReferences/inlineVarargAndDefault.kt");
+            }
+
+            @TestMetadata("inlineVarargInts.kt")
+            public void testInlineVarargInts() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/adaptedReferences/inlineVarargInts.kt");
+            }
+        }
+
         @TestMetadata("compiler/testData/codegen/boxInline/callableReference/bound")
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
@@ -840,6 +898,16 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             @TestMetadata("kt18728_4.kt")
             public void testKt18728_4() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/callableReference/bound/kt18728_4.kt");
+            }
+
+            @TestMetadata("kt30933.kt")
+            public void testKt30933() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/bound/kt30933.kt");
+            }
+
+            @TestMetadata("lambdaOnLhs.kt")
+            public void testLambdaOnLhs() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/callableReference/bound/lambdaOnLhs.kt");
             }
 
             @TestMetadata("map.kt")
@@ -947,6 +1015,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
         @TestMetadata("closureChain.kt")
         public void testClosureChain() throws Exception {
             runTest("compiler/testData/codegen/boxInline/complex/closureChain.kt");
+        }
+
+        @TestMetadata("kt44429.kt")
+        public void testKt44429() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/complex/kt44429.kt");
         }
 
         @TestMetadata("swapAndWith.kt")
@@ -1320,6 +1393,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
                 runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/kt25106.kt");
             }
 
+            @TestMetadata("lambdaTakesResult.kt")
+            public void testLambdaTakesResult() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/lambdaTakesResult.kt");
+            }
+
             @TestMetadata("noInline.kt")
             public void testNoInline() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/noInline.kt");
@@ -1417,6 +1495,21 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
                     runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/boundFunctionReferenceOnLong.kt");
                 }
 
+                @TestMetadata("boundInlineClassMethod.kt")
+                public void testBoundInlineClassMethod() throws Exception {
+                    runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/boundInlineClassMethod.kt");
+                }
+
+                @TestMetadata("boundInlineClassMethodWithAny.kt")
+                public void testBoundInlineClassMethodWithAny() throws Exception {
+                    runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/boundInlineClassMethodWithAny.kt");
+                }
+
+                @TestMetadata("boundInlineClassMethodWithInt.kt")
+                public void testBoundInlineClassMethodWithInt() throws Exception {
+                    runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/boundInlineClassMethodWithInt.kt");
+                }
+
                 @TestMetadata("boundPropertyReference.kt")
                 public void testBoundPropertyReference() throws Exception {
                     runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/boundPropertyReference.kt");
@@ -1510,6 +1603,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
                 @TestMetadata("propertyReferenceFromObject.kt")
                 public void testPropertyReferenceFromObject() throws Exception {
                     runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/propertyReferenceFromObject.kt");
+                }
+
+                @TestMetadata("withInlineClassParameter.kt")
+                public void testWithInlineClassParameter() throws Exception {
+                    runTest("compiler/testData/codegen/boxInline/defaultValues/lambdaInlining/callableReferences/withInlineClassParameter.kt");
                 }
             }
         }
@@ -1722,6 +1820,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/inlineClasses"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
         }
 
+        @TestMetadata("anonymousObject.kt")
+        public void testAnonymousObject() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/inlineClasses/anonymousObject.kt");
+        }
+
         @TestMetadata("inlineClassWithInlineValReturningInlineClass.kt")
         public void testInlineClassWithInlineValReturningInlineClass() throws Exception {
             runTest("compiler/testData/codegen/boxInline/inlineClasses/inlineClassWithInlineValReturningInlineClass.kt");
@@ -1910,6 +2013,45 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
         @TestMetadata("captureThisAndOuter.kt")
         public void testCaptureThisAndOuter() throws Exception {
             runTest("compiler/testData/codegen/boxInline/innerClasses/captureThisAndOuter.kt");
+        }
+    }
+
+    @TestMetadata("compiler/testData/codegen/boxInline/invokedynamic")
+    @TestDataPath("$PROJECT_ROOT")
+    @RunWith(JUnit3RunnerWithInners.class)
+    public static class Invokedynamic extends AbstractJsCodegenInlineTest {
+        private void runTest(String testDataFilePath) throws Exception {
+            KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+        }
+
+        public void testAllFilesPresentInInvokedynamic() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/invokedynamic"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
+        }
+
+        @TestMetadata("compiler/testData/codegen/boxInline/invokedynamic/lambdas")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Lambdas extends AbstractJsCodegenInlineTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInLambdas() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/invokedynamic/lambdas"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
+            }
+        }
+
+        @TestMetadata("compiler/testData/codegen/boxInline/invokedynamic/sam")
+        @TestDataPath("$PROJECT_ROOT")
+        @RunWith(JUnit3RunnerWithInners.class)
+        public static class Sam extends AbstractJsCodegenInlineTest {
+            private void runTest(String testDataFilePath) throws Exception {
+                KotlinTestUtils.runTest0(this::doTest, TargetBackend.JS, testDataFilePath);
+            }
+
+            public void testAllFilesPresentInSam() throws Exception {
+                KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/invokedynamic/sam"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
+            }
         }
     }
 
@@ -2160,6 +2302,46 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             runTest("compiler/testData/codegen/boxInline/nonLocalReturns/explicitLocalReturn.kt");
         }
 
+        @TestMetadata("fromArrayGenerator.kt")
+        public void testFromArrayGenerator() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGenerator.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorCatch.kt")
+        public void testFromArrayGeneratorCatch() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorCatch.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorNested.kt")
+        public void testFromArrayGeneratorNested() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorNested.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorWithCapture.kt")
+        public void testFromArrayGeneratorWithCapture() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorWithCapture.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorWithCatch.kt")
+        public void testFromArrayGeneratorWithCatch() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorWithCatch.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorWithFinally.kt")
+        public void testFromArrayGeneratorWithFinally() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorWithFinally.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorWithFinallyX2.kt")
+        public void testFromArrayGeneratorWithFinallyX2() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorWithFinallyX2.kt");
+        }
+
+        @TestMetadata("fromArrayGeneratorWithFinallyX2_2.kt")
+        public void testFromArrayGeneratorWithFinallyX2_2() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromArrayGeneratorWithFinallyX2_2.kt");
+        }
+
         @TestMetadata("fromInterfaceDefaultGetter.kt")
         public void testFromInterfaceDefaultGetter() throws Exception {
             runTest("compiler/testData/codegen/boxInline/nonLocalReturns/fromInterfaceDefaultGetter.kt");
@@ -2183,6 +2365,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
         @TestMetadata("kt8948v2.kt")
         public void testKt8948v2() throws Exception {
             runTest("compiler/testData/codegen/boxInline/nonLocalReturns/kt8948v2.kt");
+        }
+
+        @TestMetadata("kt9304.kt")
+        public void testKt9304() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/nonLocalReturns/kt9304.kt");
         }
 
         @TestMetadata("nestedNonLocals.kt")
@@ -2838,6 +3025,41 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             runTest("compiler/testData/codegen/boxInline/reified/kt18977.kt");
         }
 
+        @TestMetadata("kt28234.kt")
+        public void testKt28234() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt28234.kt");
+        }
+
+        @TestMetadata("kt35511.kt")
+        public void testKt35511() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt35511.kt");
+        }
+
+        @TestMetadata("kt35511_try.kt")
+        public void testKt35511_try() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt35511_try.kt");
+        }
+
+        @TestMetadata("kt35511_try_valueOf.kt")
+        public void testKt35511_try_valueOf() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt35511_try_valueOf.kt");
+        }
+
+        @TestMetadata("kt35511_try_values.kt")
+        public void testKt35511_try_values() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt35511_try_values.kt");
+        }
+
+        @TestMetadata("kt46584.kt")
+        public void testKt46584() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt46584.kt");
+        }
+
+        @TestMetadata("kt46584_2.kt")
+        public void testKt46584_2() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/reified/kt46584_2.kt");
+        }
+
         @TestMetadata("kt7017.kt")
         public void testKt7017() throws Exception {
             runTest("compiler/testData/codegen/boxInline/reified/kt7017.kt");
@@ -3144,6 +3366,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
         @TestMetadata("defaultFunctionWithInlineCall.kt")
         public void testDefaultFunctionWithInlineCall() throws Exception {
             runTest("compiler/testData/codegen/boxInline/smap/defaultFunctionWithInlineCall.kt");
+        }
+
+        @TestMetadata("forInline.kt")
+        public void testForInline() throws Exception {
+            runTest("compiler/testData/codegen/boxInline/smap/forInline.kt");
         }
 
         @TestMetadata("interleavedFiles.kt")
@@ -3740,6 +3967,16 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/suspend/defaultParameter"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
             }
 
+            @TestMetadata("defaultInlineLambda.kt")
+            public void testDefaultInlineLambda() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/defaultParameter/defaultInlineLambda.kt");
+            }
+
+            @TestMetadata("defaultInlineReference.kt")
+            public void testDefaultInlineReference() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/defaultParameter/defaultInlineReference.kt");
+            }
+
             @TestMetadata("defaultValueCrossinline.kt")
             public void testDefaultValueCrossinline() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/suspend/defaultParameter/defaultValueCrossinline.kt");
@@ -3773,9 +4010,19 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
                 KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/codegen/boxInline/suspend/inlineClass"), Pattern.compile("^(.+)\\.kt$"), null, TargetBackend.JS, true);
             }
 
+            @TestMetadata("returnBoxedFromLambda.kt")
+            public void testReturnBoxedFromLambda() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/inlineClass/returnBoxedFromLambda.kt");
+            }
+
             @TestMetadata("returnUnboxedDirect.kt")
             public void testReturnUnboxedDirect() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/suspend/inlineClass/returnUnboxedDirect.kt");
+            }
+
+            @TestMetadata("returnUnboxedFromLambda.kt")
+            public void testReturnUnboxedFromLambda() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/inlineClass/returnUnboxedFromLambda.kt");
             }
 
             @TestMetadata("returnUnboxedResume.kt")
@@ -3935,6 +4182,11 @@ public class JsCodegenInlineTestGenerated extends AbstractJsCodegenInlineTest {
             @TestMetadata("insideObject.kt")
             public void testInsideObject() throws Exception {
                 runTest("compiler/testData/codegen/boxInline/suspend/stateMachine/insideObject.kt");
+            }
+
+            @TestMetadata("kt30708.kt")
+            public void testKt30708() throws Exception {
+                runTest("compiler/testData/codegen/boxInline/suspend/stateMachine/kt30708.kt");
             }
 
             @TestMetadata("lambdaTransformation.kt")

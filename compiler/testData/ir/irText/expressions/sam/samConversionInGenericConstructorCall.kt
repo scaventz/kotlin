@@ -1,3 +1,5 @@
+// FIR_IDENTICAL
+// TARGET_BACKEND: JVM
 // !LANGUAGE: +NewInference +SamConversionPerArgument +ProhibitVarargAsArrayAfterSamArgument
 // FILE: samConversionInGenericConstructorCall.kt
 fun test1(f: (String) -> String) = C(f)

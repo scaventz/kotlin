@@ -29,7 +29,7 @@ class KtUltraLightClassForFacade(
     lightClassDataCache: CachedValue<LightClassDataHolder.ForFacade>,
     files: Collection<KtFile>,
     private val filesWithSupports: Collection<Pair<KtFile, KtUltraLightSupport>>
-) : KtLightClassForFacade(manager, facadeClassFqName, lightClassDataCache, files) {
+) : KtLightClassForFacadeImpl(manager, facadeClassFqName, lightClassDataCache, files) {
 
     override fun getDelegate(): PsiClass = invalidAccess()
 

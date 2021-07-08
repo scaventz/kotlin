@@ -16,13 +16,12 @@ import org.jetbrains.kotlin.asJava.classes.KtLightClass
 import org.jetbrains.kotlin.asJava.classes.cannotModify
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
 import org.jetbrains.kotlin.codegen.state.KotlinTypeMapper
+import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
+import org.jetbrains.kotlin.idea.frontend.api.isValid
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtCallableSymbol
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtAnnotatedSymbol
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolVisibility
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolWithVisibility
-import org.jetbrains.kotlin.idea.util.ifTrue
-import org.jetbrains.kotlin.idea.util.module
 
 internal abstract class FirLightMethod(
     lightMemberOrigin: LightMemberOrigin?,
@@ -88,16 +87,19 @@ internal abstract class FirLightMethod(
     ): String where T : KtAnnotatedSymbol, T : KtSymbolWithVisibility, T : KtCallableSymbol {
         getJvmNameFromAnnotation(annotationUseSiteTarget)?.let { return it }
 
-        val effectiveVisibilityIfNotInternal = (visibility != KtSymbolVisibility.INTERNAL).ifTrue {
+        val effectiveVisibilityIfNotInternal = (visibility != Visibilities.Internal).ifTrue {
             (containingClass as? FirLightClassForSymbol)?.tryGetEffectiveVisibility(this)
         } ?: this.visibility
 
-        if (effectiveVisibilityIfNotInternal != KtSymbolVisibility.INTERNAL) return defaultName
+        if (effectiveVisibilityIfNotInternal != Visibilities.Internal) return defaultName
 
-        val moduleName = module?.name ?: return defaultName
+        //TODO
+//        val moduleName = module?.name ?: return defaultName
 
-        if (hasPublishedApiAnnotation(annotationUseSiteTarget)) return defaultName
+        return defaultName
 
-        return KotlinTypeMapper.InternalNameMapper.mangleInternalName(defaultName, moduleName)
+//        if (hasPublishedApiAnnotation(annotationUseSiteTarget)) return defaultName
+//
+//        return KotlinTypeMapper.InternalNameMapper.mangleInternalName(defaultName, moduleName)
     }
 }

@@ -1,15 +1,16 @@
-class: kotlin/collections/MutableList
-
-// SYMBOLS:
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.add
+  callableIdIfNonLocal: kotlin/collections/MutableList.add
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: add
@@ -17,18 +18,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Unit
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.add
+  callableIdIfNonLocal: kotlin/collections/MutableList.add
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: add
@@ -36,18 +41,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(index), KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(index), KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.addAll
+  callableIdIfNonLocal: kotlin/collections/MutableList.addAll
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: addAll
@@ -55,18 +64,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(index), KtFirFunctionValueParameterSymbol(elements)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(index), KtFirValueParameterSymbol(elements)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.addAll
+  callableIdIfNonLocal: kotlin/collections/MutableList.addAll
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: addAll
@@ -74,18 +87,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(elements)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(elements)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Unit
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.clear
+  callableIdIfNonLocal: kotlin/collections/MutableList.clear
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: clear
@@ -94,17 +111,21 @@ KtFirFunctionSymbol:
   symbolKind: MEMBER
   typeParameters: []
   valueParameters: []
-  visibility: PUBLIC
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/collections/MutableListIterator<E>
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.listIterator
+  callableIdIfNonLocal: kotlin/collections/MutableList.listIterator
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: listIterator
@@ -113,17 +134,21 @@ KtFirFunctionSymbol:
   symbolKind: MEMBER
   typeParameters: []
   valueParameters: []
-  visibility: PUBLIC
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/collections/MutableListIterator<E>
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.listIterator
+  callableIdIfNonLocal: kotlin/collections/MutableList.listIterator
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: listIterator
@@ -131,18 +156,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(index)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(index)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.remove
+  callableIdIfNonLocal: kotlin/collections/MutableList.remove
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: remove
@@ -150,18 +179,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.removeAll
+  callableIdIfNonLocal: kotlin/collections/MutableList.removeAll
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: removeAll
@@ -169,18 +202,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(elements)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(elements)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] E
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.removeAt
+  callableIdIfNonLocal: kotlin/collections/MutableList.removeAt
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: removeAt
@@ -188,18 +225,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(index)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(index)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.retainAll
+  callableIdIfNonLocal: kotlin/collections/MutableList.retainAll
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: retainAll
@@ -207,18 +248,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(elements)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(elements)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] E
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.set
+  callableIdIfNonLocal: kotlin/collections/MutableList.set
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: true
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: set
@@ -226,18 +271,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(index), KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(index), KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/collections/MutableList<E>
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.subList
+  callableIdIfNonLocal: kotlin/collections/MutableList.subList
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: subList
@@ -245,18 +294,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(fromIndex), KtFirFunctionValueParameterSymbol(toIndex)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(fromIndex), KtFirValueParameterSymbol(toIndex)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.contains
+  callableIdIfNonLocal: kotlin/collections/MutableList.contains
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: true
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: contains
@@ -264,18 +317,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.containsAll
+  callableIdIfNonLocal: kotlin/collections/MutableList.containsAll
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: containsAll
@@ -283,18 +340,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(elements)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(elements)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] E
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.get
+  callableIdIfNonLocal: kotlin/collections/MutableList.get
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: true
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: get
@@ -302,18 +363,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(index)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(index)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Int
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.indexOf
+  callableIdIfNonLocal: kotlin/collections/MutableList.indexOf
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: indexOf
@@ -321,18 +386,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.isEmpty
+  callableIdIfNonLocal: kotlin/collections/List.isEmpty
+  dispatchType: kotlin/collections/List<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: isEmpty
@@ -341,36 +410,44 @@ KtFirFunctionSymbol:
   symbolKind: MEMBER
   typeParameters: []
   valueParameters: []
-  visibility: PUBLIC
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/collections/MutableIterator<E>
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.iterator
+  callableIdIfNonLocal: kotlin/collections/MutableList.iterator
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: true
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: iterator
-  origin: LIBRARY
+  origin: INTERSECTION_OVERRIDE
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
   valueParameters: []
-  visibility: PUBLIC
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Int
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.lastIndexOf
+  callableIdIfNonLocal: kotlin/collections/MutableList.lastIndexOf
+  dispatchType: kotlin/collections/MutableList<E>
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: ABSTRACT
   name: lastIndexOf
@@ -378,22 +455,25 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(element)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(element)]
+  visibility: Public
 
 KtFirKotlinPropertySymbol:
   annotatedType: [] kotlin/Int
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.List.size
-  getter: null
+  callableIdIfNonLocal: kotlin/collections/List.size
+  dispatchType: kotlin/collections/List<E>
+  getter: KtFirPropertyGetterSymbol(<getter>)
   hasBackingField: false
-  hasGetter: false
+  hasGetter: true
   hasSetter: false
   initializer: null
   isConst: false
   isExtension: false
   isLateInit: false
   isOverride: false
+  isStatic: false
   isVal: true
   modality: ABSTRACT
   name: size
@@ -401,17 +481,21 @@ KtFirKotlinPropertySymbol:
   receiverType: null
   setter: null
   symbolKind: MEMBER
-  visibility: PUBLIC
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Boolean
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.equals
+  callableIdIfNonLocal: kotlin/Any.equals
+  dispatchType: kotlin/Any
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: true
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: OPEN
   name: equals
@@ -419,18 +503,22 @@ KtFirFunctionSymbol:
   receiverType: null
   symbolKind: MEMBER
   typeParameters: []
-  valueParameters: [KtFirFunctionValueParameterSymbol(other)]
-  visibility: PUBLIC
+  valueParameters: [KtFirValueParameterSymbol(other)]
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/Int
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.hashCode
+  callableIdIfNonLocal: kotlin/Any.hashCode
+  dispatchType: kotlin/Any
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: OPEN
   name: hashCode
@@ -439,17 +527,21 @@ KtFirFunctionSymbol:
   symbolKind: MEMBER
   typeParameters: []
   valueParameters: []
-  visibility: PUBLIC
+  visibility: Public
 
 KtFirFunctionSymbol:
   annotatedType: [] kotlin/String
+  annotationClassIds: []
   annotations: []
-  callableIdIfNonLocal: kotlin.collections.MutableList.toString
+  callableIdIfNonLocal: kotlin/Any.toString
+  dispatchType: kotlin/Any
   isExtension: false
   isExternal: false
+  isInfix: false
   isInline: false
   isOperator: false
   isOverride: false
+  isStatic: false
   isSuspend: false
   modality: OPEN
   name: toString
@@ -458,4 +550,4 @@ KtFirFunctionSymbol:
   symbolKind: MEMBER
   typeParameters: []
   valueParameters: []
-  visibility: PUBLIC
+  visibility: Public

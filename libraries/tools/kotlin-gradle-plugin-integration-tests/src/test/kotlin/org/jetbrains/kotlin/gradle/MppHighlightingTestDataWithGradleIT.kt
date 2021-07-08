@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.gradle
 
+import org.jetbrains.kotlin.gradle.testbase.enableCacheRedirector
 import org.jetbrains.kotlin.gradle.util.modify
 import org.junit.Before
 import org.junit.Test
@@ -23,15 +24,17 @@ class MppHighlightingTestDataWithGradleIT : BaseGradleIT() {
 
     @Before
     fun cleanup() {
-        project.setupWorkingDir()
+        project.setupWorkingDir(false)
         project.gradleSettingsScript().modify { it.lines().filter { !it.startsWith("include") }.joinToString("\n") }
         project.projectDir.resolve("src").deleteRecursively()
         project.gradleBuildScript().modify { line ->
             line.lines().dropLastWhile { it != buildScriptCustomizationMarker }.joinToString("\n")
         }
+
+        project.projectDir.toPath().enableCacheRedirector()
     }
 
-    private val project by lazy { Project("mpp-source-set-hierarchy-analysis", GradleVersionRequired.AtLeast("6.0")) }
+    private val project by lazy { Project("mpp-source-set-hierarchy-analysis") }
 
     private fun doTest(cliCompiler: CliCompiler) = with(project) {
         val expectedErrorsPerSourceSetName = sourceRoots.associate { sourceRoot ->

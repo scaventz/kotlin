@@ -9,11 +9,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElementFinder
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.ProjectScope
+import org.jetbrains.kotlin.ObsoleteTestInfrastructure
 import org.jetbrains.kotlin.TestsCompiletimeError
 import org.jetbrains.kotlin.analyzer.AnalysisResult
 import org.jetbrains.kotlin.asJava.finder.JavaElementFinder
 import org.jetbrains.kotlin.backend.common.phaser.PhaseConfig
-import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensions
+import org.jetbrains.kotlin.backend.jvm.JvmGeneratorExtensionsImpl
 import org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory
 import org.jetbrains.kotlin.backend.jvm.jvmPhases
 import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys
@@ -32,7 +33,7 @@ import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.fir.analysis.FirAnalyzerFacade
 import org.jetbrains.kotlin.fir.backend.jvm.FirJvmBackendClassResolver
 import org.jetbrains.kotlin.fir.backend.jvm.FirJvmBackendExtension
-import org.jetbrains.kotlin.fir.createSession
+import org.jetbrains.kotlin.fir.createSessionForTests
 import org.jetbrains.kotlin.ir.backend.jvm.jvmResolveLibraries
 import org.jetbrains.kotlin.load.kotlin.PackagePartProvider
 import org.jetbrains.kotlin.psi.KtFile
@@ -91,6 +92,7 @@ object GenerationUtils {
         return state
     }
 
+    @OptIn(ObsoleteTestInfrastructure::class)
     private fun compileFilesUsingFrontendIR(
         project: Project,
         files: List<KtFile>,
@@ -104,12 +106,12 @@ object GenerationUtils {
         val scope = GlobalSearchScope.filesScope(project, files.map { it.virtualFile })
             .uniteWith(TopDownAnalyzerFacadeForJVM.AllJavaSourcesInProjectScope(project))
         val librariesScope = ProjectScope.getLibrariesScope(project)
-        val session = createSession(project, scope, librariesScope, "main", packagePartProvider)
+        val session = createSessionForTests(project, scope, librariesScope, "main", getPackagePartProvider = packagePartProvider)
 
         // TODO: add running checkers and check that it's safe to compile
         val firAnalyzerFacade = FirAnalyzerFacade(session, configuration.languageVersionSettings, files)
-        val extensions = JvmGeneratorExtensions()
-        val (moduleFragment, symbolTable, sourceManager, components) = firAnalyzerFacade.convertToIr(extensions)
+        val extensions = JvmGeneratorExtensionsImpl()
+        val (moduleFragment, symbolTable, components) = firAnalyzerFacade.convertToIr(extensions)
         val dummyBindingContext = NoScopeRecordCliBindingTrace().bindingContext
 
         val codegenFactory = JvmIrCodegenFactory(configuration.get(CLIConfigurationKeys.PHASE_CONFIG) ?: PhaseConfig(jvmPhases))
@@ -131,8 +133,8 @@ object GenerationUtils {
 
         generationState.beforeCompile()
         codegenFactory.generateModuleInFrontendIRMode(
-            generationState, moduleFragment, symbolTable, sourceManager, extensions, FirJvmBackendExtension(session, components),
-        )
+            generationState, moduleFragment, symbolTable, extensions, FirJvmBackendExtension(session, components),
+        ) {}
 
         generationState.factory.done()
         return generationState

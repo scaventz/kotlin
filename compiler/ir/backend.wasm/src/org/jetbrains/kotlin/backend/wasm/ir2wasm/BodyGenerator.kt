@@ -53,7 +53,7 @@ class BodyGenerator(val context: WasmFunctionCodegenContext) : IrElementVisitorV
             is IrConstKind.Short -> body.buildConstI32(kind.valueOf(expression).toInt())
             is IrConstKind.Int -> body.buildConstI32(kind.valueOf(expression))
             is IrConstKind.Long -> body.buildConstI64(kind.valueOf(expression))
-            is IrConstKind.Char -> body.buildConstI32(kind.valueOf(expression).toInt())
+            is IrConstKind.Char -> body.buildConstI32(kind.valueOf(expression).code)
             is IrConstKind.Float -> body.buildConstF32(kind.valueOf(expression))
             is IrConstKind.Double -> body.buildConstF64(kind.valueOf(expression))
             is IrConstKind.String -> {
@@ -139,7 +139,7 @@ class BodyGenerator(val context: WasmFunctionCodegenContext) : IrElementVisitorV
 
         val wasmGcType: WasmSymbol<WasmTypeDeclaration> = context.referenceGcType(klass.symbol)
 
-        klass.getWasmArrayAnnotation()?.let { wasmArrayInfo ->
+        if (klass.getWasmArrayAnnotation() != null) {
             require(expression.valueArgumentsCount == 1) { "@WasmArrayOf constructs must have exactly one argument" }
             generateExpression(expression.getValueArgument(0)!!)
             body.buildRttCanon(context.transformType(klass.defaultType))

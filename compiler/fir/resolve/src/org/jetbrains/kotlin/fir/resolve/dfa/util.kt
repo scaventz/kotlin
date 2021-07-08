@@ -7,14 +7,14 @@ package org.jetbrains.kotlin.fir.resolve.dfa
 
 import kotlinx.collections.immutable.PersistentMap
 import org.jetbrains.kotlin.fir.FirElement
-import org.jetbrains.kotlin.fir.FirSymbolOwner
 import org.jetbrains.kotlin.fir.contracts.description.ConeBooleanConstantReference
 import org.jetbrains.kotlin.fir.contracts.description.ConeConstantReference
+import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.references.FirThisReference
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
-import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirAccessorSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
@@ -92,20 +92,29 @@ internal val FirExpression.coneType: ConeKotlinType
     get() = typeRef.coneType
 
 @DfaInternals
-internal val FirElement.symbol: AbstractFirBasedSymbol<*>?
+internal val FirElement.symbol: FirBasedSymbol<*>?
     get() = when (this) {
         is FirResolvable -> symbol
-        is FirSymbolOwner<*> -> symbol
+        is FirDeclaration -> symbol
         is FirWhenSubjectExpression -> whenRef.value.subject?.symbol
         is FirSafeCallExpression -> regularQualifiedAccess.symbol
         else -> null
-    }?.takeIf { this is FirThisReceiverExpression || (it !is FirFunctionSymbol<*> && it !is FirAccessorSymbol) }
+    }?.takeIf {
+        (this as? FirExpression)?.unwrapSmartcastExpression() is FirThisReceiverExpression ||
+                (it !is FirFunctionSymbol<*> && it !is FirAccessorSymbol)
+    }
 
 @DfaInternals
-internal val FirResolvable.symbol: AbstractFirBasedSymbol<*>?
+internal val FirResolvable.symbol: FirBasedSymbol<*>?
     get() = when (val reference = calleeReference) {
         is FirThisReference -> reference.boundSymbol
         is FirResolvedNamedReference -> reference.resolvedSymbol
         is FirNamedReferenceWithCandidate -> reference.candidateSymbol
         else -> null
+    }
+
+internal fun FirExpression.unwrapSmartcastExpression(): FirExpression =
+    when (this) {
+        is FirExpressionWithSmartcast -> originalExpression
+        else -> this
     }

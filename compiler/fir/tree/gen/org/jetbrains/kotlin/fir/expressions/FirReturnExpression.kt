@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.fir.expressions
 
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.FirTarget
 import org.jetbrains.kotlin.fir.declarations.FirFunction
@@ -16,14 +17,18 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-abstract class FirReturnExpression : FirJump<FirFunction<*>>() {
+abstract class FirReturnExpression : FirJump<FirFunction>() {
     abstract override val source: FirSourceElement?
     abstract override val typeRef: FirTypeRef
     abstract override val annotations: List<FirAnnotationCall>
-    abstract override val target: FirTarget<FirFunction<*>>
+    abstract override val target: FirTarget<FirFunction>
     abstract val result: FirExpression
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitReturnExpression(this, data)
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformReturnExpression(this, data) as E
 
     abstract override fun replaceTypeRef(newTypeRef: FirTypeRef)
 

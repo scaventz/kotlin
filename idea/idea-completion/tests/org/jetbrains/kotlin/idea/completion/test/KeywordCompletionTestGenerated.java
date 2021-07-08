@@ -96,7 +96,7 @@ public class KeywordCompletionTestGenerated extends AbstractKeywordCompletionTes
     }
 
     public void testAllFilesPresentInKeywords() throws Exception {
-        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/idea-completion/testData/keywords"), Pattern.compile("^(.+)\\.kt$"), null, false);
+        KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/idea-completion/testData/keywords"), Pattern.compile("^(.+)(?<!\\.fir)\\.kt$"), null, false);
     }
 
     @TestMetadata("BeforeClass.kt")
@@ -577,6 +577,11 @@ public class KeywordCompletionTestGenerated extends AbstractKeywordCompletionTes
     @TestMetadata("This.kt")
     public void testThis() throws Exception {
         runTest("idea/idea-completion/testData/keywords/This.kt");
+    }
+
+    @TestMetadata("ThisInCompanion.kt")
+    public void testThisInCompanion() throws Exception {
+        runTest("idea/idea-completion/testData/keywords/ThisInCompanion.kt");
     }
 
     @TestMetadata("ThisPrefixMatching.kt")

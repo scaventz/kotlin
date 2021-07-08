@@ -5,8 +5,9 @@
 
 package org.jetbrains.kotlin.fir.references
 
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSourceElement
-import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
+import org.jetbrains.kotlin.fir.symbols.FirBasedSymbol
 import org.jetbrains.kotlin.fir.visitors.*
 
 /*
@@ -17,9 +18,13 @@ import org.jetbrains.kotlin.fir.visitors.*
 abstract class FirThisReference : FirReference() {
     abstract override val source: FirSourceElement?
     abstract val labelName: String?
-    abstract val boundSymbol: AbstractFirBasedSymbol<*>?
+    abstract val boundSymbol: FirBasedSymbol<*>?
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitThisReference(this, data)
 
-    abstract fun replaceBoundSymbol(newBoundSymbol: AbstractFirBasedSymbol<*>?)
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformThisReference(this, data) as E
+
+    abstract fun replaceBoundSymbol(newBoundSymbol: FirBasedSymbol<*>?)
 }

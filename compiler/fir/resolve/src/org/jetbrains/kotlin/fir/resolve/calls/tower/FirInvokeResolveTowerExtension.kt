@@ -5,7 +5,6 @@
 
 package org.jetbrains.kotlin.fir.resolve.calls.tower
 
-import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
 import org.jetbrains.kotlin.fir.expressions.builder.FirQualifiedAccessExpressionBuilder
@@ -156,7 +155,9 @@ internal class FirInvokeResolveTowerExtension(
 
             val invokeFunctionInfo =
                 info.copy(
-                    explicitReceiver = invokeReceiverExpression, name = OperatorNameConventions.INVOKE,
+                    explicitReceiver = invokeReceiverExpression,
+                    name = OperatorNameConventions.INVOKE,
+                    isImplicitInvoke = true,
                     candidateForCommonInvokeReceiver = invokeReceiverCandidate.takeUnless { invokeBuiltinExtensionMode }
                 ).let {
                     when {
@@ -262,8 +263,8 @@ private fun BodyResolveComponents.createExplicitReceiverForInvoke(
         is FirRegularClassSymbol -> buildResolvedQualifierForClass(symbol, sourceElement = null)
         is FirTypeAliasSymbol -> {
             val type = symbol.fir.expandedTypeRef.coneTypeUnsafe<ConeClassLikeType>().fullyExpandedType(session)
-            val expansionRegularClass = type.lookupTag.toSymbol(session)?.fir as? FirRegularClass
-            buildResolvedQualifierForClass(expansionRegularClass!!.symbol, sourceElement = symbol.fir.source)
+            val expansionRegularClassSymbol = type.lookupTag.toSymbolOrError(session)
+            buildResolvedQualifierForClass(expansionRegularClassSymbol, sourceElement = symbol.fir.source)
         }
         else -> throw AssertionError()
     }
@@ -330,8 +331,11 @@ private class InvokeFunctionResolveTask(
     candidateFactory,
 ) {
 
-    override fun interceptTowerGroup(towerGroup: TowerGroup): TowerGroup =
-        maxOf(towerGroup.InvokeResolvePriority(InvokeResolvePriority.COMMON_INVOKE), receiverGroup)
+    override fun interceptTowerGroup(towerGroup: TowerGroup): TowerGroup {
+        val invokeGroup = towerGroup.InvokeResolvePriority(InvokeResolvePriority.COMMON_INVOKE)
+        val max = maxOf(invokeGroup, receiverGroup)
+        return max.InvokeReceiver(receiverGroup)
+    }
 
     suspend fun runResolverForInvoke(
         info: CallInfo,

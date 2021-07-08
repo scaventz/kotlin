@@ -7,46 +7,78 @@ package org.jetbrains.kotlin.idea.fir.low.level.api.element.builder
 
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.FirConstructor
+import org.jetbrains.kotlin.fir.declarations.FirDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirProperty
+import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.resolve.ResolutionMode
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.transformers.ReturnTypeCalculator
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.BodyResolveContext
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirDesignatedBodyResolveTransformerForReturnTypeCalculator
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.ImplicitBodyResolveComputationSession
-import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
+import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirDeclarationDesignation
 import org.jetbrains.kotlin.idea.fir.low.level.api.lazy.resolve.FirLazyBodiesCalculator
 
-class FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculator(
+fun FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculator(
     designation: Iterator<FirElement>,
     session: FirSession,
     scopeSession: ScopeSession,
     implicitBodyResolveComputationSession: ImplicitBodyResolveComputationSession,
     returnTypeCalculator: ReturnTypeCalculator,
     outerBodyResolveContext: BodyResolveContext?,
+): FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculatorImpl {
+
+    val designationList = mutableListOf<FirElement>()
+    for (element in designation) {
+        designationList.add(element)
+    }
+
+    return FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculatorImpl(
+        designationList,
+        session,
+        scopeSession,
+        implicitBodyResolveComputationSession,
+        returnTypeCalculator,
+        outerBodyResolveContext
+    )
+}
+
+class FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculatorImpl(
+    designation: List<FirElement>,
+    session: FirSession,
+    scopeSession: ScopeSession,
+    implicitBodyResolveComputationSession: ImplicitBodyResolveComputationSession,
+    returnTypeCalculator: ReturnTypeCalculator,
+    outerBodyResolveContext: BodyResolveContext?,
 ) : FirDesignatedBodyResolveTransformerForReturnTypeCalculator(
-    designation,
+    designation.iterator(),
     session,
     scopeSession,
     implicitBodyResolveComputationSession,
     returnTypeCalculator,
     outerBodyResolveContext
 ) {
+    private val declarationDesignation = designation.filterIsInstance<FirDeclaration>()
+
     override fun transformSimpleFunction(
         simpleFunction: FirSimpleFunction,
         data: ResolutionMode
-    ): CompositeTransformResult<FirSimpleFunction> {
-        FirLazyBodiesCalculator.calculateLazyBodiesForFunction(simpleFunction)
+    ): FirSimpleFunction {
+        val firDesignation = FirDeclarationDesignation(declarationDesignation, simpleFunction)
+        FirLazyBodiesCalculator.calculateLazyBodiesForFunction(firDesignation)
         return super.transformSimpleFunction(simpleFunction, data)
     }
 
-    override fun transformConstructor(constructor: FirConstructor, data: ResolutionMode): CompositeTransformResult<FirDeclaration> {
-        FirLazyBodiesCalculator.calculateLazyBodyForSecondaryConstructor(constructor)
+    override fun transformConstructor(constructor: FirConstructor, data: ResolutionMode): FirConstructor {
+        val firDesignation = FirDeclarationDesignation(declarationDesignation, constructor)
+        FirLazyBodiesCalculator.calculateLazyBodyForSecondaryConstructor(firDesignation)
         return super.transformConstructor(constructor, data)
     }
 
-    override fun transformProperty(property: FirProperty, data: ResolutionMode): CompositeTransformResult<FirProperty> {
-        FirLazyBodiesCalculator.calculateLazyBodyForProperty(property)
+    override fun transformProperty(property: FirProperty, data: ResolutionMode): FirProperty {
+        val firDesignation = FirDeclarationDesignation(declarationDesignation, property)
+        FirLazyBodiesCalculator.calculateLazyBodyForProperty(firDesignation)
         return super.transformProperty(property, data)
     }
 }

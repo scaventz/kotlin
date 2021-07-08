@@ -35,7 +35,7 @@ interface CustomJdkTestLauncher {
 
     fun doTestWithJdk11(mainClass: Class<*>, arg: String) {
         if (isJava9OrLater()) return
-        KtTestUtil.getJdk11Home()?.let { doTestCustomJdk(mainClass, arg, it) }
+        KtTestUtil.getJdk11Home().let { doTestCustomJdk(mainClass, arg, it) }
     }
 
     private fun doTestCustomJdk(mainClass: Class<*>, arg: String, javaHome: File) {
@@ -48,7 +48,7 @@ interface CustomJdkTestLauncher {
         val currentJavaHome = System.getProperty("java.home")
 
         val classpath = collectClasspath(AbstractClassFileToSourceStubConverterTest::class.java.classLoader)
-            .filter { it.protocol.toLowerCase() == "file" && it.path != null && !it.path.startsWith(currentJavaHome) }
+            .filter { it.protocol.lowercase() == "file" && it.path != null && !it.path.startsWith(currentJavaHome) }
             .map { it.path }
 
         val command = arrayOf(

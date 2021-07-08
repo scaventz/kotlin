@@ -5,20 +5,27 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers.body.resolve
 
-import org.jetbrains.kotlin.fir.declarations.FirClass
+import org.jetbrains.kotlin.fir.declarations.FirClassLikeDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.resolve.ResolutionMode
+import org.jetbrains.kotlin.fir.resolve.transformers.FirProviderInterceptor
 import org.jetbrains.kotlin.fir.resolve.transformers.runStatusResolveForLocalClass
 import org.jetbrains.kotlin.fir.resolve.transformers.runSupertypeResolvePhaseForLocalClass
 import org.jetbrains.kotlin.fir.resolve.transformers.runTypeResolvePhaseForLocalClass
 import org.jetbrains.kotlin.fir.scopes.impl.createCurrentScopeList
 
-fun <F : FirClass<F>> F.runAllPhasesForLocalClass(
+fun <F : FirClassLikeDeclaration> F.runAllPhasesForLocalClass(
     transformer: FirAbstractBodyResolveTransformer,
     components: FirAbstractBodyResolveTransformer.BodyResolveTransformerComponents,
-    resolutionMode: ResolutionMode
+    resolutionMode: ResolutionMode,
+    firTowerDataContextCollector: FirTowerDataContextCollector?,
+    firProviderInterceptor: FirProviderInterceptor?,
 ): F {
     if (this.resolvePhase > FirResolvePhase.RAW_FIR) return this
+    if (this is FirRegularClass) {
+        components.context.storeClassIfNotNested(this)
+    }
     this.transformAnnotations(transformer, ResolutionMode.ContextIndependent)
     val localClassesNavigationInfo = collectLocalClassesNavigationInfo()
 
@@ -31,7 +38,8 @@ fun <F : FirClass<F>> F.runAllPhasesForLocalClass(
         components.session,
         components.scopeSession,
         components.createCurrentScopeList(),
-        localClassesNavigationInfo
+        localClassesNavigationInfo,
+        firProviderInterceptor
     )
     runTypeResolvePhaseForLocalClass(
         components.session,
@@ -44,6 +52,11 @@ fun <F : FirClass<F>> F.runAllPhasesForLocalClass(
         components.createCurrentScopeList(),
         localClassesNavigationInfo
     )
-    runContractAndBodiesResolutionForLocalClass(components, resolutionMode, localClassesNavigationInfo)
+    runContractAndBodiesResolutionForLocalClass(
+        components,
+        resolutionMode,
+        localClassesNavigationInfo,
+        firTowerDataContextCollector
+    )
     return this
 }

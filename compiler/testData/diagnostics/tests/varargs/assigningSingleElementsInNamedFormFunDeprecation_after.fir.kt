@@ -1,6 +1,5 @@
 // !LANGUAGE: +AssigningArraysToVarargsInNamedFormInAnnotations, +ProhibitAssigningSingleElementsToVarargsInNamedForm -AllowAssigningArrayElementsToVarargsInNamedFormForFunctions
 // !DIAGNOSTICS: -UNUSED_PARAMETER, -UNUSED_VARIABLE
-// !WITH_NEW_INFERENCE
 
 fun foo(vararg s: Int) {}
 
@@ -53,8 +52,8 @@ fun testMany(a: Any) {
     manyFoo(s = "")
 
     <!NONE_APPLICABLE!>manyFoo<!>(a)
-    <!NONE_APPLICABLE!>manyFoo<!>(v = a)
-    <!NONE_APPLICABLE!>manyFoo<!>(s = a)
-    <!NONE_APPLICABLE!>manyFoo<!>(v = a as Int)
-    <!NONE_APPLICABLE!>manyFoo<!>(s = a as String)
+    manyFoo(v = <!ARGUMENT_TYPE_MISMATCH!>a<!>)
+    manyFoo(s = <!ARGUMENT_TYPE_MISMATCH!>a<!>)
+    manyFoo(v = <!ARGUMENT_TYPE_MISMATCH!>a as Int<!>)
+    manyFoo(s = <!ARGUMENT_TYPE_MISMATCH!>a as String<!>)
 }

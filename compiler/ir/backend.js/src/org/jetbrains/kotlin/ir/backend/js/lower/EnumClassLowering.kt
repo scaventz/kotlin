@@ -205,6 +205,9 @@ class EnumClassConstructorBodyTransformer(val context: JsCommonBackendContext) :
                 for (i in 0..1) {
                     putValueArgument(i, builder.irGet(constructor.valueParameters[i]))
                 }
+                for (i in 0 until expression.typeArgumentsCount) {
+                    putTypeArgument(i, expression.getTypeArgument(i))
+                }
             }
 
         override fun visitDelegatingConstructorCall(expression: IrDelegatingConstructorCall): IrExpression {
@@ -217,6 +220,9 @@ class EnumClassConstructorBodyTransformer(val context: JsCommonBackendContext) :
                 }
                 for (i in 0 until expression.valueArgumentsCount) {
                     putValueArgument(valueArgIdx++, expression.getValueArgument(i))
+                }
+                for (i in 0 until expression.typeArgumentsCount) {
+                    putTypeArgument(i, expression.getTypeArgument(i))
                 }
             }
         }
@@ -353,7 +359,7 @@ class EnumClassCreateInitializerLowering(val context: JsCommonBackendContext) : 
 
             // TODO Why not move to upper level?
             // TODO Also doesn't fit the transformFlat-ish API
-            stageController.unrestrictDeclarationListsAccess {
+            context.irFactory.stageController.unrestrictDeclarationListsAccess {
                 declaration.declarations += entryInstancesInitializedVar
                 declaration.declarations += initEntryInstancesFun
             }
@@ -414,7 +420,7 @@ class EnumEntryCreateGetInstancesFunsLowering(val context: JsCommonBackendContex
 
                 // TODO prettify
                 entryGetInstanceFun.parent = irClass.parent
-                stageController.unrestrictDeclarationListsAccess {
+                context.irFactory.stageController.unrestrictDeclarationListsAccess {
                     (irClass.parent as IrDeclarationContainer).declarations += entryGetInstanceFun
                 }
 
@@ -458,17 +464,15 @@ class EnumSyntheticFunctionsLowering(val context: JsCommonBackendContext) : Decl
     private val IrClass.initEntryInstancesFun: IrSimpleFunction? by context.mapping.enumClassToInitEntryInstancesFun
 
     override fun transformFlat(declaration: IrDeclaration): List<IrDeclaration>? {
-        if (declaration is IrConstructor && declaration.isPrimary) {
-            declaration.parentEnumClassOrNull?.let { enumClass ->
-                if (declaration.parentClassOrNull?.isCompanion == true) {
-                    (declaration.body as? IrSyntheticBody)?.let { originalBody ->
-                        declaration.parentEnumClassOrNull?.let { enumClass ->
-                            declaration.body = context.irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET) {
-                                statements += context.createIrBuilder(declaration.symbol).irBlockBody {
-                                    +irCall(enumClass.initEntryInstancesFun!!.symbol)
-                                }.statements + originalBody.statements
-                            }
-                        }
+        if (declaration is IrConstructor && declaration.isPrimary && declaration.parentEnumClassOrNull != null &&
+            declaration.parentClassOrNull?.isCompanion == true
+        ) {
+            (declaration.body as? IrSyntheticBody)?.let { originalBody ->
+                declaration.parentEnumClassOrNull?.let { enumClass ->
+                    declaration.body = context.irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET) {
+                        statements += context.createIrBuilder(declaration.symbol).irBlockBody {
+                            +irCall(enumClass.initEntryInstancesFun!!.symbol)
+                        }.statements + originalBody.statements
                     }
                 }
             }

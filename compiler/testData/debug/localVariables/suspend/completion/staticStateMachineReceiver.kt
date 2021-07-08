@@ -21,7 +21,6 @@ suspend fun box() {
 // test.kt:4 <init>:
 // test.kt:14 box: $completion:kotlin.coroutines.Continuation=helpers.ResultContinuation
 // test.kt:7 foo1:
-// CoroutineUtil.kt:28 getContext:
 
 // LOCAL VARIABLES JVM
 // test.kt:-1 <init>:
@@ -33,7 +32,7 @@ suspend fun box() {
 // test.kt:8 foo1: $continuation:kotlin.coroutines.Continuation=TestKt$foo1$1, $result:java.lang.Object=null, $this$foo1:A=A, l:long=42:long
 // test.kt:6 foo: $this$foo:A=A, $completion:kotlin.coroutines.Continuation=TestKt$foo1$1
 // test.kt:8 foo1: $continuation:kotlin.coroutines.Continuation=TestKt$foo1$1, $result:java.lang.Object=null, $this$foo1:A=A, l:long=42:long
-// test.kt:9 foo1: $continuation:kotlin.coroutines.Continuation=TestKt$foo1$1, $result:java.lang.Object=null, $this$foo1:A=A, l:long=42:long
+// test.kt:9 foo1: $continuation:kotlin.coroutines.Continuation=TestKt$foo1$1, $result:java.lang.Object=null, l:long=42:long, $this$foo1:A=A
 // test.kt:6 foo: $this$foo:A=A, $completion:kotlin.coroutines.Continuation=TestKt$foo1$1
 // test.kt:9 foo1: $continuation:kotlin.coroutines.Continuation=TestKt$foo1$1, $result:java.lang.Object=null, l:long=42:long
 // test.kt:10 foo1: $continuation:kotlin.coroutines.Continuation=TestKt$foo1$1, $result:java.lang.Object=null, l:long=42:long

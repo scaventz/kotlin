@@ -17,9 +17,9 @@
 package org.jetbrains.kotlin.library.impl
 
 import org.jetbrains.kotlin.konan.file.File
-import org.jetbrains.kotlin.library.*
 import org.jetbrains.kotlin.konan.properties.Properties
 import org.jetbrains.kotlin.konan.properties.loadProperties
+import org.jetbrains.kotlin.library.*
 
 open class BaseKotlinLibraryImpl(
     val access: BaseLibraryAccess<KotlinLibraryLayout>,
@@ -30,7 +30,7 @@ open class BaseKotlinLibraryImpl(
 
     private val componentListAndHasPre14Manifest by lazy {
         access.inPlace { layout ->
-            val listFiles = layout.libDir.listFiles
+            val listFiles = layout.libFile.listFiles
             listFiles
                 .filter { it.isDirectory }
                 .filter { it.listFiles.map { it.name }.contains(KLIB_MANIFEST_FILE_NAME) }
@@ -108,6 +108,8 @@ class IrMonoliticLibraryImpl(_access: IrLibraryAccess<IrKotlinLibraryLayout>) : 
 
     override fun body(index: Int, fileIndex: Int) = bodies.tableItemBytes(fileIndex, index)
 
+    override fun debugInfo(index: Int, fileIndex: Int) = debugInfos?.tableItemBytes(fileIndex, index)
+
     override fun file(index: Int) = files.tableItemBytes(index)
 
     private fun loadIrDeclaration(index: Int, fileIndex: Int) =
@@ -141,6 +143,12 @@ class IrMonoliticLibraryImpl(_access: IrLibraryAccess<IrKotlinLibraryLayout>) : 
         IrMultiArrayFileReader(access.realFiles {
             it.irBodies
         })
+    }
+
+    private val debugInfos: IrMultiArrayFileReader? by lazy {
+        access.realFiles {
+            it.irDebugInfo.let { diFile -> if (diFile.exists) IrMultiArrayFileReader(diFile) else null }
+        }
     }
 
     private val files: IrArrayFileReader by lazy {
@@ -212,6 +220,23 @@ class IrPerFileLibraryImpl(_access: IrLibraryAccess<IrKotlinLibraryLayout>) : Ir
         return dataReader.tableItemBytes(index)
     }
 
+
+    private val fileToDebugInfoMap = mutableMapOf<Int, IrArrayFileReader?>()
+    override fun debugInfo(index: Int, fileIndex: Int): ByteArray? {
+        val dataReader = fileToDebugInfoMap.getOrPut(fileIndex) {
+            val fileDirectory = directories[fileIndex]
+            access.realFiles {
+                it.irDebugInfo(fileDirectory).let { diFile ->
+                    if (diFile.exists) {
+                        IrArrayFileReader(diFile)
+                    } else null
+                }
+            }
+
+        }
+        return dataReader?.tableItemBytes(index)
+    }
+
     override fun file(index: Int): ByteArray {
         return access.realFiles {
             it.irFile(directories[index]).readBytes()
@@ -230,7 +255,24 @@ open class KotlinLibraryImpl(
 ) : KotlinLibrary,
     BaseKotlinLibrary by base,
     MetadataLibrary by metadata,
-    IrLibrary by ir
+    IrLibrary by ir {
+    override fun toString(): String = buildString {
+        append("name ")
+        append(base.libraryName)
+        append(", ")
+        append("file: ")
+        append(base.libraryFile.path)
+        append(", ")
+        append("version: ")
+        append(base.versions)
+        if (isInterop) {
+            append(", interop: true, ")
+            append("native targets: ")
+            nativeTargets.joinTo(this, ", ", "{", "}")
+        }
+        append(')')
+    }
+}
 
 fun createKotlinLibrary(
     libraryFile: File,

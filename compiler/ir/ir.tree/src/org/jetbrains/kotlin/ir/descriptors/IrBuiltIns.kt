@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.incremental.components.NoLookupLocation
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOriginImpl
 import org.jetbrains.kotlin.ir.declarations.IrFactory
-import org.jetbrains.kotlin.ir.declarations.impl.IrExternalPackageFragmentImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrTypeParameterSymbolImpl
@@ -48,13 +47,12 @@ class IrBuiltIns(
     private val builtInsModule = builtIns.builtInsModule
 
     private val packageFragmentDescriptor = IrBuiltinsPackageFragmentDescriptorImpl(builtInsModule, KOTLIN_INTERNAL_IR_FQN)
-    val packageFragment =
-        IrExternalPackageFragmentImpl(symbolTable.referenceExternalPackageFragment(packageFragmentDescriptor), KOTLIN_INTERNAL_IR_FQN)
+    val packageFragment = symbolTable.declareExternalPackageFragmentIfNotExists(packageFragmentDescriptor)
 
     private fun ClassDescriptor.toIrSymbol() = symbolTable.referenceClass(this)
     private fun KotlinType.toIrType() = typeTranslator.translateType(this)
 
-    fun defineOperator(name: String, returnType: IrType, valueParameterTypes: List<IrType>): IrSimpleFunctionSymbol {
+    private fun defineOperator(name: String, returnType: IrType, valueParameterTypes: List<IrType>): IrSimpleFunctionSymbol {
         val operatorDescriptor =
             IrSimpleBuiltinOperatorDescriptorImpl(packageFragmentDescriptor, Name.identifier(name), returnType.originalKotlinType!!)
 
@@ -238,7 +236,14 @@ class IrBuiltIns(
     val stringType = string.toIrType()
     val stringClass = builtIns.string.toIrSymbol()
 
+    val iterableClass = builtIns.iterable.toIrSymbol()
+    val iteratorClass = builtIns.iterator.toIrSymbol()
+    val listIteratorClass = builtIns.listIterator.toIrSymbol()
+    val listClass = builtIns.list.toIrSymbol()
     val collectionClass = builtIns.collection.toIrSymbol()
+    val setClass = builtIns.set.toIrSymbol()
+    val mapClass = builtIns.map.toIrSymbol()
+    val mapEntryClass = builtIns.mapEntry.toIrSymbol()
 
     val arrayClass = builtIns.array.toIrSymbol()
 

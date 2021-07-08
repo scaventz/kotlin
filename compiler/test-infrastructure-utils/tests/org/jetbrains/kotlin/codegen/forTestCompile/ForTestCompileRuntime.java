@@ -32,7 +32,7 @@ public class ForTestCompileRuntime {
 
     @NotNull
     public static File minimalRuntimeJarForTests() {
-        return assertExists(new File("dist/kotlin-stdlib-minimal-for-test.jar"));
+        return assertExists(new File("dist/kotlin-stdlib-jvm-minimal-for-test.jar"));
     }
 
     @NotNull
@@ -93,16 +93,6 @@ public class ForTestCompileRuntime {
     @NotNull
     public static File jvmAnnotationsForTests() {
         return assertExists(new File("dist/kotlinc/lib/kotlin-annotations-jvm.jar"));
-    }
-
-    @NotNull
-    public static File androidAnnotationsForTests() {
-        return assertExists(new File("dist/kotlinc/lib/kotlin-annotations-android.jar"));
-    }
-
-    @NotNull
-    public static File coroutinesCompatForTests() {
-        return assertExists(new File("dist/kotlinc/lib/kotlin-coroutines-experimental-compat.jar"));
     }
 
     @NotNull

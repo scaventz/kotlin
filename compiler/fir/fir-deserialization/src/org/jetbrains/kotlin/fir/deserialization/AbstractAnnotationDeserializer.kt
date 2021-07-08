@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
-import org.jetbrains.kotlin.fir.declarations.collectEnumEntries
+import org.jetbrains.kotlin.fir.declarations.utils.collectEnumEntries
 import org.jetbrains.kotlin.fir.diagnostics.ConeSimpleDiagnostic
 import org.jetbrains.kotlin.fir.diagnostics.DiagnosticKind
 import org.jetbrains.kotlin.fir.expressions.*
@@ -36,6 +36,7 @@ import org.jetbrains.kotlin.serialization.deserialization.builtins.BuiltInSerial
 import org.jetbrains.kotlin.serialization.deserialization.descriptors.DeserializedContainerSource
 import org.jetbrains.kotlin.serialization.deserialization.getClassId
 import org.jetbrains.kotlin.serialization.deserialization.getName
+import org.jetbrains.kotlin.types.ConstantValueKind
 
 abstract class AbstractAnnotationDeserializer(
     private val session: FirSession
@@ -77,6 +78,7 @@ abstract class AbstractAnnotationDeserializer(
     open fun loadPropertyAnnotations(
         containerSource: DeserializedContainerSource?,
         propertyProto: ProtoBuf.Property,
+        containingClassProto: ProtoBuf.Class?,
         nameResolver: NameResolver,
         typeTable: TypeTable
     ): List<FirAnnotationCall> {
@@ -222,30 +224,30 @@ abstract class AbstractAnnotationDeserializer(
 
         return when (value.type) {
             BYTE -> {
-                val kind = if (isUnsigned) FirConstKind.UnsignedByte else FirConstKind.Byte
-                const(kind, value.intValue.toByte())
+                val kind = if (isUnsigned) ConstantValueKind.UnsignedByte else ConstantValueKind.Byte
+                const(kind, value.intValue.toByte(), session.builtinTypes.byteType)
             }
 
             SHORT -> {
-                val kind = if (isUnsigned) FirConstKind.UnsignedShort else FirConstKind.Short
-                const(kind, value.intValue.toShort())
+                val kind = if (isUnsigned) ConstantValueKind.UnsignedShort else ConstantValueKind.Short
+                const(kind, value.intValue.toShort(), session.builtinTypes.shortType)
             }
 
             INT -> {
-                val kind = if (isUnsigned) FirConstKind.UnsignedInt else FirConstKind.Int
-                const(kind, value.intValue.toInt())
+                val kind = if (isUnsigned) ConstantValueKind.UnsignedInt else ConstantValueKind.Int
+                const(kind, value.intValue.toInt(), session.builtinTypes.intType)
             }
 
             LONG -> {
-                val kind = if (isUnsigned) FirConstKind.UnsignedLong else FirConstKind.Long
-                const(kind, value.intValue)
+                val kind = if (isUnsigned) ConstantValueKind.UnsignedLong else ConstantValueKind.Long
+                const(kind, value.intValue, session.builtinTypes.longType)
             }
 
-            CHAR -> const(FirConstKind.Char, value.intValue.toChar())
-            FLOAT -> const(FirConstKind.Float, value.floatValue)
-            DOUBLE -> const(FirConstKind.Double, value.doubleValue)
-            BOOLEAN -> const(FirConstKind.Boolean, (value.intValue != 0L))
-            STRING -> const(FirConstKind.String, nameResolver.getString(value.stringValue))
+            CHAR -> const(ConstantValueKind.Char, value.intValue.toInt().toChar(), session.builtinTypes.charType)
+            FLOAT -> const(ConstantValueKind.Float, value.floatValue, session.builtinTypes.floatType)
+            DOUBLE -> const(ConstantValueKind.Double, value.doubleValue, session.builtinTypes.doubleType)
+            BOOLEAN -> const(ConstantValueKind.Boolean, (value.intValue != 0L), session.builtinTypes.booleanType)
+            STRING -> const(ConstantValueKind.String, nameResolver.getString(value.stringValue), session.builtinTypes.stringType)
             ANNOTATION -> deserializeAnnotation(value.annotation, nameResolver)
             CLASS -> buildGetClassCall {
                 val classId = nameResolver.getClassId(value.classId)
@@ -294,5 +296,7 @@ abstract class AbstractAnnotationDeserializer(
         }
     }
 
-    private fun <T> const(kind: FirConstKind<T>, value: T) = buildConstExpression(null, kind, value)
+    private fun <T> const(kind: ConstantValueKind<T>, value: T, typeRef: FirResolvedTypeRef): FirConstExpression<T> {
+        return buildConstExpression(null, kind, value).apply { this.replaceTypeRef(typeRef) }
+    }
 }

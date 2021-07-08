@@ -7,16 +7,20 @@ package org.jetbrains.kotlin.fir.resolve.calls
 
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.fir.*
+import org.jetbrains.kotlin.fir.FirVisibilityChecker
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.expressions.FirExpression
-import org.jetbrains.kotlin.fir.expressions.FirQualifiedAccessExpression
-import org.jetbrains.kotlin.fir.expressions.FirResolvedQualifier
+import org.jetbrains.kotlin.fir.declarations.utils.isInfix
+import org.jetbrains.kotlin.fir.declarations.utils.isOperator
+import org.jetbrains.kotlin.fir.declarations.utils.modality
+import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.references.FirSuperReference
-import org.jetbrains.kotlin.fir.resolve.*
 import org.jetbrains.kotlin.fir.resolve.inference.*
+import org.jetbrains.kotlin.fir.resolve.toSymbol
+import org.jetbrains.kotlin.fir.scopes.FirUnstableSmartcastTypeScope
 import org.jetbrains.kotlin.fir.symbols.SyntheticSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirCallableSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirFunctionSymbol
+import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.name.ClassId
@@ -24,6 +28,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind.*
 import org.jetbrains.kotlin.types.AbstractNullabilityChecker
+import org.jetbrains.kotlin.types.SmartcastStability
 
 abstract class ResolutionStage {
     abstract suspend fun check(candidate: Candidate, callInfo: CallInfo, sink: CheckerSink, context: ResolutionContext)
@@ -39,17 +44,17 @@ internal object CheckExplicitReceiverConsistency : ResolutionStage() {
         when (receiverKind) {
             NO_EXPLICIT_RECEIVER -> {
                 if (explicitReceiver != null && explicitReceiver !is FirResolvedQualifier && !explicitReceiver.isSuperReferenceExpression()) {
-                    return sink.yieldDiagnostic(InapplicableWrongReceiver)
+                    return sink.yieldDiagnostic(InapplicableWrongReceiver(actualType = explicitReceiver.typeRef.coneTypeSafe()))
                 }
             }
             EXTENSION_RECEIVER, DISPATCH_RECEIVER -> {
                 if (explicitReceiver == null) {
-                    return sink.yieldDiagnostic(InapplicableWrongReceiver)
+                    return sink.yieldDiagnostic(InapplicableWrongReceiver())
                 }
             }
             BOTH_RECEIVERS -> {
                 if (explicitReceiver == null) {
-                    return sink.yieldDiagnostic(InapplicableWrongReceiver)
+                    return sink.yieldDiagnostic(InapplicableWrongReceiver())
                 }
                 // Here we should also check additional invoke receiver
             }
@@ -70,6 +75,7 @@ object CheckExtensionReceiver : ResolutionStage() {
         )
         candidate.resolvePlainArgumentType(
             candidate.csBuilder,
+            argumentExtensionReceiverValue.receiverExpression,
             argumentType = argumentType,
             expectedType = expectedType,
             sink = sink,
@@ -103,9 +109,18 @@ object CheckDispatchReceiver : ResolutionStage() {
         }
 
         val dispatchReceiverValueType = candidate.dispatchReceiverValue?.type ?: return
+        val isReceiverNullable = !AbstractNullabilityChecker.isSubtypeOfAny(context.session.typeContext, dispatchReceiverValueType)
 
-        if (!AbstractNullabilityChecker.isSubtypeOfAny(context.session.typeContext, dispatchReceiverValueType)) {
-            sink.yieldDiagnostic(InapplicableWrongReceiver)
+        val isCandidateFromUnstableSmartcast =
+            (candidate.originScope as? FirUnstableSmartcastTypeScope)?.isSymbolFromUnstableSmartcast(candidate.symbol) == true
+
+        if (explicitReceiverExpression is FirExpressionWithSmartcast &&
+            explicitReceiverExpression.smartcastStability != SmartcastStability.STABLE_VALUE &&
+            (isCandidateFromUnstableSmartcast || isReceiverNullable)
+        ) {
+            sink.yieldDiagnostic(UnstableSmartCast(explicitReceiverExpression, explicitReceiverExpression.smartcastType.coneType))
+        } else if (isReceiverNullable) {
+            sink.yieldDiagnostic(UnsafeCall(dispatchReceiverValueType))
         }
     }
 }
@@ -143,16 +158,16 @@ internal object CheckArguments : CheckerStage() {
         for (argument in callInfo.arguments) {
             val parameter = argumentMapping[argument]
             candidate.resolveArgument(
+                callInfo,
                 argument,
                 parameter,
                 isReceiver = false,
                 sink = sink,
                 context = context
             )
-            if (candidate.system.hasContradiction) {
-                sink.yieldDiagnostic(InapplicableCandidate)
-            }
-            sink.yieldIfNeed()
+        }
+        if (candidate.system.hasContradiction && callInfo.arguments.isNotEmpty()) {
+            sink.yieldDiagnostic(InapplicableCandidate)
         }
     }
 }
@@ -191,7 +206,7 @@ internal object CheckVisibility : CheckerStage() {
 
         if (declaration is FirConstructor) {
             // TODO: Should be some other form
-            val classSymbol = declaration.returnTypeRef.coneTypeUnsafe<ConeClassLikeType>().lookupTag.toSymbol(declaration.session)
+            val classSymbol = declaration.returnTypeRef.coneTypeUnsafe<ConeClassLikeType>().lookupTag.toSymbol(context.session)
 
             if (classSymbol is FirRegularClassSymbol) {
                 if (classSymbol.fir.classKind.isSingleton) {
@@ -202,12 +217,12 @@ internal object CheckVisibility : CheckerStage() {
         }
     }
 
-    private suspend fun <T> checkVisibility(
+    private suspend fun <T : FirMemberDeclaration> checkVisibility(
         declaration: T,
         sink: CheckerSink,
         candidate: Candidate,
         visibilityChecker: FirVisibilityChecker
-    ): Boolean where T : FirMemberDeclaration, T : FirSymbolOwner<*> {
+    ): Boolean {
         if (!visibilityChecker.isVisible(declaration, candidate)) {
             sink.yieldDiagnostic(HiddenCandidate)
             return false
@@ -239,20 +254,19 @@ internal object CheckLowPriorityInOverloadResolution : CheckerStage() {
 }
 
 internal object PostponedVariablesInitializerResolutionStage : ResolutionStage() {
-    private val BUILDER_INFERENCE_CLASS_ID: ClassId = ClassId.fromString("kotlin/BuilderInference")
 
     override suspend fun check(candidate: Candidate, callInfo: CallInfo, sink: CheckerSink, context: ResolutionContext) {
         val argumentMapping = candidate.argumentMapping ?: return
         // TODO: convert type argument mapping to map [FirTypeParameterSymbol, FirTypedProjection?]
         if (candidate.typeArgumentMapping is TypeArgumentMapping.Mapped) return
         for (parameter in argumentMapping.values) {
-            if (!parameter.hasBuilderInferenceMarker()) continue
+            if (!parameter.hasBuilderInferenceAnnotation()) continue
             val type = parameter.returnTypeRef.coneType
             val receiverType = type.receiverType(callInfo.session) ?: continue
 
             for (freshVariable in candidate.freshVariables) {
                 if (candidate.csBuilder.isPostponedTypeVariable(freshVariable)) continue
-                if (freshVariable !is TypeParameterBasedTypeVariable) continue
+                if (freshVariable !is ConeTypeParameterBasedTypeVariable) continue
                 val typeParameterSymbol = freshVariable.typeParameterSymbol
                 val typeHasVariable = receiverType.contains {
                     (it as? ConeTypeParameterType)?.lookupTag?.typeParameterSymbol == typeParameterSymbol
@@ -263,8 +277,30 @@ internal object PostponedVariablesInitializerResolutionStage : ResolutionStage()
             }
         }
     }
+}
 
-    private fun FirValueParameter.hasBuilderInferenceMarker(): Boolean {
-        return this.hasAnnotation(BUILDER_INFERENCE_CLASS_ID)
+internal object CheckCallModifiers : CheckerStage() {
+    override suspend fun check(candidate: Candidate, callInfo: CallInfo, sink: CheckerSink, context: ResolutionContext) {
+        if (callInfo.callSite is FirFunctionCall) {
+            val functionSymbol = candidate.symbol as? FirNamedFunctionSymbol ?: return
+            when {
+                callInfo.callSite.origin == FirFunctionCallOrigin.Infix && !functionSymbol.fir.isInfix ->
+                    sink.reportDiagnostic(InfixCallOfNonInfixFunction(functionSymbol))
+                callInfo.callSite.origin == FirFunctionCallOrigin.Operator && !functionSymbol.fir.isOperator ->
+                    sink.reportDiagnostic(OperatorCallOfNonOperatorFunction(functionSymbol))
+                callInfo.isImplicitInvoke && !functionSymbol.fir.isOperator ->
+                    sink.reportDiagnostic(OperatorCallOfNonOperatorFunction(functionSymbol))
+            }
+        }
+    }
+}
+
+internal object CheckDeprecatedSinceKotlin : ResolutionStage() {
+    override suspend fun check(candidate: Candidate, callInfo: CallInfo, sink: CheckerSink, context: ResolutionContext) {
+        val fir = (candidate.symbol as? FirCallableSymbol<*>)?.fir ?: return
+        val deprecation = fir.getDeprecation(callInfo.callSite)
+        if (deprecation != null && deprecation.level == DeprecationLevelValue.HIDDEN) {
+            sink.yieldDiagnostic(HiddenCandidate)
+        }
     }
 }

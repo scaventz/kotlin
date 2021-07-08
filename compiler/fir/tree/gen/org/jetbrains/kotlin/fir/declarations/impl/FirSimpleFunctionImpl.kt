@@ -5,9 +5,10 @@
 
 package org.jetbrains.kotlin.fir.declarations.impl
 
-import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirModuleData
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.contracts.FirContractDescription
+import org.jetbrains.kotlin.fir.declarations.DeprecationsPerUseSite
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationAttributes
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationStatus
@@ -32,17 +33,18 @@ import org.jetbrains.kotlin.fir.visitors.*
 
 internal class FirSimpleFunctionImpl(
     override val source: FirSourceElement?,
-    override val session: FirSession,
+    override val moduleData: FirModuleData,
     override var resolvePhase: FirResolvePhase,
     override val origin: FirDeclarationOrigin,
     override val attributes: FirDeclarationAttributes,
     override var returnTypeRef: FirTypeRef,
     override var receiverTypeRef: FirTypeRef?,
-    override val valueParameters: MutableList<FirValueParameter>,
-    override var body: FirBlock?,
+    override var deprecation: DeprecationsPerUseSite?,
     override var status: FirDeclarationStatus,
     override val containerSource: DeserializedContainerSource?,
     override val dispatchReceiverType: ConeKotlinType?,
+    override val valueParameters: MutableList<FirValueParameter>,
+    override var body: FirBlock?,
     override var contractDescription: FirContractDescription,
     override val name: Name,
     override val symbol: FirNamedFunctionSymbol,
@@ -58,10 +60,10 @@ internal class FirSimpleFunctionImpl(
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {
         returnTypeRef.accept(visitor, data)
         receiverTypeRef?.accept(visitor, data)
+        status.accept(visitor, data)
         controlFlowGraphReference?.accept(visitor, data)
         valueParameters.forEach { it.accept(visitor, data) }
         body?.accept(visitor, data)
-        status.accept(visitor, data)
         contractDescription.accept(visitor, data)
         annotations.forEach { it.accept(visitor, data) }
         typeParameters.forEach { it.accept(visitor, data) }
@@ -70,10 +72,10 @@ internal class FirSimpleFunctionImpl(
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
         transformReturnTypeRef(transformer, data)
         transformReceiverTypeRef(transformer, data)
-        controlFlowGraphReference = controlFlowGraphReference?.transformSingle(transformer, data)
+        transformStatus(transformer, data)
+        controlFlowGraphReference = controlFlowGraphReference?.transform(transformer, data)
         transformValueParameters(transformer, data)
         transformBody(transformer, data)
-        transformStatus(transformer, data)
         transformContractDescription(transformer, data)
         transformAnnotations(transformer, data)
         transformTypeParameters(transformer, data)
@@ -81,12 +83,17 @@ internal class FirSimpleFunctionImpl(
     }
 
     override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
-        returnTypeRef = returnTypeRef.transformSingle(transformer, data)
+        returnTypeRef = returnTypeRef.transform(transformer, data)
         return this
     }
 
     override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
-        receiverTypeRef = receiverTypeRef?.transformSingle(transformer, data)
+        receiverTypeRef = receiverTypeRef?.transform(transformer, data)
+        return this
+    }
+
+    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
+        status = status.transform(transformer, data)
         return this
     }
 
@@ -96,17 +103,12 @@ internal class FirSimpleFunctionImpl(
     }
 
     override fun <D> transformBody(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
-        body = body?.transformSingle(transformer, data)
-        return this
-    }
-
-    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
-        status = status.transformSingle(transformer, data)
+        body = body?.transform(transformer, data)
         return this
     }
 
     override fun <D> transformContractDescription(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
-        contractDescription = contractDescription.transformSingle(transformer, data)
+        contractDescription = contractDescription.transform(transformer, data)
         return this
     }
 
@@ -130,6 +132,10 @@ internal class FirSimpleFunctionImpl(
 
     override fun replaceReceiverTypeRef(newReceiverTypeRef: FirTypeRef?) {
         receiverTypeRef = newReceiverTypeRef
+    }
+
+    override fun replaceDeprecation(newDeprecation: DeprecationsPerUseSite?) {
+        deprecation = newDeprecation
     }
 
     override fun replaceControlFlowGraphReference(newControlFlowGraphReference: FirControlFlowGraphReference?) {

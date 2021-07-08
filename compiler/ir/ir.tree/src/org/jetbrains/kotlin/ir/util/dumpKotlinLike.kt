@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.ir.util
 import com.intellij.openapi.util.text.StringUtil
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.ObsoleteDescriptorBasedAPI
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -57,6 +58,7 @@ class KotlinLikeDumpOptions(
     // TODO support
     val labelPrintingStrategy: LabelPrintingStrategy = LabelPrintingStrategy.NEVER,
     val printFakeOverridesStrategy: FakeOverridesStrategy = FakeOverridesStrategy.ALL,
+    val printElseAsTrue: Boolean = false,
     /*
     TODO add more options:
      always print visibility?
@@ -139,6 +141,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
         declaration.acceptChildren(this, null)
     }
 
+    @OptIn(ObsoleteDescriptorBasedAPI::class)
     override fun visitFile(declaration: IrFile, data: IrDeclaration?) {
         if (options.printRegionsPerFile) p.println("//region block: ${declaration.name}")
 
@@ -283,7 +286,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
             else ->
                 Modality.FINAL
         }
-        p(modality, defaultModality) { name.toLowerCase() }
+        p(modality, defaultModality) { name.lowercase() }
         p(isExternal, "external")
         p(isFakeOverride, customModifier("fake"))
         p(isOverride, "override")
@@ -302,7 +305,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
         p(isData, "data")
         p(isCompanion, "companion")
         p(isFunInterface, "fun")
-        p(classKind) { name.toLowerCase().replace('_', ' ') + if (this == ClassKind.ENUM_ENTRY) " class" else "" }
+        p(classKind) { name.lowercase().replace('_', ' ') + if (this == ClassKind.ENUM_ENTRY) " class" else "" }
         p(isInfix, "infix")
         p(isOperator, "operator")
     }
@@ -1242,7 +1245,7 @@ private class KotlinLikeDumper(val p: Printer, val options: KotlinLikeDumpOption
     override fun visitElseBranch(branch: IrElseBranch, data: IrDeclaration?) {
         p.printIndent()
         if ((branch.condition as? IrConst<*>)?.value == true) {
-            p.printWithNoIndent("else")
+            p.printWithNoIndent(if (options.printElseAsTrue) "true" else "else")
         } else {
             p.printWithNoIndent("/* else */ ")
             branch.condition.accept(this, data)

@@ -7,11 +7,18 @@ package org.jetbrains.kotlin.fir.analysis.checkers.extended
 
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.contracts.description.EventOccurrencesRange
-import org.jetbrains.kotlin.fir.*
-import org.jetbrains.kotlin.fir.analysis.cfa.*
+import org.jetbrains.kotlin.fir.FirFakeSourceElement
+import org.jetbrains.kotlin.fir.FirSourceElement
+import org.jetbrains.kotlin.fir.analysis.cfa.AbstractFirPropertyInitializationChecker
+import org.jetbrains.kotlin.fir.analysis.cfa.PathAwarePropertyInitializationInfo
+import org.jetbrains.kotlin.fir.analysis.cfa.TraverseDirection
+import org.jetbrains.kotlin.fir.analysis.cfa.traverse
+import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.getChildren
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirErrors
+import org.jetbrains.kotlin.fir.analysis.diagnostics.reportOn
+import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
 import org.jetbrains.kotlin.fir.references.FirResolvedNamedReference
 import org.jetbrains.kotlin.fir.resolve.dfa.cfg.*
 import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
@@ -21,7 +28,9 @@ object CanBeValChecker : AbstractFirPropertyInitializationChecker() {
         graph: ControlFlowGraph,
         reporter: DiagnosticReporter,
         data: Map<CFGNode<*>, PathAwarePropertyInitializationInfo>,
-        properties: Set<FirPropertySymbol>
+        properties: Set<FirPropertySymbol>,
+        capturedWrites: Set<FirVariableAssignment>,
+        context: CheckerContext
     ) {
         val unprocessedProperties = mutableSetOf<FirPropertySymbol>()
         val propertiesCharacteristics = mutableMapOf<FirPropertySymbol, EventOccurrencesRange>()
@@ -30,8 +39,9 @@ object CanBeValChecker : AbstractFirPropertyInitializationChecker() {
         graph.traverse(TraverseDirection.Forward, reporterVisitor)
 
         for (property in unprocessedProperties) {
-            if (property.fir.source is FirFakeSourceElement<*>) continue
-            if (property.isDestructuring) continue
+            val source = property.fir.source
+            if (source is FirFakeSourceElement) continue
+            if (source?.elementType == KtNodeTypes.DESTRUCTURING_DECLARATION) continue
             propertiesCharacteristics[property] = EventOccurrencesRange.ZERO
         }
 
@@ -41,7 +51,7 @@ object CanBeValChecker : AbstractFirPropertyInitializationChecker() {
 
         for ((symbol, value) in propertiesCharacteristics) {
             val source = symbol.fir.source
-            if (symbol.isDestructuring) {
+            if (source?.elementType == KtNodeTypes.DESTRUCTURING_DECLARATION) {
                 lastDestructuringSource = source
                 lastDestructuredVariables = symbol.getDestructuringChildrenCount() ?: continue
                 destructuringCanBeVal = true
@@ -51,14 +61,14 @@ object CanBeValChecker : AbstractFirPropertyInitializationChecker() {
             if (lastDestructuringSource != null) {
                 // if this is the last variable in destructuring declaration and destructuringCanBeVal == true and it can be val
                 if (lastDestructuredVariables == 1 && destructuringCanBeVal && canBeVal(symbol, value)) {
-                    reporter.report(lastDestructuringSource, FirErrors.CAN_BE_VAL)
+                    reporter.reportOn(lastDestructuringSource, FirErrors.CAN_BE_VAL, context)
                     lastDestructuringSource = null
                 } else if (!canBeVal(symbol, value)) {
                     destructuringCanBeVal = false
                 }
                 lastDestructuredVariables--
             } else if (canBeVal(symbol, value) && symbol.fir.delegate == null) {
-                reporter.report(source, FirErrors.CAN_BE_VAL)
+                reporter.reportOn(source, FirErrors.CAN_BE_VAL, context)
             }
         }
     }
@@ -101,9 +111,6 @@ object CanBeValChecker : AbstractFirPropertyInitializationChecker() {
             it?.tokenType == KtNodeTypes.DESTRUCTURING_DECLARATION_ENTRY
         }
     }
-
-    private val FirPropertySymbol.isDestructuring
-        get() = callableId.callableName.asString() == "<destruct>"
 
     private val canBeValOccurrenceRanges = setOf(
         EventOccurrencesRange.EXACTLY_ONCE,

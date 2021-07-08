@@ -6,6 +6,7 @@
 package org.jetbrains.kotlin.fir.expressions.builder
 
 import kotlin.contracts.*
+import org.jetbrains.kotlin.fir.FirImplementationDetail
 import org.jetbrains.kotlin.fir.FirSourceElement
 import org.jetbrains.kotlin.fir.builder.FirAnnotationContainerBuilder
 import org.jetbrains.kotlin.fir.builder.FirBuilderDsl
@@ -13,6 +14,7 @@ import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirEmptyArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirFunctionCallOrigin
 import org.jetbrains.kotlin.fir.expressions.FirImplicitInvokeCall
 import org.jetbrains.kotlin.fir.expressions.builder.FirAbstractFunctionCallBuilder
 import org.jetbrains.kotlin.fir.expressions.builder.FirExpressionBuilder
@@ -58,7 +60,14 @@ open class FirImplicitInvokeCallBuilder : FirAbstractFunctionCallBuilder, FirAnn
     @Deprecated("Modification of 'typeRef' has no impact for FirImplicitInvokeCallBuilder", level = DeprecationLevel.HIDDEN)
     override var typeRef: FirTypeRef
         get() = throw IllegalStateException()
-        set(value) {
+        set(_) {
+            throw IllegalStateException()
+        }
+
+    @Deprecated("Modification of 'origin' has no impact for FirImplicitInvokeCallBuilder", level = DeprecationLevel.HIDDEN)
+    override var origin: FirFunctionCallOrigin
+        get() = throw IllegalStateException()
+        set(_) {
             throw IllegalStateException()
         }
 }

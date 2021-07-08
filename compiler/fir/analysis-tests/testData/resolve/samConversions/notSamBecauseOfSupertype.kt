@@ -18,14 +18,13 @@ public class JavaUsage {
 fun foo(m: MyRunnable) {}
 
 fun main() {
-    JavaUsage.<!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>foo<!> {
-            x ->
-        x <!UNRESOLVED_REFERENCE!>><!> 1
+    JavaUsage.foo <!ARGUMENT_TYPE_MISMATCH!>{
+            x -> x <!UNRESOLVED_REFERENCE!>><!> 1
     }<!>
 
-    JavaUsage.<!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>foo<!>({ <!UNRESOLVED_REFERENCE!>it<!> <!UNRESOLVED_REFERENCE!>><!> 1 })<!>
+    JavaUsage.foo(<!ARGUMENT_TYPE_MISMATCH!>{ <!UNRESOLVED_REFERENCE!>it<!> > 1 }<!>)
 
     val x = { x: Int -> x > 1 }
 
-    JavaUsage.<!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>foo<!>(x)<!>
+    JavaUsage.foo(<!ARGUMENT_TYPE_MISMATCH!>x<!>)
 }

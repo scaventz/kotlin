@@ -23,6 +23,7 @@ fun renderJavaClass(renderer: FirRenderer, javaClass: FirJavaClass, session: Fir
 
     val staticScope = javaClass.scopeProvider.getStaticScope(javaClass, session, ScopeSession())
 
+    renderer.renderAnnotations(javaClass)
     renderer.visitMemberDeclaration(javaClass)
     renderer.renderSupertypes(javaClass)
     renderer.renderInBraces {
@@ -41,7 +42,7 @@ fun renderJavaClass(renderer: FirRenderer, javaClass: FirJavaClass, session: Fir
             if (declaration in renderedDeclarations) continue
 
             val scopeToUse =
-                if (declaration is FirCallableMemberDeclaration<*> && declaration.status.isStatic)
+                if (declaration is FirCallableMemberDeclaration && declaration.status.isStatic)
                     staticScope
                 else
                     memberScope

@@ -18,6 +18,7 @@ Some handy links:
  * [Issue Tracker](https://youtrack.jetbrains.com/issues/KT)
  * [Forum](https://discuss.kotlinlang.org/)
  * [Kotlin Blog](https://blog.jetbrains.com/kotlin/)
+ * [Subscribe to Kotlin YouTube channel](https://www.youtube.com/channel/UCP7uiEZIqci43m22KDl0sNw)
  * [Follow Kotlin on Twitter](https://twitter.com/kotlin)
  * [Public Slack channel](https://slack.kotlinlang.org/)
  * [TeamCity CI build](https://teamcity.jetbrains.com/project.html?tab=projectOverview&projectId=Kotlin)
@@ -40,26 +41,30 @@ Support for multiplatform programming is one of Kotlin’s key benefits. It redu
 
 ## Build environment requirements
 
-In order to build Kotlin distribution you need to have:
+This repository is using [Gradle toolchains](https://docs.gradle.org/current/userguide/toolchains.html) feature
+to select and auto-provision required JDKs from [AdoptOpenJdk](https://adoptopenjdk.net) project. 
 
-- JDK 1.6, 1.7, 1.8 and 9
-- Setup environment variables as following:
+Unfortunately [AdoptOpenJdk](https://adoptopenjdk.net) project does not provide required JDK 1.6 and 1.7 images,
+so you could either download them manually and provide path to installation via `JDK_16` and `JDK_17` environment variables or
+use following SDK managers:
+- [Asdf-vm](https://asdf-vm.com/)
+- [Jabba](https://github.com/shyiko/jabba)
+- [SDKMAN!](https://sdkman.io/)
 
-        JAVA_HOME="path to JDK 1.8"
-        JDK_16="path to JDK 1.6"
-        JDK_17="path to JDK 1.7"
-        JDK_18="path to JDK 1.8"
-        JDK_9="path to JDK 9"
+Alternatively, it is still possible to only provide required JDKs via environment variables 
+(see [gradle.properties](./gradle.properties#L5) for supported variable names). To ensure Gradle uses only JDKs 
+from environmental variables - disable Gradle toolchain auto-detection by passing `-Porg.gradle.java.installations.auto-detect=false` option
+(or put it into `$GRADLE_USER_HOME/gradle.properties`).
 
-For local development, if you're not working on bytecode generation or the standard library, it's OK to have only JDK 1.8 and JDK 9 installed, and to point `JDK_16` and `JDK_17` environment variables to your JDK 1.8 installation.
-
-You also can use [Gradle properties](https://docs.gradle.org/current/userguide/build_environment.html#sec:gradle_configuration_properties) to setup `JDK_*` variables.
+For local development, if you're not working on bytecode generation or the standard library, it's OK to avoid installing JDK 1.6 and JDK 1.7.
+Add `kotlin.build.isObsoleteJdkOverrideEnabled=true` to the `local.properties` file, so build will only use JDK 1.8+. Note, that in this
+case, build will have Gradle remote build cache misses for some tasks. 
 
 Note: The JDK 6 for MacOS is not available on Oracle's site. You can install it by
 
 ```bash
-$ brew tap caskroom/versions
-$ brew cask install java6
+$ brew tap homebrew/cask-versions
+$ brew install --cask java6
 ```
 
 On Windows you might need to add long paths setting to the repo:
@@ -105,16 +110,18 @@ To reproduce TeamCity build use `-Pteamcity=true` flag. Local builds don't run p
 **OPTIONAL:** Some artifacts, mainly Maven plugin ones, are built separately with Maven.
 Refer to [libraries/ReadMe.md](libraries/ReadMe.md) for details.
 
+To build Kotlin/Native, see
+[kotlin-native/README.md](kotlin-native/README.md#building-from-source).
 
 ### Building for different versions of IntelliJ IDEA and Android Studio
 
-Kotlin plugin is intended to work with several recent versions of IntelliJ IDEA and Android Studio. Each platform is allowed to have a different set of features and might provide a slightly different API. Instead of using several parallel Git branches, project stores everything in a single branch, but files may have counterparts with version extensions (\*.as32, \*.172, \*.181). The primary file is expected to be replaced with its counterpart when targeting non-default platform.
+Kotlin plugin is intended to work with several recent versions of IntelliJ IDEA and Android Studio. Each platform is allowed to have a different set of features and might provide a slightly different API. Instead of using several parallel Git branches, the project stores everything in a single branch, but files may have counterparts with version extensions (\*.as32, \*.172, \*.181). The primary file is expected to be replaced with its counterpart when targeting a non-default platform.
 
-More detailed description of this scheme can be found at https://github.com/JetBrains/bunches/blob/master/ReadMe.md.
+A More detailed description of this scheme can be found at https://github.com/JetBrains/bunches/blob/master/ReadMe.md.
 
 Usually, there's no need to care about multiple platforms as all features are enabled everywhere by default. Additional counterparts should be created if there's an expected difference in behavior or an incompatible API usage is required **and** there's no reasonable workaround to save source compatibility. Kotlin plugin contains a pre-commit check that shows a warning if a file has been updated without its counterparts.
 
-Development for some particular platform is possible after 'switching' that can be done with [Bunch Tool](https://github.com/JetBrains/bunches/releases) from the command line.
+Development for some particular platform is possible after 'switching' that can be done with the [Bunch Tool](https://github.com/JetBrains/bunches/releases) from the command line.
 
 ```sh
 cd kotlin-project-dir
@@ -144,28 +151,27 @@ From this root project there are Run/Debug Configurations for running `IDEA` or 
 * Run the `IDEA` run configuration in the project
 * A child IntelliJ IDEA with the Kotlin plugin will then startup
 
-### Including into composite build
+### Dependency verification
 
-To include kotlin compiler into [composite build](https://docs.gradle.org/current/userguide/composite_builds.html) you need to define `dependencySubstitution` for `kotlin-compiler` module in `settings.gradle.kts`
+We have a [dependencies verification](https://docs.gradle.org/current/userguide/dependency_verification.html) feature enabled in the
+repository for all Gradle builds. Gradle will check hashes (md5 and sha256) of used dependencies and will fail builds with
+`Dependency verification failed` errors when local artifacts are absent or have different hashes listed in the
+[verification-metadata.xml](https://github.com/JetBrains/kotlin/blob/master/gradle/verification-metadata.xml) file.
 
-```Kotlin
-includeBuild("/path/to/kotlin") {
-    dependencySubstitution {
-        substitute(module("org.jetbrains.kotlin:kotlin-compiler"))
-            .with(project(":include:kotlin-compiler"))
-    }
-}
-```
+It's expected that `verification-metadata.xml` should only be updated with the commits that modify the build. There are some tips how
+to perform such updates:
 
-or in `settings.gradle`
+- Use auto-generation for getting an initial list of new hashes (verify updates relate to you changes).
 
-```Groovy
-includeBuild('/path/to/kotlin') {
-    dependencySubstitution {
-        substitute module('org.jetbrains.kotlin:kotlin-compiler') with project(':include:kotlin-compiler')
-    }
-}
-```
+`./gradlew -M sha256,md5 help`
+
+*(any other task may be used instead of `help`)*
+
+- Consider removing old versions from the file if you are updating dependencies.
+- Leave meaningful `origin` attribute (instead of `Generated by Gradle`) if you did some manual verification of the artifact.
+- Always do manual verification if several hashes are needed and a new `also-trust` tag has to be added.
+- If you’re adding a dependency with OS mentioning in an artifact name (`darwin`, `mac`, `osx`, `linux`, `windows`), remember to add 
+  counterparts for other platforms.
 
 # License
 Kotlin is distributed under the terms of the Apache License (Version 2.0). See [license folder](license/README.md) for details.

@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.asJava.classes.lazyPub
 import org.jetbrains.kotlin.asJava.elements.FirLightIdentifier
 import org.jetbrains.kotlin.descriptors.annotations.AnnotationUseSiteTarget
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
+import org.jetbrains.kotlin.idea.frontend.api.isValid
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtKotlinPropertySymbol
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtPropertySymbol
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSimpleConstantValue
@@ -82,7 +83,7 @@ internal class FirLightFieldForPropertySymbol(
             modifiers.add(PsiModifier.VOLATILE)
         }
 
-        val nullability = if (visibility != PsiModifier.PRIVATE && !(propertySymbol is KtKotlinPropertySymbol && propertySymbol.isLateInit))
+        val nullability = if (!(propertySymbol is KtKotlinPropertySymbol && propertySymbol.isLateInit))
             propertySymbol.annotatedType.type.getTypeNullability(propertySymbol, FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE)
         else NullabilityType.Unknown
 
@@ -113,4 +114,6 @@ internal class FirLightFieldForPropertySymbol(
                         propertySymbol == other.propertySymbol)
 
     override fun hashCode(): Int = kotlinOrigin.hashCode()
+
+    override fun isValid(): Boolean = super.isValid() && propertySymbol.isValid()
 }

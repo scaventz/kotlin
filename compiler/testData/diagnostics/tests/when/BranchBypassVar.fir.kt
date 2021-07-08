@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 /*
  * KOTLIN DIAGNOSTICS SPEC TEST (NEGATIVE)
  *
@@ -18,5 +17,5 @@ fun test(a: Any) {
         is A -> q = "1"
     }
     // When is not exhaustive
-    return q
+    return <!RETURN_TYPE_MISMATCH!>q<!>
 }

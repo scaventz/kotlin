@@ -60,6 +60,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -272,6 +273,10 @@ public class KotlinTestUtils {
         assertEqualsToFile(expectedFile, afterText);
     }
 
+    public static void assertEqualsToFile(@NotNull Path expectedFile, @NotNull String actual) {
+        assertEqualsToFile(expectedFile.toFile(), actual);
+    }
+
     public static void assertEqualsToFile(@NotNull File expectedFile, @NotNull String actual) {
         assertEqualsToFile(expectedFile, actual, s -> s);
     }
@@ -296,7 +301,7 @@ public class KotlinTestUtils {
 
             String expectedText = StringUtilsKt.trimTrailingWhitespacesAndAddNewlineAtEOF(StringUtil.convertLineSeparators(expected.trim()));
 
-            if (!Comparing.equal(sanitizer.invoke(expectedText), sanitizer.invoke(actualText))) {
+            if (!Objects.equals(sanitizer.invoke(expectedText), sanitizer.invoke(actualText))) {
                 throw new FileComparisonFailure(message + ": " + expectedFile.getName(),
                                                 expected, actual, expectedFile.getAbsolutePath());
             }
@@ -606,6 +611,8 @@ public class KotlinTestUtils {
 
                 if (PRINT_STACKTRACE_FOR_IGNORED_TESTS) {
                     e.printStackTrace();
+                } else {
+                    System.err.println("MUTED TEST with `" + ignoreDirective + "`");
                 }
                 return;
             }
@@ -621,7 +628,7 @@ public class KotlinTestUtils {
                     }
                 }
 
-                throw new AssertionError("Looks like this test can be unmuted. Remove IGNORE_BACKEND directive.");
+                throw new AssertionError(String.format("Looks like this test can be unmuted. Remove \"%s%s\" directive.", ignoreDirective, targetBackend));
             }
         };
     }

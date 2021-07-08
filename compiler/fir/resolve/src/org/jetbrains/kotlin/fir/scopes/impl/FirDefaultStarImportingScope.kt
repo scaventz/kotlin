@@ -5,10 +5,13 @@
 
 package org.jetbrains.kotlin.fir.scopes.impl
 
+import org.jetbrains.kotlin.config.AnalysisFlags
 import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.builder.buildImport
 import org.jetbrains.kotlin.fir.declarations.builder.buildResolvedImport
+import org.jetbrains.kotlin.fir.languageVersionSettings
+import org.jetbrains.kotlin.fir.moduleData
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirVariableSymbol
@@ -17,12 +20,15 @@ import org.jetbrains.kotlin.name.Name
 class FirDefaultStarImportingScope(
     session: FirSession,
     scopeSession: ScopeSession,
+    filter: FirImportingScopeFilter,
     priority: DefaultImportPriority
-) : FirAbstractStarImportingScope(session, scopeSession, lookupInFir = false) {
-
+) : FirAbstractStarImportingScope(
+    session, scopeSession, filter,
+    lookupInFir = session.languageVersionSettings.getFlag(AnalysisFlags.allowKotlinPackage)
+) {
     // TODO: put languageVersionSettings into FirSession?
     override val starImports = run {
-        val analyzerServices = session.moduleInfo?.analyzerServices
+        val analyzerServices = session.moduleData.analyzerServices
         val allDefaultImports = priority.getAllDefaultImports(analyzerServices, LanguageVersionSettingsImpl.DEFAULT)
         allDefaultImports
             ?.filter { it.isAllUnder }
@@ -38,6 +44,7 @@ class FirDefaultStarImportingScope(
     }
 
     override fun processFunctionsByName(name: Name, processor: (FirNamedFunctionSymbol) -> Unit) {
+        if (filter == FirImportingScopeFilter.INVISIBLE_CLASSES) return
         if (name.isSpecial || name.identifier.isNotEmpty()) {
             for (import in starImports) {
                 for (symbol in provider.getTopLevelFunctionSymbols(import.packageFqName, name)) {
@@ -48,6 +55,7 @@ class FirDefaultStarImportingScope(
     }
 
     override fun processPropertiesByName(name: Name, processor: (FirVariableSymbol<*>) -> Unit) {
+        if (filter == FirImportingScopeFilter.INVISIBLE_CLASSES) return
         if (name.isSpecial || name.identifier.isNotEmpty()) {
             for (import in starImports) {
                 for (symbol in provider.getTopLevelPropertySymbols(import.packageFqName, name)) {

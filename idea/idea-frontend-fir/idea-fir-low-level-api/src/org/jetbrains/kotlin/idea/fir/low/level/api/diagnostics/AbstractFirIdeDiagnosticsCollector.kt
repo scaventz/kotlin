@@ -5,63 +5,93 @@
 
 package org.jetbrains.kotlin.idea.fir.low.level.api.diagnostics
 
-import com.intellij.openapi.diagnostic.Logger
-import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.analysis.CheckersComponentInternal
+import org.jetbrains.kotlin.fir.analysis.checkers.*
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.ComposedDeclarationCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.expression.ExpressionCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.type.TypeCheckers
 import org.jetbrains.kotlin.fir.analysis.collectors.AbstractDiagnosticCollector
-import org.jetbrains.kotlin.fir.analysis.collectors.registerAllComponents
+import org.jetbrains.kotlin.fir.analysis.collectors.components.*
 import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporter
-import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnostic
-import org.jetbrains.kotlin.fir.analysis.diagnostics.FirPsiDiagnostic
-import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.ImplicitBodyResolveComputationSession
-import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.createReturnTypeCalculatorForIDE
-import org.jetbrains.kotlin.idea.fir.low.level.api.element.builder.FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculator
-import org.jetbrains.kotlin.idea.fir.low.level.api.util.checkCanceled
-import org.jetbrains.kotlin.psi.KtElement
+import org.jetbrains.kotlin.fir.analysis.jvm.checkers.JvmDeclarationCheckers
+import org.jetbrains.kotlin.fir.checkers.*
+import org.jetbrains.kotlin.fir.moduleData
+import org.jetbrains.kotlin.idea.fir.low.level.api.sessions.moduleSourceInfo
+import org.jetbrains.kotlin.platform.SimplePlatform
+import org.jetbrains.kotlin.platform.jvm.JvmPlatform
 
 internal abstract class AbstractFirIdeDiagnosticsCollector(
     session: FirSession,
+    useExtendedCheckers: Boolean,
 ) : AbstractDiagnosticCollector(
     session,
-    returnTypeCalculator = createReturnTypeCalculatorForIDE(
-        session,
-        ScopeSession(),
-        ImplicitBodyResolveComputationSession(),
-        ::FirIdeDesignatedBodyResolveTransformerForReturnTypeCalculator
-    )
-) {
-    init {
-        registerAllComponents()
+    createComponents = { reporter ->
+        CheckersFactory.createComponents(session, reporter, useExtendedCheckers)
     }
+)
 
-    protected abstract fun onDiagnostic(diagnostic: Diagnostic)
 
+private object CheckersFactory {
+    fun createComponents(
+        session: FirSession,
+        reporter: DiagnosticReporter,
+        useExtendedCheckers: Boolean
+    ): List<AbstractDiagnosticCollectorComponent> {
+        val moduleInfo = session.moduleData.moduleSourceInfo
+        val platform = moduleInfo.platform.componentPlatforms.first()
+        val declarationCheckers = createDeclarationCheckers(useExtendedCheckers, platform)
+        val expressionCheckers = createExpressionCheckers(useExtendedCheckers)
+        val typeCheckers = createTypeCheckers(useExtendedCheckers)
 
-    private inner class Reporter : DiagnosticReporter() {
-        override fun report(diagnostic: FirDiagnostic<*>?) {
-            if (diagnostic !is FirPsiDiagnostic<*>) return
-            if (diagnostic.element.psi !is KtElement) return
-            onDiagnostic(diagnostic)
+        @OptIn(ExperimentalStdlibApi::class)
+        return buildList {
+            if (!useExtendedCheckers) {
+                add(ErrorNodeDiagnosticCollectorComponent(session, reporter))
+            }
+            add(DeclarationCheckersDiagnosticComponent(session, reporter, declarationCheckers))
+            add(ExpressionCheckersDiagnosticComponent(session, reporter, expressionCheckers))
+            typeCheckers?.let { add(TypeCheckersDiagnosticComponent(session, reporter, it)) }
+            add(ControlFlowAnalysisDiagnosticComponent(session, reporter, declarationCheckers))
         }
     }
 
-    override var reporter: DiagnosticReporter = Reporter()
 
-    override fun initializeCollector() {
-        reporter = Reporter()
+    private fun createDeclarationCheckers(useExtendedCheckers: Boolean, platform: SimplePlatform): DeclarationCheckers {
+        return if (useExtendedCheckers) {
+            ExtendedDeclarationCheckers
+        } else {
+            createDeclarationCheckers {
+                add(CommonDeclarationCheckers)
+                when (platform) {
+                    is JvmPlatform -> add(JvmDeclarationCheckers)
+                }
+            }
+        }
     }
 
-    override fun beforeCollecting() {
-        checkCanceled()
-    }
+    private fun createExpressionCheckers(useExtendedCheckers: Boolean): ExpressionCheckers =
+        if (useExtendedCheckers) ExtendedExpressionCheckers else CommonExpressionCheckers
 
-    override fun getCollectedDiagnostics(): List<FirDiagnostic<*>> {
-        // Not necessary in IDE
-        return emptyList()
-    }
+    private fun createTypeCheckers(useExtendedCheckers: Boolean): TypeCheckers? =
+        if (useExtendedCheckers) null else CommonTypeCheckers
 
-    companion object {
-        private val LOG = Logger.getInstance(AbstractFirIdeDiagnosticsCollector::class.java)
+
+    @OptIn(ExperimentalStdlibApi::class)
+    private inline fun createDeclarationCheckers(
+        createDeclarationCheckers: MutableList<DeclarationCheckers>.() -> Unit
+    ): DeclarationCheckers =
+        createDeclarationCheckers(buildList(createDeclarationCheckers))
+
+
+    @OptIn(CheckersComponentInternal::class)
+    private fun createDeclarationCheckers(declarationCheckers: List<DeclarationCheckers>): DeclarationCheckers {
+        return when (declarationCheckers.size) {
+            1 -> declarationCheckers.single()
+            else -> ComposedDeclarationCheckers().apply {
+                declarationCheckers.forEach(::register)
+            }
+        }
     }
 }

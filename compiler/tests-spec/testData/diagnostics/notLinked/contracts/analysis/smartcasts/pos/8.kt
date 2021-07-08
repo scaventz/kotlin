@@ -1,5 +1,5 @@
+// FIR_IDE_IGNORE
 // !USE_EXPERIMENTAL: kotlin.contracts.ExperimentalContracts
-// !WITH_NEW_INFERENCE
 
 /*
  * KOTLIN DIAGNOSTICS NOT LINKED SPEC TEST (POSITIVE)
@@ -90,7 +90,7 @@ fun case_3(value_1: Int?, value_2: Any?) {
     if (!value_1.case_3(value_1, value_2 is Number?)) {
         println(<!DEBUG_INFO_SMARTCAST!>value_2<!>?.toByte())
         println(<!DEBUG_INFO_SMARTCAST!>value_1<!>.inv())
-    } else if (<!OI;DEBUG_INFO_CONSTANT!>value_1<!>.case_3(<!DEBUG_INFO_CONSTANT!>value_1<!>, value_2 is Number?)) {
+    } else if (value_1.case_3(<!DEBUG_INFO_CONSTANT!>value_1<!>, value_2 is Number?)) {
         println(<!DEBUG_INFO_CONSTANT!>value_1<!>)
     } else {
         <!UNREACHABLE_CODE!>println(<!><!DEBUG_INFO_SMARTCAST!>value_1<!><!UNREACHABLE_CODE!>.inv())<!>

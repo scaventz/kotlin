@@ -10,8 +10,8 @@ fun test() {
     foo({})
 
     // Bad
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>foo<!>(1) {}<!>
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>foo<!>(f = {}) {}<!>
+    foo(1) <!TOO_MANY_ARGUMENTS!>{}<!>
+    foo(f = {}) <!TOO_MANY_ARGUMENTS!>{}<!>
 
     // OK
     bar(1) {}
@@ -20,15 +20,15 @@ fun test() {
     bar(x = 1, f = {})
 
     // Bad
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>bar<!> {}<!>
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>bar<!>({})<!>
+    <!NO_VALUE_FOR_PARAMETER!>bar {}<!>
+    bar({}<!NO_VALUE_FOR_PARAMETER!>)<!>
 
     // OK
     baz(other = false, f = {})
     baz({}, false)
 
     // Bad
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>baz<!> {}<!>
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>baz<!>() {}<!>
-    <!INAPPLICABLE_CANDIDATE{LT}!><!INAPPLICABLE_CANDIDATE{PSI}!>baz<!>(other = false) {}<!>
+    <!NO_VALUE_FOR_PARAMETER!>baz {}<!>
+    baz(<!NO_VALUE_FOR_PARAMETER!>)<!> {}
+    baz(other = false<!NO_VALUE_FOR_PARAMETER!>)<!> <!TOO_MANY_ARGUMENTS!>{}<!>
 }

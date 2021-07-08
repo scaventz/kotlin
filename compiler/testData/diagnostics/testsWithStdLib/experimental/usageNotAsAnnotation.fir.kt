@@ -15,6 +15,7 @@ import kotlin.RequiresOptIn
 // Usages with FQ names should be OK
 
 @kotlin.RequiresOptIn(level = kotlin.RequiresOptIn.Level.ERROR)
+@Retention(AnnotationRetention.BINARY)
 annotation class M
 
 
@@ -34,10 +35,10 @@ fun f4(u: OptIn0 /* TODO */) {}
 annotation class VarargKClasses(vararg val k: KClass<*>)
 
 @VarargKClasses(
-    RequiresOptIn::class,
-    OptIn::class,
-    kotlin.RequiresOptIn::class,
-    kotlin.OptIn::class
+    <!EXPERIMENTAL_CAN_ONLY_BE_USED_AS_ANNOTATION!>RequiresOptIn<!>::class,
+    <!EXPERIMENTAL_CAN_ONLY_BE_USED_AS_ANNOTATION!>OptIn<!>::class,
+    <!EXPERIMENTAL_CAN_ONLY_BE_USED_AS_ANNOTATION!>kotlin.RequiresOptIn<!>::class,
+    <!EXPERIMENTAL_CAN_ONLY_BE_USED_AS_ANNOTATION!>kotlin.OptIn<!>::class
 )
 fun f5() {}
 

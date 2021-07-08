@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.ValueParameterDescriptor
 import org.jetbrains.kotlin.resolve.calls.components.CallableReferenceCandidate
 import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintSystemError
+import org.jetbrains.kotlin.resolve.calls.inference.model.NewConstraintError
 import org.jetbrains.kotlin.resolve.calls.tower.CandidateApplicability
 import org.jetbrains.kotlin.resolve.calls.tower.CandidateApplicability.*
 import org.jetbrains.kotlin.types.TypeConstructor
@@ -160,7 +161,7 @@ sealed class UnstableSmartCast(
 class UnstableSmartCastResolutionError(
     argument: ExpressionKotlinCallArgument,
     targetType: UnwrappedType,
-) : UnstableSmartCast(argument, targetType, MAY_THROW_RUNTIME_ERROR)
+) : UnstableSmartCast(argument, targetType, UNSTABLE_SMARTCAST)
 
 class UnstableSmartCastDiagnosticError(
     argument: ExpressionKotlinCallArgument,
@@ -170,7 +171,7 @@ class UnstableSmartCastDiagnosticError(
 class UnsafeCallError(
     val receiver: SimpleKotlinCallArgument,
     val isForImplicitInvoke: Boolean = false
-) : KotlinCallDiagnostic(MAY_THROW_RUNTIME_ERROR) {
+) : KotlinCallDiagnostic(UNSAFE_CALL) {
     override fun report(reporter: DiagnosticReporter) = reporter.onCallReceiver(receiver, this)
 }
 
@@ -213,11 +214,11 @@ class NonApplicableCallForBuilderInferenceDiagnostic(val kotlinCall: KotlinCall)
     }
 }
 
-class ArgumentTypeMismatchDiagnostic(
+class ArgumentNullabilityMismatchDiagnostic(
     val expectedType: UnwrappedType,
     val actualType: UnwrappedType,
     val expressionArgument: ExpressionKotlinCallArgument
-) : KotlinCallDiagnostic(MAY_THROW_RUNTIME_ERROR) {
+) : KotlinCallDiagnostic(UNSAFE_CALL) {
     override fun report(reporter: DiagnosticReporter) {
         reporter.onCallArgument(expressionArgument, this)
     }
@@ -279,3 +280,6 @@ val KotlinCallDiagnostic.constraintSystemError: ConstraintSystemError?
 
 fun ConstraintSystemError.asDiagnostic(): KotlinConstraintSystemDiagnostic = KotlinConstraintSystemDiagnostic(this)
 fun Collection<ConstraintSystemError>.asDiagnostics(): List<KotlinConstraintSystemDiagnostic> = map(ConstraintSystemError::asDiagnostic)
+
+fun List<KotlinCallDiagnostic>.filterErrorDiagnostics() =
+    filter { it !is KotlinConstraintSystemDiagnostic || (it.error as? NewConstraintError)?.isWarning != true }

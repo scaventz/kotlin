@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2021 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -15,15 +15,14 @@ package kotlin
  *
  * @sample samples.text.Chars.charFromCode
  */
-@OptIn(ExperimentalUnsignedTypes::class)
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @kotlin.internal.InlineOnly
 public inline fun Char(code: Int): Char {
     if (code < Char.MIN_VALUE.code || code > Char.MAX_VALUE.code) {
         throw IllegalArgumentException("Invalid Char code: $code")
     }
-    return Char(code.toUShort())
+    return code.toChar()
 }
 
 /**
@@ -31,9 +30,8 @@ public inline fun Char(code: Int): Char {
  *
  * @sample samples.text.Chars.charFromCode
  */
-@OptIn(ExperimentalUnsignedTypes::class)
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @Suppress("NO_ACTUAL_FOR_EXPECT")
 public expect fun Char(code: UShort): Char
 
@@ -44,7 +42,8 @@ public expect fun Char(code: UShort): Char
  *
  * @sample samples.text.Chars.code
  */
-@ExperimentalStdlibApi
-@SinceKotlin("1.4")
+@SinceKotlin("1.5")
+@WasExperimental(ExperimentalStdlibApi::class)
 @kotlin.internal.InlineOnly
+@Suppress("DEPRECATION")
 public inline val Char.code: Int get() = this.toInt()

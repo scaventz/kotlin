@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.test.directives
 
+import org.jetbrains.kotlin.test.TargetBackend
 import org.jetbrains.kotlin.test.directives.model.SimpleDirectivesContainer
 
 object ModuleStructureDirectives : SimpleDirectivesContainer() {
@@ -45,10 +46,14 @@ object ModuleStructureDirectives : SimpleDirectivesContainer() {
         """.trimIndent()
     )
 
-    val TARGET_BACKEND_KIND by stringDirective(
+    val TARGET_BACKEND_KIND by enumDirective<TargetBackend>(
         """
             Usage: // TARGET_BACKEND: {Backend}
             Declares backend for analyzing current module 
         """.trimIndent()
+    )
+
+    val TARGET_PLATFORM by enumDirective<TargetPlatformEnum>(
+        "Declares target platform for current module"
     )
 }

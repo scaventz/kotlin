@@ -6,16 +6,25 @@
 package org.jetbrains.kotlin.fir.scopes.impl
 
 import org.jetbrains.kotlin.descriptors.Visibilities
-import org.jetbrains.kotlin.fir.*
-import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.declarations.FirCallableMemberDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRef
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameterRefsOwner
 import org.jetbrains.kotlin.fir.declarations.synthetic.FirSyntheticProperty
+import org.jetbrains.kotlin.fir.declarations.utils.visibility
+import org.jetbrains.kotlin.fir.dispatchReceiverClassOrNull
+import org.jetbrains.kotlin.fir.originalForSubstitutionOverride
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.substitution.chain
 import org.jetbrains.kotlin.fir.scopes.FakeOverrideSubstitution
 import org.jetbrains.kotlin.fir.scopes.FirTypeScope
 import org.jetbrains.kotlin.fir.scopes.ProcessorAction
 import org.jetbrains.kotlin.fir.symbols.impl.*
-import org.jetbrains.kotlin.fir.types.*
+import org.jetbrains.kotlin.fir.types.ConeClassLikeType
+import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.fir.types.coneType
+import org.jetbrains.kotlin.fir.types.coneTypeSafe
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.utils.addToStdlib.runIf
 
@@ -121,7 +130,8 @@ class FirClassSubstitutionScope(
         }
 
         if (newReceiverType == null && newReturnType == null && newParameterTypes.all { it == null } &&
-            newTypeParameters === member.typeParameters && fakeOverrideSubstitution == null) {
+            newTypeParameters === member.typeParameters && fakeOverrideSubstitution == null
+        ) {
             return original
         }
 
@@ -157,6 +167,7 @@ class FirClassSubstitutionScope(
         if (newReturnType == null && newParameterTypes.all { it == null } && newTypeParameters === constructor.typeParameters) {
             return original
         }
+
         return FirFakeOverrideGenerator.createSubstitutionOverrideConstructor(
             FirConstructorSymbol(original.callableId),
             session, constructor, dispatchReceiverTypeForSubstitutedMembers,
@@ -170,8 +181,9 @@ class FirClassSubstitutionScope(
         if (skipPrivateMembers && member.visibility == Visibilities.Private) return original
 
         val (newTypeParameters, newReceiverType, newReturnType, _, fakeOverrideSubstitution) = createSubstitutedData(member)
-        if (newReceiverType == null &&
-            newReturnType == null && newTypeParameters === member.typeParameters
+
+        if (newReceiverType == null && newReturnType == null &&
+            newTypeParameters === member.typeParameters && fakeOverrideSubstitution == null
         ) {
             return original
         }
@@ -199,8 +211,9 @@ class FirClassSubstitutionScope(
         val fakeOverrideSubstitution: FakeOverrideSubstitution?
     )
 
-    private fun createSubstitutedData(member: FirCallableMemberDeclaration<*>): SubstitutedData {
+    private fun createSubstitutedData(member: FirCallableMemberDeclaration): SubstitutedData {
         val (newTypeParameters, substitutor) = FirFakeOverrideGenerator.createNewTypeParametersAndSubstitutor(
+            session,
             member as FirTypeParameterRefsOwner,
             substitutor,
             forceTypeParametersRecreation = dispatchReceiverTypeForSubstitutedMembers.lookupTag != member.dispatchReceiverClassOrNull()

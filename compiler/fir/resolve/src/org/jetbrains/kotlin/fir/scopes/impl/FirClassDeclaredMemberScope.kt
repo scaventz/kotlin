@@ -5,7 +5,9 @@
 
 package org.jetbrains.kotlin.fir.scopes.impl
 
+import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.*
+import org.jetbrains.kotlin.fir.declarations.utils.isSynthetic
 import org.jetbrains.kotlin.fir.resolve.providers.FirSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.substitution.ConeSubstitutor
 import org.jetbrains.kotlin.fir.resolve.transformers.ensureResolvedForCalls
@@ -16,7 +18,8 @@ import org.jetbrains.kotlin.fir.symbols.impl.*
 import org.jetbrains.kotlin.name.Name
 
 class FirClassDeclaredMemberScope(
-    klass: FirClass<*>,
+    val useSiteSession: FirSession,
+    klass: FirClass,
     useLazyNestedClassifierScope: Boolean = false,
     existingNames: List<Name>? = null,
     symbolProvider: FirSymbolProvider? = null
@@ -24,17 +27,17 @@ class FirClassDeclaredMemberScope(
     private val nestedClassifierScope: FirScope? = if (useLazyNestedClassifierScope) {
         lazyNestedClassifierScope(klass.symbol.classId, existingNames!!, symbolProvider!!)
     } else {
-        nestedClassifierScope(klass)
+        useSiteSession.nestedClassifierScope(klass)
     }
 
     private val callablesIndex: Map<Name, List<FirCallableSymbol<*>>> = run {
         val result = mutableMapOf<Name, MutableList<FirCallableSymbol<*>>>()
         loop@ for (declaration in klass.declarations) {
             when (declaration) {
-                is FirCallableMemberDeclaration<*> -> {
+                is FirCallableMemberDeclaration -> {
                     val name = when (declaration) {
                         is FirConstructor -> CONSTRUCTOR_NAME
-                        is FirVariable<*> -> declaration.name
+                        is FirVariable -> if (declaration.isSynthetic) continue@loop else declaration.name
                         is FirSimpleFunction -> declaration.name
                         else -> continue@loop
                     }
@@ -65,7 +68,7 @@ class FirClassDeclaredMemberScope(
         val symbols = callablesIndex[name] ?: emptyList()
         for (symbol in symbols) {
             if (symbol is D) {
-                symbol.ensureResolvedForCalls(symbol.fir.session)
+                symbol.ensureResolvedForCalls(useSiteSession)
                 processor(symbol)
             }
         }

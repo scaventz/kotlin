@@ -10,7 +10,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.source.tree.LeafPsiElement;
 import kotlin.Pair;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.kotlin.cfg.WhenMissingCase;
 import org.jetbrains.kotlin.config.LanguageFeature;
 import org.jetbrains.kotlin.config.LanguageVersion;
 import org.jetbrains.kotlin.config.LanguageVersionSettings;
@@ -129,6 +128,8 @@ public interface Errors {
     DiagnosticFactory3<PsiElement, DeclarationDescriptor, DescriptorVisibility, DeclarationDescriptor> INVISIBLE_MEMBER = DiagnosticFactory3.create(ERROR, CALL_ELEMENT);
     DiagnosticFactory1<KtElement, DeclarationDescriptor> DEPRECATED_ACCESS_BY_SHORT_NAME = DiagnosticFactory1.create(WARNING);
 
+    DiagnosticFactory1<PsiElement, PropertyDescriptor> DEPRECATED_ACCESS_TO_ENUM_COMPANION_PROPERTY = DiagnosticFactory1.create(WARNING);
+
     DiagnosticFactory1<PsiElement, ConstructorDescriptor> PROTECTED_CONSTRUCTOR_NOT_IN_SUPER_CALL = DiagnosticFactory1.create(ERROR);
 
     // Exposed visibility group
@@ -141,6 +142,7 @@ public interface Errors {
     DiagnosticFactory3<KtSuperTypeListEntry, EffectiveVisibility, DescriptorWithRelation, EffectiveVisibility> EXPOSED_SUPER_CLASS = DiagnosticFactory3.create(ERROR);
     DiagnosticFactory3<KtSuperTypeListEntry, EffectiveVisibility, DescriptorWithRelation, EffectiveVisibility> EXPOSED_SUPER_INTERFACE = DiagnosticFactory3.create(ERROR);
     DiagnosticFactory3<PsiElement, EffectiveVisibility, DescriptorWithRelation, EffectiveVisibility> EXPOSED_TYPEALIAS_EXPANDED_TYPE = DiagnosticFactory3.create(ERROR);
+    DiagnosticFactory2<PsiElement, DescriptorWithRelation, EffectiveVisibility> EXPOSED_FROM_PRIVATE_IN_FILE = DiagnosticFactory2.create(WARNING);
 
     DiagnosticFactory2<KtExpression, KotlinType, Collection<ClassDescriptor>> INACCESSIBLE_TYPE = DiagnosticFactory2.create(WARNING);
 
@@ -155,7 +157,10 @@ public interface Errors {
 
     DiagnosticFactory0<KtTypeProjection> PROJECTION_ON_NON_CLASS_TYPE_ARGUMENT = DiagnosticFactory0.create(ERROR, VARIANCE_IN_PROJECTION);
     DiagnosticFactory2<KtTypeReference, KotlinType, KotlinType> UPPER_BOUND_VIOLATED = DiagnosticFactory2.create(ERROR);
+    DiagnosticFactory2<KtTypeReference, KotlinType, KotlinType> UPPER_BOUND_VIOLATED_WARNING = DiagnosticFactory2.create(WARNING);
     DiagnosticFactory0<KtNullableType> REDUNDANT_NULLABLE = DiagnosticFactory0.create(WARNING, NULLABLE_TYPE);
+    DiagnosticFactory0<KtDefinitelyNotNullType> DEFINITELY_NOT_NULLABLE_NOT_APPLICABLE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<KtNullableType> NULLABLE_ON_DEFINITELY_NOT_NULLABLE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory2<KtElement, Integer, DeclarationDescriptor> WRONG_NUMBER_OF_TYPE_ARGUMENTS = DiagnosticFactory2.create(ERROR);
     DiagnosticFactory1<KtElement, ClassDescriptor> OUTER_CLASS_ARGUMENTS_REQUIRED = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory1<KtElement, String> TYPE_ARGUMENTS_NOT_ALLOWED = DiagnosticFactory1.create(ERROR);
@@ -190,6 +195,8 @@ public interface Errors {
     DiagnosticFactory2<KtTypeReference, KotlinType, String> TYPEALIAS_EXPANDED_TO_MALFORMED_TYPE = DiagnosticFactory2.create(ERROR);
     DiagnosticFactory1<KtElement, KotlinType> EXPANDED_TYPE_CANNOT_BE_CONSTRUCTED = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory1<KtTypeElement, KotlinType> EXPANDED_TYPE_CANNOT_BE_INHERITED = DiagnosticFactory1.create(ERROR);
+
+    DiagnosticFactory0<KtPostfixExpression> DEPRECATED_SYNTAX_WITH_DEFINITELY_NOT_NULL = DiagnosticFactory0.create(WARNING);
 
     DiagnosticFactory0<KtModifierList> MODIFIER_LIST_NOT_ALLOWED = DiagnosticFactory0.create(ERROR);
 
@@ -281,6 +288,10 @@ public interface Errors {
     DiagnosticFactory0<KtAnnotationEntry> USE_EXPERIMENTAL_WITHOUT_ARGUMENTS = DiagnosticFactory0.create(WARNING);
     DiagnosticFactory1<KtAnnotationEntry, FqName> USE_EXPERIMENTAL_ARGUMENT_IS_NOT_MARKER = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory1<KtAnnotationEntry, String> EXPERIMENTAL_ANNOTATION_WITH_WRONG_TARGET = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory0<PsiElement> EXPERIMENTAL_ANNOTATION_WITH_WRONG_RETENTION = DiagnosticFactory0.create(ERROR);
+
+    DiagnosticFactory1<KtAnnotationEntry, String> EXPERIMENTAL_ANNOTATION_ON_WRONG_TARGET = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory0<KtAnnotationEntry> EXPERIMENTAL_ANNOTATION_ON_OVERRIDE = DiagnosticFactory0.create(ERROR);
 
     DiagnosticFactory1<PsiElement, String> EXPERIMENTAL_UNSIGNED_LITERALS = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory1<PsiElement, String> EXPERIMENTAL_UNSIGNED_LITERALS_ERROR = DiagnosticFactory1.create(ERROR);
@@ -323,6 +334,7 @@ public interface Errors {
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_IS_EXTENSION_FUNCTION_TYPE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_IS_SUSPEND_FUNCTION_TYPE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_IS_KSUSPEND_FUNCTION_TYPE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> MIXING_SUSPEND_AND_NON_SUSPEND_SUPERTYPES = DiagnosticFactory0.create(ERROR);
 
     DiagnosticFactory0<KtTypeReference> MANY_CLASSES_IN_SUPERTYPE_LIST = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtTypeReference> SUPERTYPE_APPEARS_TWICE = DiagnosticFactory0.create(ERROR);
@@ -346,8 +358,9 @@ public interface Errors {
 
     DiagnosticFactory0<PsiElement> NON_PRIVATE_CONSTRUCTOR_IN_ENUM = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> NON_PRIVATE_CONSTRUCTOR_IN_SEALED = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> NON_PRIVATE_OR_PROTECTED_CONSTRUCTOR_IN_SEALED = DiagnosticFactory0.create(ERROR);
 
-    // Inline and value classes
+    // Inline classes
 
     DiagnosticFactory0<PsiElement> INLINE_CLASS_NOT_TOP_LEVEL = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> INLINE_CLASS_NOT_FINAL = DiagnosticFactory0.create(ERROR);
@@ -355,7 +368,6 @@ public interface Errors {
     DiagnosticFactory0<KtElement> INLINE_CLASS_CONSTRUCTOR_WRONG_PARAMETERS_SIZE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtParameter> INLINE_CLASS_CONSTRUCTOR_NOT_FINAL_READ_ONLY_PARAMETER = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtProperty> PROPERTY_WITH_BACKING_FIELD_INSIDE_INLINE_CLASS = DiagnosticFactory0.create(ERROR, DECLARATION_SIGNATURE);
-    DiagnosticFactory0<PsiElement> RESERVED_VAR_PROPERTY_OF_VALUE_CLASS = DiagnosticFactory0.create(WARNING);
     DiagnosticFactory0<PsiElement> DELEGATED_PROPERTY_INSIDE_INLINE_CLASS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory1<KtTypeReference, KotlinType> INLINE_CLASS_HAS_INAPPLICABLE_PARAMETER_TYPE = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory0<PsiElement> INLINE_CLASS_CANNOT_IMPLEMENT_INTERFACE_BY_DELEGATION = DiagnosticFactory0.create(ERROR);
@@ -365,6 +377,7 @@ public interface Errors {
     DiagnosticFactory0<PsiElement> SECONDARY_CONSTRUCTOR_WITH_BODY_INSIDE_INLINE_CLASS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> INNER_CLASS_INSIDE_INLINE_CLASS = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> VALUE_CLASS_CANNOT_BE_CLONEABLE = DiagnosticFactory0.create(ERROR);
+    DiagnosticFactory0<PsiElement> INLINE_CLASS_DEPRECATED = DiagnosticFactory0.create(WARNING);
 
     // Result class
 
@@ -433,6 +446,8 @@ public interface Errors {
     // Companion objects
 
     DiagnosticFactory0<KtObjectDeclaration> MANY_COMPANION_OBJECTS = DiagnosticFactory0.create(ERROR, COMPANION_OBJECT);
+    DiagnosticFactory0<KtExpression> SELF_CALL_IN_NESTED_OBJECT_CONSTRUCTOR_WARNING = DiagnosticFactory0.create(WARNING);
+    DiagnosticFactory0<KtExpression> SELF_CALL_IN_NESTED_OBJECT_CONSTRUCTOR = DiagnosticFactory0.create(ERROR);
 
     // Objects
 
@@ -537,10 +552,14 @@ public interface Errors {
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> ABSTRACT_CLASS_MEMBER_NOT_IMPLEMENTED =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
+    DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> ABSTRACT_CLASS_MEMBER_NOT_IMPLEMENTED_WARNING =
+            DiagnosticFactory2.create(WARNING, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> MANY_IMPL_MEMBER_NOT_IMPLEMENTED =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> MANY_INTERFACES_MEMBER_NOT_IMPLEMENTED =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
+    DiagnosticFactory2<KtClassOrObject, KtClassOrObject, CallableMemberDescriptor> MANY_INTERFACES_MEMBER_NOT_IMPLEMENTED_WARNING =
+            DiagnosticFactory2.create(WARNING, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, ClassDescriptor, Collection<CallableMemberDescriptor>> INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER =
             DiagnosticFactory2.create(ERROR, DECLARATION_NAME);
     DiagnosticFactory2<KtClassOrObject, ClassDescriptor, Collection<CallableMemberDescriptor>> INVISIBLE_ABSTRACT_MEMBER_FROM_SUPER_WARNING =
@@ -589,7 +608,7 @@ public interface Errors {
     DiagnosticFactory0<KtProperty> PRIVATE_PROPERTY_IN_INTERFACE = DiagnosticFactory0.create(ERROR, PRIVATE_MODIFIER);
     DiagnosticFactory0<KtProperty> BACKING_FIELD_IN_INTERFACE = DiagnosticFactory0.create(ERROR, DECLARATION_SIGNATURE);
 
-    DiagnosticFactory1<PsiElement, String> INAPPLICABLE_LATEINIT_MODIFIER = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory1<KtModifierListOwner, String> INAPPLICABLE_LATEINIT_MODIFIER = DiagnosticFactory1.create(ERROR, LATEINIT_MODIFIER);
     DiagnosticFactory0<PsiElement> LATEINIT_INTRINSIC_CALL_ON_NON_LITERAL = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> LATEINIT_INTRINSIC_CALL_ON_NON_LATEINIT = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> LATEINIT_INTRINSIC_CALL_IN_INLINE_FUNCTION = DiagnosticFactory0.create(ERROR);
@@ -602,6 +621,8 @@ public interface Errors {
     DiagnosticFactory0<KtExpression> SETTER_PARAMETER_WITH_DEFAULT_VALUE = DiagnosticFactory0.create(ERROR);
 
     DiagnosticFactory2<KtTypeReference, KotlinType, KotlinType> WRONG_SETTER_PARAMETER_TYPE = DiagnosticFactory2.create(ERROR);
+    DiagnosticFactory1<KtPropertyDelegate, String> DELEGATE_USES_EXTENSION_PROPERTY_TYPE_PARAMETER = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory1<KtPropertyDelegate, String> DELEGATE_USES_EXTENSION_PROPERTY_TYPE_PARAMETER_WARNING = DiagnosticFactory1.create(WARNING);
 
     // Function-specific
 
@@ -786,6 +807,8 @@ public interface Errors {
             DiagnosticFactory3.create(ERROR);
 
     DiagnosticFactory0<KtExpression> RESERVED_SYNTAX_IN_CALLABLE_REFERENCE_LHS = DiagnosticFactory0.create(ERROR);
+
+    DiagnosticFactory0<KtParenthesizedExpression> PARENTHESIZED_COMPANION_LHS_DEPRECATION = DiagnosticFactory0.create(WARNING);
 
     // Type inference
 
@@ -1010,7 +1033,8 @@ public interface Errors {
     DiagnosticFactory0<KtEscapeStringTemplateEntry> ILLEGAL_ESCAPE_SEQUENCE = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtConstantExpression> UNSIGNED_LITERAL_WITHOUT_DECLARATIONS_ON_CLASSPATH = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<KtExpression> SIGNED_CONSTANT_CONVERTED_TO_UNSIGNED = DiagnosticFactory0.create(ERROR);
-
+    DiagnosticFactory1<KtExpression, KotlinType> INTEGER_OPERATOR_RESOLVE_WILL_CHANGE = DiagnosticFactory1.create(WARNING);
+    DiagnosticFactory1<KtExpression, Boolean> NON_TRIVIAL_BOOLEAN_CONSTANT = DiagnosticFactory1.create(WARNING);
 
     // Casts and is-checks
 
@@ -1057,6 +1081,7 @@ public interface Errors {
     DiagnosticFactory1<KtWhenExpression, List<WhenMissingCase>> NON_EXHAUSTIVE_WHEN = DiagnosticFactory1.create(WARNING, WHEN_EXPRESSION);
     DiagnosticFactory1<KtWhenExpression, List<WhenMissingCase>>
             NON_EXHAUSTIVE_WHEN_ON_SEALED_CLASS = DiagnosticFactory1.create(INFO, WHEN_EXPRESSION);
+    DiagnosticFactory1<KtWhenExpression, String> EXPECT_TYPE_IN_WHEN_WITHOUT_ELSE = DiagnosticFactory1.create(ERROR, WHEN_EXPRESSION);
 
     DiagnosticFactory0<PsiElement> COMMA_IN_WHEN_CONDITION_WITHOUT_ARGUMENT = DiagnosticFactory0.create(ERROR);
     DiagnosticFactory0<PsiElement> DUPLICATE_LABEL_IN_WHEN = DiagnosticFactory0.create(WARNING);
@@ -1066,6 +1091,7 @@ public interface Errors {
     // Type mismatch
 
     DiagnosticFactory2<KtExpression, KotlinType, KotlinType> TYPE_MISMATCH = DiagnosticFactory2.create(ERROR);
+    DiagnosticFactory2<KtExpression, KotlinType, KotlinType> TYPE_MISMATCH_WARNING = DiagnosticFactory2.create(WARNING);
     DiagnosticFactory1<KtElement, KotlinType> TYPE_MISMATCH_DUE_TO_EQUALS_LAMBDA_IN_FUN = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory1<KtElement, TypeMismatchDueToTypeProjectionsData> TYPE_MISMATCH_DUE_TO_TYPE_PROJECTIONS = DiagnosticFactory1.create(ERROR);
     DiagnosticFactory2<KtElement, CallableDescriptor, KotlinType> MEMBER_PROJECTED_OUT = DiagnosticFactory2.create(ERROR);
@@ -1077,6 +1103,7 @@ public interface Errors {
     DiagnosticFactory0<KtWhenConditionInRange> TYPE_MISMATCH_IN_RANGE = DiagnosticFactory0.create(ERROR, WHEN_CONDITION_IN_RANGE);
 
     DiagnosticFactory1<KtParameter, KotlinType> EXPECTED_PARAMETER_TYPE_MISMATCH = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory1<KtParameter, KotlinType> EXPECTED_PARAMETER_TYPE_MISMATCH_WARNING = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory2<KtFunction, Integer, List<KotlinType>> EXPECTED_PARAMETERS_NUMBER_MISMATCH =
             DiagnosticFactory2.create(ERROR, FUNCTION_PARAMETERS);
 
@@ -1137,6 +1164,7 @@ public interface Errors {
     DiagnosticFactory1<PsiElement, CallableDescriptor> PROTECTED_CALL_FROM_PUBLIC_INLINE = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory1<PsiElement, CallableDescriptor> PROTECTED_CONSTRUCTOR_CALL_FROM_PUBLIC_INLINE = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory1<PsiElement, CallableDescriptor> PROTECTED_CALL_FROM_PUBLIC_INLINE_ERROR = DiagnosticFactory1.create(ERROR);
+    DiagnosticFactory1<PsiElement, CallableDescriptor> SUPER_CALL_FROM_PUBLIC_INLINE = DiagnosticFactory1.create(WARNING);
     DiagnosticFactory2<KtElement, KtExpression, DeclarationDescriptor> INVALID_DEFAULT_FUNCTIONAL_PARAMETER_FOR_INLINE = DiagnosticFactory2.create(ERROR);
     DiagnosticFactory2<KtElement, KtExpression, DeclarationDescriptor> NOT_SUPPORTED_INLINE_PARAMETER_IN_INLINE_PARAMETER_DEFAULT_VALUE = DiagnosticFactory2.create(ERROR);
     DiagnosticFactory0<PsiElement> PRIVATE_INLINE_FUNCTIONS_RETURNING_ANONYMOUS_OBJECTS = DiagnosticFactory0.create(WARNING);

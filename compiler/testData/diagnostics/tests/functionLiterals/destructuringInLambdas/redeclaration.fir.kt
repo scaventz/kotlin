@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !CHECK_TYPE
 // !DIAGNOSTICS: -UNUSED_PARAMETER -UNUSED_ANONYMOUS_PARAMETER
 data class A(val x: Int, val y: String)
@@ -23,7 +22,7 @@ fun bar() {
     }
 
     foo { (a, b), (c, b) ->
-        <!UNRESOLVED_REFERENCE!>a<!> <!INAPPLICABLE_CANDIDATE!>checkType<!> { <!INAPPLICABLE_CANDIDATE!>_<!><Int>() }
+        a checkType { _<Int>() }
         b checkType { <!INAPPLICABLE_CANDIDATE!>_<!><String>() }
         c checkType { <!INAPPLICABLE_CANDIDATE!>_<!><B>() }
     }

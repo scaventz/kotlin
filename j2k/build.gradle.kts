@@ -43,16 +43,14 @@ dependencies {
     testRuntime(project(":kotlin-scripting-idea"))
     testRuntime(project(":kotlinx-serialization-ide-plugin"))
     testRuntime(project(":plugins:parcelize:parcelize-ide"))
+    testRuntime(project(":plugins:lombok:lombok-ide-plugin"))
     testRuntime(intellijPluginDep("properties"))
     testRuntime(intellijPluginDep("gradle"))
     testRuntime(intellijPluginDep("Groovy"))
     testRuntime(intellijPluginDep("coverage"))
     Ide.IJ {
         testRuntime(intellijPluginDep("maven"))
-
-        if (Ide.IJ201.orHigher()) {
-            testRuntime(intellijPluginDep("repository-search"))
-        }
+        testRuntime(intellijPluginDep("repository-search"))
     }
     testRuntime(intellijPluginDep("android"))
     testRuntime(intellijPluginDep("smali"))
@@ -66,11 +64,8 @@ dependencies {
     testRuntime(intellijPluginDep("java-decompiler"))
     testRuntime(project(":plugins:kapt3-idea")) { isTransitive = false }
 
-    if (Ide.AS36.orHigher()) {
+    Ide.AS {
         testRuntime(intellijPluginDep("android-layoutlib"))
-    }
-
-    if (Ide.AS41.orHigher()) {
         testRuntime(intellijPluginDep("platform-images"))
     }
 }

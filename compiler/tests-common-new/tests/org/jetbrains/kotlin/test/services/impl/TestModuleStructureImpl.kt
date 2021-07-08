@@ -28,12 +28,12 @@ class TestModuleStructureImpl(
     private val targetArtifactsByModule: Map<String, List<BinaryKind<*>>> = buildMap {
         for (module in modules) {
             val result = mutableListOf<BinaryKind<*>>()
-            for (dependency in module.dependencies) {
+            for (dependency in module.allDependencies) {
                 if (dependency.kind == DependencyKind.KLib) {
                     result += ArtifactKinds.KLib
                 }
             }
-            module.targetPlatform.toArtifactKind()?.let { result += it }
+            result += module.binaryKind
             put(module.name, result)
         }
     }
@@ -52,11 +52,11 @@ class TestModuleStructureImpl(
     }
 
     companion object {
-        private fun TargetPlatform.toArtifactKind(): BinaryKind<*>? = when (this) {
+        fun TargetPlatform.toArtifactKind(): BinaryKind<*> = when (this) {
             in JvmPlatforms.allJvmPlatforms -> ArtifactKinds.Jvm
             in JsPlatforms.allJsPlatforms -> ArtifactKinds.Js
             in NativePlatforms.allNativePlatforms -> ArtifactKinds.Native
-            else -> null
+            else -> BinaryKind.NoArtifact
         }
     }
 }

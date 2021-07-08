@@ -6,31 +6,33 @@
 package org.jetbrains.kotlin.idea.frontend.api.fir.symbols
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.descriptors.Visibility
 import org.jetbrains.kotlin.fir.declarations.FirField
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
+import org.jetbrains.kotlin.fir.declarations.utils.isStatic
 import org.jetbrains.kotlin.idea.fir.findPsi
 import org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveState
-import org.jetbrains.kotlin.idea.frontend.api.ValidityToken
-import org.jetbrains.kotlin.idea.frontend.api.types.KtType
 import org.jetbrains.kotlin.idea.frontend.api.fir.KtSymbolByFirBuilder
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.cached
 import org.jetbrains.kotlin.idea.frontend.api.fir.utils.firRef
+import org.jetbrains.kotlin.idea.frontend.api.fir.utils.weakRef
 import org.jetbrains.kotlin.idea.frontend.api.symbols.KtJavaFieldSymbol
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtCommonSymbolModality
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolVisibility
 import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtTypeAndAnnotations
 import org.jetbrains.kotlin.idea.frontend.api.symbols.pointers.KtSymbolPointer
-import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ValidityToken
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
 
 internal class KtFirJavaFieldSymbol(
     fir: FirField,
     resolveState: FirModuleResolveState,
     override val token: ValidityToken,
-    private val builder: KtSymbolByFirBuilder
+    _builder: KtSymbolByFirBuilder
 ) : KtJavaFieldSymbol(), KtFirSymbol<FirField> {
+    private val builder by weakRef(_builder)
     override val firRef = firRef(fir, resolveState)
-    override val psi: PsiElement? by firRef.withFirAndCache { fir -> fir.findPsi(fir.session) }
+    override val psi: PsiElement? by firRef.withFirAndCache { fir -> fir.findPsi(fir.moduleData.session) }
 
     override val annotatedType: KtTypeAndAnnotations by cached {
         firRef.returnTypeAndAnnotations(FirResolvePhase.TYPES, builder)
@@ -38,14 +40,12 @@ internal class KtFirJavaFieldSymbol(
     override val isVal: Boolean get() = firRef.withFir { it.isVal }
     override val name: Name get() = firRef.withFir { it.name }
 
-    override val callableIdIfNonLocal: FqName?
-        get() = firRef.withFir { fir ->
-            fir.symbol.callableId.asFqNameForDebugInfo() // todo check if local
-        }
+    override val callableIdIfNonLocal: CallableId? get() = getCallableIdIfNonLocal()
 
-    override val modality: KtCommonSymbolModality get() = getModality()
+    override val modality: Modality get() = getModality()
 
-    override val visibility: KtSymbolVisibility get() = getVisibility()
+    override val visibility: Visibility get() = getVisibility()
+    override val isStatic: Boolean get() = firRef.withFir { it.isStatic }
 
     override fun createPointer(): KtSymbolPointer<KtJavaFieldSymbol> {
         TODO("Creating pointers for java fields is not supported yet")

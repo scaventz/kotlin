@@ -5,31 +5,77 @@
 
 package org.jetbrains.kotlin.idea.frontend.api
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.components.ServiceManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
-import org.jetbrains.kotlin.idea.util.application.runReadAction
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Computable
+import org.jetbrains.annotations.TestOnly
+import org.jetbrains.kotlin.idea.frontend.api.tokens.AlwaysAccessibleValidityTokenFactory
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ReadActionConfinementValidityTokenFactory
+import org.jetbrains.kotlin.idea.frontend.api.tokens.ValidityTokenFactory
 import org.jetbrains.kotlin.psi.KtElement
-import org.jetbrains.kotlin.utils.PrintingLogger
+import org.jetbrains.kotlin.psi.KtFile
 
 @RequiresOptIn("To use analysis session, consider using analyze/analyzeWithReadAction/analyseInModalWindow methods")
-annotation class InvalidWayOfUsingAnalysisSession
+public annotation class InvalidWayOfUsingAnalysisSession
+
+@RequiresOptIn
+public annotation class KtAnalysisSessionProviderInternals
 
 /**
  * Provides [KtAnalysisSession] by [contextElement]
- * Should not be used directly, consider using [analyze]/[analyzeWithReadAction]/[analyseInModalWindow] instead
+ * Should not be used directly, consider using [analyse]/[analyseWithReadAction]/[analyseInModalWindow] instead
  */
 @InvalidWayOfUsingAnalysisSession
-abstract class KtAnalysisSessionProvider {
-    @InvalidWayOfUsingAnalysisSession
-    abstract fun getAnalysisSessionFor(contextElement: KtElement): KtAnalysisSession
-}
+public abstract class KtAnalysisSessionProvider : Disposable {
+    @Suppress("LeakingThis")
+    @OptIn(KtInternalApiMarker::class)
+    public val noWriteActionInAnalyseCallChecker: NoWriteActionInAnalyseCallChecker = NoWriteActionInAnalyseCallChecker(this)
 
-@InvalidWayOfUsingAnalysisSession
-fun getAnalysisSessionFor(contextElement: KtElement): KtAnalysisSession =
-    contextElement.project.service<KtAnalysisSessionProvider>().getAnalysisSessionFor(contextElement)
+    @InvalidWayOfUsingAnalysisSession
+    public abstract fun getAnalysisSession(contextElement: KtElement, factory: ValidityTokenFactory): KtAnalysisSession
+
+    @InvalidWayOfUsingAnalysisSession
+    public inline fun <R> analyseInDependedAnalysisSession(
+        originalFile: KtFile,
+        elementToReanalyze: KtElement,
+        action: KtAnalysisSession.() -> R
+    ): R {
+        val dependedAnalysisSession = getAnalysisSession(originalFile, ReadActionConfinementValidityTokenFactory)
+            .createContextDependentCopy(originalFile, elementToReanalyze)
+        return analyse(dependedAnalysisSession, ReadActionConfinementValidityTokenFactory, action)
+    }
+
+    @InvalidWayOfUsingAnalysisSession
+    public inline fun <R> analyse(contextElement: KtElement, tokenFactory: ValidityTokenFactory, action: KtAnalysisSession.() -> R): R =
+        analyse(getAnalysisSession(contextElement, tokenFactory), tokenFactory, action)
+
+    @OptIn(KtAnalysisSessionProviderInternals::class, KtInternalApiMarker::class)
+    @InvalidWayOfUsingAnalysisSession
+    public inline fun <R> analyse(analysisSession: KtAnalysisSession, factory: ValidityTokenFactory, action: KtAnalysisSession.() -> R): R {
+        noWriteActionInAnalyseCallChecker.beforeEnteringAnalysisContext()
+        factory.beforeEnteringAnalysisContext()
+        return try {
+            analysisSession.action()
+        } finally {
+            factory.afterLeavingAnalysisContext()
+            noWriteActionInAnalyseCallChecker.afterLeavingAnalysisContext()
+        }
+    }
+
+    @TestOnly
+    public abstract fun clearCaches()
+
+    override fun dispose() {}
+
+    public companion object {
+        public fun getInstance(project: Project): KtAnalysisSessionProvider =
+            ServiceManager.getService(project, KtAnalysisSessionProvider::class.java)
+    }
+}
 
 /**
  * Execute given [action] in [KtAnalysisSession] context
@@ -41,47 +87,75 @@ fun getAnalysisSessionFor(contextElement: KtElement): KtAnalysisSession =
  * To analyse something from EDT thread, consider using [analyseInModalWindow]
  *
  * @see KtAnalysisSession
- * @see analyzeWithReadAction
+ * @see analyseWithReadAction
  */
 @OptIn(InvalidWayOfUsingAnalysisSession::class)
-inline fun <R> analyze(contextElement: KtElement, action: KtAnalysisSession.() -> R): R =
-    getAnalysisSessionFor(contextElement).action()
+public inline fun <R> analyse(contextElement: KtElement, action: KtAnalysisSession.() -> R): R =
+    KtAnalysisSessionProvider.getInstance(contextElement.project)
+        .analyse(contextElement, ReadActionConfinementValidityTokenFactory, action)
 
+@OptIn(InvalidWayOfUsingAnalysisSession::class)
+public inline fun <R> analyseWithCustomToken(
+    contextElement: KtElement,
+    tokenFactory: ValidityTokenFactory,
+    action: KtAnalysisSession.() -> R
+): R =
+    KtAnalysisSessionProvider.getInstance(contextElement.project)
+        .analyse(contextElement, tokenFactory, action)
 
 /**
- * Execute given [action] in [KtAnalysisSession] context like [analyze] does but execute it in read action
+ * UAST-specific version of [analyse] that executes the given [action] in [KtAnalysisSession] context
+ */
+@OptIn(InvalidWayOfUsingAnalysisSession::class)
+public inline fun <R> analyseForUast(
+    contextElement: KtElement,
+    action: KtAnalysisSession.() -> R
+): R =
+    analyseWithCustomToken(contextElement, AlwaysAccessibleValidityTokenFactory, action)
+
+@OptIn(InvalidWayOfUsingAnalysisSession::class)
+public inline fun <R> analyseInDependedAnalysisSession(
+    originalFile: KtFile,
+    elementToReanalyze: KtElement,
+    action: KtAnalysisSession.() -> R
+): R =
+    KtAnalysisSessionProvider.getInstance(originalFile.project)
+        .analyseInDependedAnalysisSession(originalFile, elementToReanalyze, action)
+
+/**
+ * Execute given [action] in [KtAnalysisSession] context like [analyse] does but execute it in read action
  * Uses [contextElement] to get a module from which you would like to see the other modules
  * Usually [contextElement] is some element form the module you currently analysing now
  *
  * Should be called from read action
  * To analyse something from EDT thread, consider using [analyseInModalWindow]
- * If you are already in read action, consider using [analyze]
+ * If you are already in read action, consider using [analyse]
  *
  * @see KtAnalysisSession
- * @see analyze
+ * @see analyse
  */
-inline fun <R> analyzeWithReadAction(
+public inline fun <R> analyseWithReadAction(
     contextElement: KtElement,
     crossinline action: KtAnalysisSession.() -> R
-): R = runReadAction {
-    analyze(contextElement, action)
-}
+): R = ApplicationManager.getApplication().runReadAction(Computable {
+    analyse(contextElement, action)
+})
 
 /**
  * Show a modal window with a progress bar and specified [windowTitle]
  * and execute given [action] task with [KtAnalysisSession] context
  * If [action] throws some exception, then [analyseInModalWindow] will rethrow it
  * Should be executed from EDT only
- * If you want to analyse something from non-EDT thread, consider using [analyze]/[analyzeWithReadAction]
+ * If you want to analyse something from non-EDT thread, consider using [analyse]/[analyseWithReadAction]
  */
-inline fun <R> analyseInModalWindow(
+public inline fun <R> analyseInModalWindow(
     contextElement: KtElement,
     windowTitle: String,
     crossinline action: KtAnalysisSession.() -> R
 ): R {
     ApplicationManager.getApplication().assertIsDispatchThread()
     val task = object : Task.WithResult<R, Exception>(contextElement.project, windowTitle, /*canBeCancelled*/ true) {
-        override fun compute(indicator: ProgressIndicator): R = analyzeWithReadAction(contextElement) { action() }
+        override fun compute(indicator: ProgressIndicator): R = analyseWithReadAction(contextElement) { action() }
     }
     task.queue()
     return task.result

@@ -5,10 +5,11 @@
 
 package org.jetbrains.kotlin.fir.analysis
 
-import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureDescriptor
+import org.jetbrains.kotlin.backend.jvm.serialization.JvmIdSignatureDescriptor
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.collectors.FirDiagnosticsCollector
+import org.jetbrains.kotlin.fir.analysis.diagnostics.DiagnosticReporterFactory
 import org.jetbrains.kotlin.fir.analysis.diagnostics.FirDiagnostic
 import org.jetbrains.kotlin.fir.backend.Fir2IrConverter
 import org.jetbrains.kotlin.fir.backend.Fir2IrResult
@@ -28,16 +29,28 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi2ir.generators.GeneratorExtensions
 import java.io.File
 
+abstract class AbstractFirAnalyzerFacade {
+    abstract val scopeSession: ScopeSession
+    abstract fun runCheckers(): Map<FirFile, List<FirDiagnostic>>
+
+    abstract fun runResolution(): List<FirFile>
+
+    abstract fun convertToIr(extensions: GeneratorExtensions): Fir2IrResult
+}
+
 class FirAnalyzerFacade(
     val session: FirSession,
     val languageVersionSettings: LanguageVersionSettings,
     val ktFiles: Collection<KtFile> = emptyList(), // may be empty if light tree mode enabled
     val originalFiles: Collection<File> = emptyList(), // may be empty if light tree mode disabled
     val useLightTree: Boolean = false
-) {
+) : AbstractFirAnalyzerFacade() {
     private var firFiles: List<FirFile>? = null
-    private var scopeSession: ScopeSession? = null
-    private var collectedDiagnostics: Map<FirFile, List<FirDiagnostic<*>>>? = null
+    private var _scopeSession: ScopeSession? = null
+    override val scopeSession: ScopeSession
+        get() = _scopeSession!!
+
+    private var collectedDiagnostics: Map<FirFile, List<FirDiagnostic>>? = null
 
     private fun buildRawFir() {
         if (firFiles != null) return
@@ -59,34 +72,36 @@ class FirAnalyzerFacade(
         }
     }
 
-    fun runResolution(): List<FirFile> {
+    override fun runResolution(): List<FirFile> {
         if (firFiles == null) buildRawFir()
-        if (scopeSession != null) return firFiles!!
+        if (_scopeSession != null) return firFiles!!
         val resolveProcessor = FirTotalResolveProcessor(session)
         resolveProcessor.process(firFiles!!)
-        scopeSession = resolveProcessor.scopeSession
+        _scopeSession = resolveProcessor.scopeSession
         return firFiles!!
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    fun runCheckers(): Map<FirFile, List<FirDiagnostic<*>>> {
-        if (scopeSession == null) runResolution()
+    override fun runCheckers(): Map<FirFile, List<FirDiagnostic>> {
+        if (_scopeSession == null) runResolution()
         if (collectedDiagnostics != null) return collectedDiagnostics!!
-        val collector = FirDiagnosticsCollector.create(session)
+        val collector = FirDiagnosticsCollector.create(session, scopeSession)
         collectedDiagnostics = buildMap {
             for (file in firFiles!!) {
-                put(file, collector.collectDiagnostics(file))
+                val reporter = DiagnosticReporterFactory.createReporter()
+                collector.collectDiagnostics(file, reporter)
+                put(file, reporter.diagnostics)
             }
         }
         return collectedDiagnostics!!
     }
 
-    fun convertToIr(extensions: GeneratorExtensions): Fir2IrResult {
-        if (scopeSession == null) runResolution()
-        val signaturer = IdSignatureDescriptor(JvmManglerDesc())
+    override fun convertToIr(extensions: GeneratorExtensions): Fir2IrResult {
+        if (_scopeSession == null) runResolution()
+        val signaturer = JvmIdSignatureDescriptor(JvmManglerDesc())
 
         return Fir2IrConverter.createModuleFragment(
-            session, scopeSession!!, firFiles!!,
+            session, _scopeSession!!, firFiles!!,
             languageVersionSettings, signaturer,
             extensions, FirJvmKotlinMangler(session), IrFactoryImpl,
             FirJvmVisibilityConverter,

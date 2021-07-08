@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // FILE: abc/A.java
 package abc;
 public class A {
@@ -27,5 +26,5 @@ class B : A() {
 }
 
 fun baz(a: A) {
-    a.<!HIDDEN!>foo<!> { }
+    a.<!INVISIBLE_REFERENCE!>foo<!> { }
 }

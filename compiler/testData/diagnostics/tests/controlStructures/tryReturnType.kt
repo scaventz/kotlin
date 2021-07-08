@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 package a
 
 fun foo() : Int {
@@ -14,14 +13,14 @@ fun foo() : Int {
 }
 
 fun bar() : Int =
-    try <!TYPE_MISMATCH{NI}!>{
-        <!TYPE_MISMATCH{OI}!>doSmth()<!>
+    try <!TYPE_MISMATCH!>{
+        doSmth()
     }<!>
-    catch (e: Exception) <!TYPE_MISMATCH{NI}!>{
-        <!TYPE_MISMATCH{OI}!>""<!>
+    catch (e: Exception) <!TYPE_MISMATCH!>{
+        ""
     }<!>
     finally {
-        <!UNUSED_EXPRESSION!>""<!>
+        ""
     }
 
 

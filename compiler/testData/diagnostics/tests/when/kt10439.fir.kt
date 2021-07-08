@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 /*
  * KOTLIN DIAGNOSTICS SPEC TEST (POSITIVE)
  *
@@ -14,12 +13,12 @@
 fun foo(x: Int) = x
 
 fun test0(flag: Boolean) {
-    <!INAPPLICABLE_CANDIDATE!>foo<!>(if (flag) true else "")
+    foo(<!ARGUMENT_TYPE_MISMATCH!>if (flag) true else ""<!>)
 }
 
 fun test1(flag: Boolean) {
-    <!INAPPLICABLE_CANDIDATE!>foo<!>(when (flag) {
+    foo(<!ARGUMENT_TYPE_MISMATCH!>when (flag) {
         true -> true
         else -> ""
-    })
+    }<!>)
 }

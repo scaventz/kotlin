@@ -16,6 +16,8 @@
 
 package kotlin.reflect.jvm.internal
 
+import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.PrimitiveType
 import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.annotations.Annotated
@@ -42,6 +44,7 @@ import org.jetbrains.kotlin.resolve.descriptorUtil.annotationClass
 import org.jetbrains.kotlin.resolve.descriptorUtil.classId
 import org.jetbrains.kotlin.resolve.isInlineClassType
 import org.jetbrains.kotlin.serialization.deserialization.DeserializationContext
+import org.jetbrains.kotlin.serialization.deserialization.DeserializedArrayValue
 import org.jetbrains.kotlin.serialization.deserialization.MemberDeserializer
 import java.lang.reflect.Type
 import kotlin.jvm.internal.FunctionReference
@@ -54,8 +57,7 @@ import kotlin.reflect.jvm.internal.calls.createAnnotationInstance
 internal val JVM_STATIC = FqName("kotlin.jvm.JvmStatic")
 
 internal fun ClassDescriptor.toJavaClass(): Class<*>? {
-    val source = source
-    return when (source) {
+    return when (val source = source) {
         is KotlinJvmBinarySourceElement -> {
             (source.binaryClass as ReflectKotlinClass).klass
         }
@@ -101,6 +103,9 @@ private fun loadClass(classLoader: ClassLoader, packageName: String, className: 
     return classLoader.tryLoadClass(fqName)
 }
 
+internal fun Class<*>.createArrayType(): Class<*> =
+    java.lang.reflect.Array.newInstance(this, 0)::class.java
+
 internal fun DescriptorVisibility.toKVisibility(): KVisibility? =
     when (this) {
         DescriptorVisibilities.PUBLIC -> KVisibility.PUBLIC
@@ -112,8 +117,7 @@ internal fun DescriptorVisibility.toKVisibility(): KVisibility? =
 
 internal fun Annotated.computeAnnotations(): List<Annotation> =
     annotations.mapNotNull {
-        val source = it.source
-        when (source) {
+        when (val source = it.source) {
             is ReflectAnnotationSource -> source.annotation
             is RuntimeSourceElementFactory.RuntimeSourceElement -> (source.javaElement as? ReflectJavaAnnotation)?.annotation
             else -> it.toAnnotationInstance()
@@ -135,7 +139,7 @@ private fun AnnotationDescriptor.toAnnotationInstance(): Annotation? {
 // TODO: consider throwing exceptions such as AnnotationFormatError/AnnotationTypeMismatchException if a value of unexpected type is found
 private fun ConstantValue<*>.toRuntimeValue(classLoader: ClassLoader): Any? = when (this) {
     is AnnotationValue -> value.toAnnotationInstance()
-    is ArrayValue -> value.map { it.toRuntimeValue(classLoader) }.toTypedArray()
+    is ArrayValue -> arrayToRuntimeValue(classLoader)
     is EnumValue -> {
         val (enumClassId, entryName) = value
         loadClass(classLoader, enumClassId)?.let { enumClass ->
@@ -153,6 +157,39 @@ private fun ConstantValue<*>.toRuntimeValue(classLoader: ClassLoader): Any? = wh
     }
     is ErrorValue, is NullValue -> null
     else -> value  // Primitives and strings
+}
+
+private fun ArrayValue.arrayToRuntimeValue(classLoader: ClassLoader): Any? {
+    val type = (this as? DeserializedArrayValue)?.type ?: return null
+    val values = value.map { it.toRuntimeValue(classLoader) }
+
+    return when (KotlinBuiltIns.getPrimitiveArrayElementType(type)) {
+        PrimitiveType.BOOLEAN -> BooleanArray(value.size) { values[it] as Boolean }
+        PrimitiveType.CHAR -> CharArray(value.size) { values[it] as Char }
+        PrimitiveType.BYTE -> ByteArray(value.size) { values[it] as Byte }
+        PrimitiveType.SHORT -> ShortArray(value.size) { values[it] as Short }
+        PrimitiveType.INT -> IntArray(value.size) { values[it] as Int }
+        PrimitiveType.FLOAT -> FloatArray(value.size) { values[it] as Float }
+        PrimitiveType.LONG -> LongArray(value.size) { values[it] as Long }
+        PrimitiveType.DOUBLE -> DoubleArray(value.size) { values[it] as Double }
+        null -> {
+            check(KotlinBuiltIns.isArray(type)) { "Not an array type: $type" }
+            val argType = type.arguments.single().type
+            val classifier = argType.constructor.declarationDescriptor as? ClassDescriptor ?: error("Not a class type: $argType")
+            when {
+                KotlinBuiltIns.isString(argType) -> Array(value.size) { values[it] as String }
+                KotlinBuiltIns.isKClass(classifier) -> Array(value.size) { values[it] as Class<*> }
+                else -> {
+                    val argClass = classifier.classId?.let { loadClass(classLoader, it) } ?: return null
+
+                    @Suppress("UNCHECKED_CAST")
+                    val array = java.lang.reflect.Array.newInstance(argClass, value.size) as Array<in Any?>
+                    repeat(values.size) { array[it] = values[it] }
+                    array
+                }
+            }
+        }
+    }
 }
 
 // TODO: wrap other exceptions
@@ -184,7 +221,7 @@ internal fun <M : MessageLite, D : CallableDescriptor> deserializeToDescriptor(
     typeTable: TypeTable,
     metadataVersion: BinaryVersion,
     createDescriptor: MemberDeserializer.(M) -> D
-): D? {
+): D {
     val moduleData = moduleAnchor.getOrCreateModule()
 
     val typeParameters = when (proto) {

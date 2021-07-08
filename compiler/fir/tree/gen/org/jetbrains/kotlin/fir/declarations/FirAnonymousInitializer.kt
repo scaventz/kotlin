@@ -5,10 +5,9 @@
 
 package org.jetbrains.kotlin.fir.declarations
 
-import org.jetbrains.kotlin.fir.FirPureAbstractElement
-import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.FirElement
+import org.jetbrains.kotlin.fir.FirModuleData
 import org.jetbrains.kotlin.fir.FirSourceElement
-import org.jetbrains.kotlin.fir.FirSymbolOwner
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.references.FirControlFlowGraphReference
 import org.jetbrains.kotlin.fir.symbols.impl.FirAnonymousInitializerSymbol
@@ -19,9 +18,9 @@ import org.jetbrains.kotlin.fir.visitors.*
  * DO NOT MODIFY IT MANUALLY
  */
 
-abstract class FirAnonymousInitializer : FirPureAbstractElement(), FirDeclaration, FirSymbolOwner<FirAnonymousInitializer>, FirControlFlowGraphOwner {
+abstract class FirAnonymousInitializer : FirDeclaration(), FirControlFlowGraphOwner {
     abstract override val source: FirSourceElement?
-    abstract override val session: FirSession
+    abstract override val moduleData: FirModuleData
     abstract override val resolvePhase: FirResolvePhase
     abstract override val origin: FirDeclarationOrigin
     abstract override val attributes: FirDeclarationAttributes
@@ -30,6 +29,10 @@ abstract class FirAnonymousInitializer : FirPureAbstractElement(), FirDeclaratio
     abstract override val symbol: FirAnonymousInitializerSymbol
 
     override fun <R, D> accept(visitor: FirVisitor<R, D>, data: D): R = visitor.visitAnonymousInitializer(this, data)
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <E: FirElement, D> transform(transformer: FirTransformer<D>, data: D): E = 
+        transformer.transformAnonymousInitializer(this, data) as E
 
     abstract override fun replaceResolvePhase(newResolvePhase: FirResolvePhase)
 

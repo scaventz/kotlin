@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !DIAGNOSTICS: -UNUSED_PARAMETER -UNUSED_VARIABLE
 
 fun println() {}
@@ -17,18 +16,18 @@ fun testResultOfLambda2() =
 
 fun testResultOfAnonFun1() =
         run(fun () =
-                if (true) <!IMPLICIT_CAST_TO_ANY{OI}!>42<!>
-                else <!IMPLICIT_CAST_TO_ANY{OI}!>println()<!>
+                if (true) 42
+                else println()
         )
 
 fun testResultOfAnonFun2() =
         run(fun () {
-            if (true) <!UNUSED_EXPRESSION!>42<!> else println()
+            if (true) 42 else println()
         })
 
 fun testReturnFromAnonFun() =
         run(fun () {
-            return <!TYPE_MISMATCH{NI}!>if (true) <!CONSTANT_EXPECTED_TYPE_MISMATCH{OI}!>42<!> else println()<!>
+            return <!TYPE_MISMATCH!>if (true) 42 else println()<!>
         })
 
 fun <!IMPLICIT_NOTHING_RETURN_TYPE!>testReturn1<!>() =

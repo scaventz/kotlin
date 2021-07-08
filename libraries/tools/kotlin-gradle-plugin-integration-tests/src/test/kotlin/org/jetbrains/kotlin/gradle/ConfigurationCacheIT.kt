@@ -5,8 +5,10 @@
 
 package org.jetbrains.kotlin.gradle
 
-import org.jetbrains.kotlin.gradle.util.findFileByName
+import org.jetbrains.kotlin.gradle.targets.js.dukat.ExternalsOutputFormat
 import org.jetbrains.kotlin.gradle.util.createTempDir
+import org.jetbrains.kotlin.gradle.util.findFileByName
+import org.jetbrains.kotlin.gradle.util.modify
 import org.junit.Test
 import java.io.File
 import java.net.URI
@@ -64,10 +66,73 @@ class ConfigurationCacheIT : AbstractConfigurationCacheIT() {
         testConfigurationCacheOf("assemble", executedTaskNames = asList(":lib-project:compileKotlin"))
     }
 
+    // KT-43605
+    @Test
+    fun testInstantExecutionWithBuildSrc() = with(Project("instantExecutionWithBuildSrc")) {
+        setupWorkingDir()
+        testConfigurationCacheOf(
+            "build", executedTaskNames = listOf(
+                ":compileKotlin",
+            )
+        )
+    }
+
+    @Test
+    fun testInstantExecutionWithIncludedBuildPlugin() =
+        with(Project("instantExecutionWithIncludedBuildPlugin", gradleVersionRequirement = GradleVersionRequired.AtLeast("6.8"))) {
+            setupWorkingDir()
+            testConfigurationCacheOf(
+                "build", executedTaskNames = listOf(
+                    ":compileKotlin",
+                )
+            )
+        }
+
     @Test
     fun testInstantExecutionForJs() = with(Project("instantExecutionToJs")) {
         testConfigurationCacheOf("assemble", executedTaskNames = asList(":compileKotlin2Js"))
     }
+
+    @Test
+    fun testConfigurationCacheJsPlugin() = with(Project("kotlin-js-browser-project")) {
+        setupWorkingDir()
+        gradleBuildScript().modify(::transformBuildScriptWithPluginsDsl)
+        gradleSettingsScript().modify(::transformBuildScriptWithPluginsDsl)
+        testConfigurationCacheOf(
+            ":app:build", executedTaskNames = asList(
+                ":app:packageJson",
+                ":app:publicPackageJson",
+                ":app:compileKotlinJs",
+                ":app:processDceKotlinJs",
+                ":app:browserProductionWebpack",
+            )
+        )
+    }
+
+    @Test
+    fun testConfigurationCacheDukatSrc() = testConfigurationCacheDukat()
+
+    @Test
+    fun testConfigurationCacheDukatBinaries() = testConfigurationCacheDukat {
+        gradleProperties().modify {
+            """
+                ${ExternalsOutputFormat.externalsOutputFormatProperty}=${ExternalsOutputFormat.BINARY}
+            """.trimIndent()
+        }
+    }
+
+    private fun testConfigurationCacheDukat(configure: Project.() -> Unit = {}) =
+        with(Project("both", directoryPrefix = "dukat-integration")) {
+            setupWorkingDir()
+            gradleBuildScript().modify(::transformBuildScriptWithPluginsDsl)
+            gradleSettingsScript().modify(::transformBuildScriptWithPluginsDsl)
+            configure(this)
+            testConfigurationCacheOf(
+                "irGenerateExternalsIntegrated", executedTaskNames = listOf(
+                    ":irGenerateExternalsIntegrated"
+                )
+            )
+        }
 }
 
 abstract class AbstractConfigurationCacheIT : BaseGradleIT() {

@@ -27,6 +27,7 @@ val commonMainSources by task<Sync> {
                 "libraries/stdlib/common/src/generated/_Collections.kt",
                 "libraries/stdlib/common/src/generated/_Comparisons.kt",
                 "libraries/stdlib/common/src/generated/_Maps.kt",
+                "libraries/stdlib/common/src/generated/_OneToManyTitlecaseMappings.kt",
                 "libraries/stdlib/common/src/generated/_Sequences.kt",
                 "libraries/stdlib/common/src/generated/_Sets.kt",
                 "libraries/stdlib/common/src/generated/_Strings.kt",
@@ -62,7 +63,6 @@ val jsMainSources by task<Sync> {
         val fullJsMainSources = tasks.getByPath(":kotlin-stdlib-js-ir:jsMainSources")
         exclude(
             listOf(
-                "libraries/stdlib/js/src/jquery/**",
                 "libraries/stdlib/js/src/org.w3c/**",
                 "libraries/stdlib/js/src/kotlin/char.kt",
                 "libraries/stdlib/js/src/kotlin/collections.kt",
@@ -71,7 +71,6 @@ val jsMainSources by task<Sync> {
                 "libraries/stdlib/js/src/kotlin/console.kt",
                 "libraries/stdlib/js/src/kotlin/coreDeprecated.kt",
                 "libraries/stdlib/js/src/kotlin/date.kt",
-                "libraries/stdlib/js/src/kotlin/debug.kt",
                 "libraries/stdlib/js/src/kotlin/grouping.kt",
                 "libraries/stdlib/js/src/kotlin/json.kt",
                 "libraries/stdlib/js/src/kotlin/promise.kt",

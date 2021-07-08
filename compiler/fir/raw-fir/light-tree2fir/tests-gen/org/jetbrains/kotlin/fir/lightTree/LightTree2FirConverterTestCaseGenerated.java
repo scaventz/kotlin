@@ -46,6 +46,16 @@ public class LightTree2FirConverterTestCaseGenerated extends AbstractLightTree2F
             runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/annotation.kt");
         }
 
+        @TestMetadata("annotationsOnNullableParenthesizedTypes.kt")
+        public void testAnnotationsOnNullableParenthesizedTypes() throws Exception {
+            runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/annotationsOnNullableParenthesizedTypes.kt");
+        }
+
+        @TestMetadata("annotationsOnParenthesizedTypes.kt")
+        public void testAnnotationsOnParenthesizedTypes() throws Exception {
+            runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/annotationsOnParenthesizedTypes.kt");
+        }
+
         @TestMetadata("complexTypes.kt")
         public void testComplexTypes() throws Exception {
             runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/complexTypes.kt");
@@ -91,6 +101,11 @@ public class LightTree2FirConverterTestCaseGenerated extends AbstractLightTree2F
             runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/expectActual.kt");
         }
 
+        @TestMetadata("external.kt")
+        public void testExternal() throws Exception {
+            runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/external.kt");
+        }
+
         @TestMetadata("F.kt")
         public void testF() throws Exception {
             runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/F.kt");
@@ -109,6 +124,11 @@ public class LightTree2FirConverterTestCaseGenerated extends AbstractLightTree2F
         @TestMetadata("genericProperty.kt")
         public void testGenericProperty() throws Exception {
             runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/genericProperty.kt");
+        }
+
+        @TestMetadata("initBlockWithDeclarations.kt")
+        public void testInitBlockWithDeclarations() throws Exception {
+            runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/initBlockWithDeclarations.kt");
         }
 
         @TestMetadata("nestedClass.kt")
@@ -144,6 +164,16 @@ public class LightTree2FirConverterTestCaseGenerated extends AbstractLightTree2F
         @TestMetadata("simpleTypeAlias.kt")
         public void testSimpleTypeAlias() throws Exception {
             runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/simpleTypeAlias.kt");
+        }
+
+        @TestMetadata("splitModifierList.kt")
+        public void testSplitModifierList() throws Exception {
+            runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/splitModifierList.kt");
+        }
+
+        @TestMetadata("suspendFunctionTypes.kt")
+        public void testSuspendFunctionTypes() throws Exception {
+            runTest("compiler/fir/raw-fir/psi2fir/testData/rawBuilder/declarations/suspendFunctionTypes.kt");
         }
 
         @TestMetadata("typeAliasWithGeneric.kt")

@@ -14,14 +14,19 @@ import org.jetbrains.kotlin.backend.common.lower.createIrBuilder
 import org.jetbrains.kotlin.backend.common.phaser.makeIrFilePhase
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
+import org.jetbrains.kotlin.backend.jvm.codegen.parentClassId
 import org.jetbrains.kotlin.backend.jvm.ir.createJvmIrBuilder
+import org.jetbrains.kotlin.backend.jvm.ir.hasChild
 import org.jetbrains.kotlin.backend.jvm.ir.irArrayOf
 import org.jetbrains.kotlin.backend.jvm.ir.needsAccessor
 import org.jetbrains.kotlin.backend.jvm.lower.FunctionReferenceLowering.Companion.calculateOwner
 import org.jetbrains.kotlin.backend.jvm.lower.FunctionReferenceLowering.Companion.calculateOwnerKClass
 import org.jetbrains.kotlin.backend.jvm.lower.FunctionReferenceLowering.Companion.kClassToJavaClass
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.InlineClassAbi
+import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.hasMangledReturnType
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.isInlineClassFieldGetter
+import org.jetbrains.kotlin.codegen.inline.loadCompiledInlineFunction
+import org.jetbrains.kotlin.codegen.optimization.nullCheck.usesLocalExceptParameterNullCheck
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
@@ -30,10 +35,13 @@ import org.jetbrains.kotlin.ir.builders.*
 import org.jetbrains.kotlin.ir.builders.declarations.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionReferenceImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetObjectValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrInstanceInitializerCallImpl
 import org.jetbrains.kotlin.ir.symbols.*
+import org.jetbrains.kotlin.ir.types.IrSimpleType
+import org.jetbrains.kotlin.ir.types.IrTypeProjection
 import org.jetbrains.kotlin.ir.types.createType
 import org.jetbrains.kotlin.ir.types.impl.IrSimpleTypeImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
@@ -44,6 +52,7 @@ import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.name.SpecialNames
 import org.jetbrains.kotlin.types.Variance
+import java.util.concurrent.ConcurrentHashMap
 
 internal val propertyReferencePhase = makeIrFilePhase(
     ::PropertyReferenceLowering,
@@ -191,7 +200,8 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
             origin = JvmLoweredDeclarationOrigin.GENERATED_PROPERTY_REFERENCE
             isFinal = true
             isStatic = true
-            visibility = JavaDescriptorVisibilities.PACKAGE_VISIBILITY
+            visibility =
+                if (irClass.isInterface && context.state.jvmDefaultMode.forAllMethodsWithBody) DescriptorVisibilities.PUBLIC else JavaDescriptorVisibilities.PACKAGE_VISIBILITY
         }
 
         val localProperties = mutableListOf<IrLocalDelegatedPropertySymbol>()
@@ -252,6 +262,40 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
     override fun visitLocalDelegatedPropertyReference(expression: IrLocalDelegatedPropertyReference): IrExpression =
         cachedKProperty(expression)
 
+    private fun IrSimpleFunction.usesParameter(index: Int): Boolean {
+        parentClassId?.let { containerId ->
+            // This function was imported from a jar. Didn't run the inline class lowering yet though - have to map manually.
+            val replaced = context.inlineClassReplacements.getReplacementFunction(this) ?: this
+            val signature = context.methodSignatureMapper.mapSignatureSkipGeneric(replaced)
+            val localIndex = signature.valueParameters.take(index + if (replaced.extensionReceiverParameter != null) 1 else 0)
+                .sumOf { it.asmType.size } + (if (replaced.dispatchReceiverParameter != null) 1 else 0)
+            // Null checks are removed during inlining, so we can ignore them.
+            return loadCompiledInlineFunction(containerId, signature.asmMethod, isSuspend, hasMangledReturnType, context.state)
+                .node.usesLocalExceptParameterNullCheck(localIndex)
+        }
+        return hasChild { it is IrGetValue && it.symbol == valueParameters[index].symbol }
+    }
+
+    // Assuming that the only functions that take PROPERTY_REFERENCE_FOR_DELEGATE-kind references are getValue,
+    // setValue, and provideDelegate, there is only one valid index for each symbol, so we don't need it in the key.
+    private val usesPropertyParameterCache = ConcurrentHashMap<IrSymbol, Boolean>()
+
+    override fun visitCall(expression: IrCall): IrExpression {
+        // Don't generate entries in `$$delegatedProperties` if they won't be used for anything. This is only possible
+        // for inline functions, since for non-inline ones we need to provide some non-null value, and if they're not
+        // in the same file, they can start using it without forcing a recompilation of this file.
+        if (!expression.symbol.owner.isInline) return super.visitCall(expression)
+        for (index in expression.symbol.owner.valueParameters.indices) {
+            val value = expression.getValueArgument(index)
+            if (value is IrCallableReference<*> && value.origin == IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE) {
+                if (!usesPropertyParameterCache.getOrPut(expression.symbol) { expression.symbol.owner.usesParameter(index) }) {
+                    expression.putValueArgument(index, IrConstImpl.constNull(value.startOffset, value.endOffset, value.type))
+                }
+            }
+        }
+        return super.visitCall(expression)
+    }
+
     private fun cachedKProperty(expression: IrCallableReference<*>): IrExpression {
         expression.transformChildrenVoid()
         if (expression.origin != IrStatementOrigin.PROPERTY_REFERENCE_FOR_DELEGATE)
@@ -276,17 +320,33 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
     // Example: `C::property` -> `Reflection.property1(PropertyReference1Impl(C::class, "property", "getProperty()LType;"))`.
     private fun createReflectedKProperty(expression: IrCallableReference<*>): IrExpression {
         assert(expression.dispatchReceiver == null && expression.extensionReceiver == null) {
+            // TODO: technically can with `generateOptimizedCallableReferenceSuperClasses` - use the 5-argument constructor
             "cannot create a reflected KProperty if the reference has a bound receiver: ${expression.render()}"
         }
         val referenceKind = propertyReferenceKindFor(expression)
         return context.createIrBuilder(currentScope!!.scope.scopeOwnerSymbol, expression.startOffset, expression.endOffset).run {
             irCall(referenceKind.wrapper).apply {
-                val constructor = referenceKind.implSymbol.constructors.single { it.owner.valueParameters.size == 3 }
-                putValueArgument(0, irCall(constructor).apply {
-                    putValueArgument(0, calculateOwner(expression.propertyContainer, this@PropertyReferenceLowering.context))
-                    putValueArgument(1, irString(expression.referencedName.asString()))
-                    putValueArgument(2, computeSignatureString(expression))
-                })
+                val container = expression.propertyContainer
+                val name = irString(expression.referencedName.asString())
+                val signature = computeSignatureString(expression)
+                val impl = when {
+                    this@PropertyReferenceLowering.context.state.generateOptimizedCallableReferenceSuperClasses ->
+                        irCall(referenceKind.implSymbol.constructors.single { it.owner.valueParameters.size == 4 }).apply {
+                            val kClass = calculateOwnerKClass(container, this@PropertyReferenceLowering.context)
+                            val isPackage = (container is IrClass && container.isFileClass) || container is IrPackageFragment
+                            putValueArgument(0, kClassToJavaClass(kClass, this@PropertyReferenceLowering.context))
+                            putValueArgument(1, name)
+                            putValueArgument(2, signature)
+                            putValueArgument(3, irInt(if (isPackage) 1 else 0))
+                        }
+                    else ->
+                        irCall(referenceKind.implSymbol.constructors.single { it.owner.valueParameters.size == 3 }).apply {
+                            putValueArgument(0, calculateOwner(container, this@PropertyReferenceLowering.context))
+                            putValueArgument(1, name)
+                            putValueArgument(2, signature)
+                        }
+                }
+                putValueArgument(0, impl)
             }
         }
     }
@@ -339,6 +399,7 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
             referenceClass.addOverride(getSignature) { computeSignatureString(expression) }
         }
 
+        val boundReceiver = expression.getBoundReceiver()
         val backingField = superClass.properties.single { it.name.asString() == "receiver" }.backingField!!
         val get = superClass.functions.find { it.name.asString() == "get" }
         val set = superClass.functions.find { it.name.asString() == "set" }
@@ -347,20 +408,16 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
         val field = expression.field?.owner
         if (field == null) {
             fun IrBuilderWithScope.setCallArguments(call: IrCall, arguments: List<IrValueParameter>) {
-                var index = 1
+                val receiverFromField = boundReceiver?.let { irImplicitCast(irGetField(irGet(arguments[0]), backingField), it.type) }
                 call.copyTypeArgumentsFrom(expression)
-                val hasBoundReceiver = expression.getBoundReceiver() != null
                 call.dispatchReceiver = call.symbol.owner.dispatchReceiverParameter?.let {
-                    if (hasBoundReceiver)
-                        irImplicitCast(irGetField(irGet(arguments[0]), backingField), it.type)
-                    else
-                        irImplicitCast(irGet(arguments[index++]), it.type)
+                    receiverFromField ?: irImplicitCast(irGet(arguments[1]), expression.receiverType)
                 }
                 call.extensionReceiver = call.symbol.owner.extensionReceiverParameter?.let {
-                    if (hasBoundReceiver)
-                        irImplicitCast(irGetField(irGet(arguments[0]), backingField), it.type)
+                    if (call.symbol.owner.dispatchReceiverParameter == null)
+                        receiverFromField ?: irImplicitCast(irGet(arguments[1]), it.type)
                     else
-                        irImplicitCast(irGet(arguments[index++]), it.type)
+                        irImplicitCast(irGet(arguments[if (receiverFromField != null) 1 else 2]), it.type)
                 }
             }
 
@@ -385,9 +442,9 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
                 field.isStatic ->
                     null
                 expression.dispatchReceiver != null ->
-                    irImplicitCast(irGetField(irGet(arguments[0]), backingField), field.parentAsClass.defaultType)
+                    irImplicitCast(irGetField(irGet(arguments[0]), backingField), expression.receiverType)
                 else ->
-                    irImplicitCast(irGet(arguments[1]), field.parentAsClass.defaultType)
+                    irImplicitCast(irGet(arguments[1]), expression.receiverType)
             }
 
             referenceClass.addOverride(get!!) { arguments ->
@@ -440,6 +497,12 @@ private class PropertyReferenceLowering(val context: JvmBackendContext) : IrElem
             }
         }
     }
+
+    // In `value::x`, using `value`'s type is fine; but in `C::x`, the type of the receiver has to be `C`.
+    // This is *not* the type of `x`'s dispatch receiver if `x` is declared in a superclass of `C`, so we
+    // extract `C` from the reference's type, which is either `KProperty1<C, R>` or `KProperty2<C, Extension, R>`.
+    private val IrCallableReference<*>.receiverType
+        get() = dispatchReceiver?.type ?: ((type as IrSimpleType).arguments.first() as IrTypeProjection).type
 
     private fun IrCallableReference<*>.getBoundReceiver(): IrExpression? {
         val callee = symbol.owner

@@ -240,6 +240,11 @@ public class JsLegacyPrimitiveArraysBoxTestGenerated extends AbstractJsLegacyPri
         runTest("compiler/testData/codegen/box/arrays/kt33.kt");
     }
 
+    @TestMetadata("kt34291_16dimensions.kt")
+    public void testKt34291_16dimensions() throws Exception {
+        runTest("compiler/testData/codegen/box/arrays/kt34291_16dimensions.kt");
+    }
+
     @TestMetadata("kt3771.kt")
     public void testKt3771() throws Exception {
         runTest("compiler/testData/codegen/box/arrays/kt3771.kt");
@@ -248,6 +253,11 @@ public class JsLegacyPrimitiveArraysBoxTestGenerated extends AbstractJsLegacyPri
     @TestMetadata("kt4118.kt")
     public void testKt4118() throws Exception {
         runTest("compiler/testData/codegen/box/arrays/kt4118.kt");
+    }
+
+    @TestMetadata("kt42932.kt")
+    public void testKt42932() throws Exception {
+        runTest("compiler/testData/codegen/box/arrays/kt42932.kt");
     }
 
     @TestMetadata("kt4348.kt")

@@ -11,6 +11,8 @@ import org.gradle.api.file.FileTree
 import org.gradle.api.tasks.*
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.asValidFrameworkName
 import org.jetbrains.kotlin.gradle.plugin.mpp.Framework
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.utils.appendLine
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget.*
@@ -63,7 +65,7 @@ private class IosFrameworkFiles(val rootDir: File) {
 /**
  * Task running lipo to create a fat framework from several simple frameworks. It also merges headers, plists and module files.
  */
-open class FatFrameworkTask: DefaultTask() {
+open class FatFrameworkTask : DefaultTask() {
 
     //region DSL properties.
     /**
@@ -105,11 +107,13 @@ open class FatFrameworkTask: DefaultTask() {
     private val fatDsym: IosDsymFiles
         get() = fatFramework.dSYM
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFiles
     @get:SkipWhenEmpty
     protected val inputFrameworkFiles: Iterable<FileTree>
         get() = frameworks.map { project.fileTree(it.outputFile) }
 
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
     @get:InputFiles
     protected val inputDsymFiles: Iterable<FileTree>
         get() = frameworks.mapNotNull { framework ->
@@ -130,9 +134,9 @@ open class FatFrameworkTask: DefaultTask() {
      * Adds the specified frameworks in this fat framework.
      */
     fun from(frameworks: Iterable<Framework>) {
-        frameworks.forEach {
-            val arch = it.konanTarget.architecture
-            val family = it.konanTarget.family
+        frameworks.forEach { framework ->
+            val arch = framework.konanTarget.architecture
+            val family = framework.konanTarget.family
             val fatFrameworkFamily = getFatFrameworkFamily()
             require(fatFrameworkFamily == null || family == fatFrameworkFamily) {
                 "Cannot add a binary with platform family '${family.visibleName}' to the fat framework:\n" +
@@ -145,8 +149,20 @@ open class FatFrameworkTask: DefaultTask() {
                 "This fat framework already has a binary for architecture `${arch.name.toLowerCase()}` " +
                         "(${alreadyAdded.name} for target `${alreadyAdded.target.name}`)"
             }
-            archToFramework[arch] = it
-            dependsOn(it.linkTask)
+
+            require(archToFramework.all { it.value.isStatic == framework.isStatic }) {
+                fun Framework.staticOrDynamic(): String = if (isStatic) "static" else "dynamic"
+
+                buildString {
+                    append("Cannot create a fat framework from:\n")
+                    archToFramework.forEach { append("${it.value.baseName} - ${it.key.name.toLowerCase()} - ${it.value.staticOrDynamic()}\n") }
+                    append("${framework.baseName} - ${arch.name.toLowerCase()} - ${framework.staticOrDynamic()}\n")
+                    append("All input frameworks must be either static or dynamic")
+                }
+            }
+
+            archToFramework[arch] = framework
+            dependsOn(framework.linkTask)
 
         }
     }
@@ -167,10 +183,10 @@ open class FatFrameworkTask: DefaultTask() {
         }
 
     private val Framework.plistPlatform: String
-        get() = when(konanTarget) {
-            IOS_ARM32, IOS_ARM64, IOS_X64 -> "iPhoneOS"
-            TVOS_ARM64, TVOS_X64 -> "AppleTVOS"
-            WATCHOS_ARM32, WATCHOS_ARM64, WATCHOS_X86, WATCHOS_X64 -> "WatchOS"
+        get() = when (konanTarget) {
+            IOS_ARM32, IOS_ARM64, IOS_X64, IOS_SIMULATOR_ARM64 -> "iPhoneOS"
+            TVOS_ARM64, TVOS_X64, TVOS_SIMULATOR_ARM64 -> "AppleTVOS"
+            WATCHOS_ARM32, WATCHOS_ARM64, WATCHOS_X86, WATCHOS_X64, WATCHOS_SIMULATOR_ARM64 -> "WatchOS"
             else -> error("Fat frameworks are not supported for platform `${konanTarget.visibleName}`")
         }
 
@@ -214,8 +230,25 @@ open class FatFrameworkTask: DefaultTask() {
             )
         }
 
-    private fun mergeBinaries(outputFile: File) =
+    private fun runInstallNameTool(file: File, frameworkName: String) {
+        project.exec { exec ->
+            exec.executable = "install_name_tool"
+            exec.args = listOf(
+                "-id",
+                "@rpath/${frameworkName}.framework/${frameworkName}",
+                file.absolutePath
+            )
+        }
+    }
+
+    private fun mergeBinaries(outputFile: File) {
+
         runLipo(archToFramework.values.map { it.files.binary }, outputFile)
+
+        if (archToFramework.values.any{ it.isStatic.not() && it.baseName != fatFrameworkName }) {
+            runInstallNameTool(outputFile, fatFrameworkName)
+        }
+    }
 
     private fun mergeHeaders(outputFile: File) = outputFile.writer().use { writer ->
 
@@ -231,13 +264,13 @@ open class FatFrameworkTask: DefaultTask() {
             headerContents.toList().forEachIndexed { i, (arch, content) ->
                 val macro = arch.clangMacro
                 if (i == 0) {
-                    writer.appendln("#if defined($macro)\n")
+                    writer.appendLine("#if defined($macro)\n")
                 } else {
-                    writer.appendln("#elif defined($macro)\n")
+                    writer.appendLine("#elif defined($macro)\n")
                 }
-                writer.appendln(content)
+                writer.appendLine(content)
             }
-            writer.appendln(
+            writer.appendLine(
                 """
                 #else
                 #error Unsupported platform
@@ -332,5 +365,17 @@ open class FatFrameworkTask: DefaultTask() {
         createModuleFile(fatFramework.moduleFile, frameworkName)
         mergePlists(fatFramework.infoPlist, frameworkName)
         mergeDSYM()
+    }
+
+    companion object {
+        private val supportedTargets = listOf(
+            IOS_ARM32, IOS_ARM64, IOS_X64,
+            WATCHOS_ARM32, WATCHOS_ARM64, WATCHOS_X86, WATCHOS_X64,
+            TVOS_ARM64, TVOS_X64
+        )
+
+        fun isSupportedTarget(target: KotlinNativeTarget): Boolean {
+            return target.konanTarget in supportedTargets
+        }
     }
 }

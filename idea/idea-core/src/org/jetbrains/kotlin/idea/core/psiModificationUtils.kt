@@ -14,13 +14,13 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.elementType
 import org.jetbrains.kotlin.builtins.isFunctionOrSuspendFunctionType
 import org.jetbrains.kotlin.config.LanguageFeature
-import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.extensions.DeclarationAttributeAltererExtension
 import org.jetbrains.kotlin.idea.FrontendInternals
 import org.jetbrains.kotlin.idea.caches.resolve.analyze
 import org.jetbrains.kotlin.idea.caches.resolve.getResolutionFacade
 import org.jetbrains.kotlin.idea.caches.resolve.resolveToDescriptorIfAny
+import org.jetbrains.kotlin.idea.project.languageVersionSettings
 import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.idea.resolve.frontendService
 import org.jetbrains.kotlin.idea.resolve.getLanguageVersionSettings
@@ -38,7 +38,10 @@ import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.OverridingUtil
 import org.jetbrains.kotlin.resolve.calls.callUtil.getResolvedCall
 import org.jetbrains.kotlin.resolve.calls.callUtil.getValueArgumentsInParentheses
+import org.jetbrains.kotlin.resolve.calls.callUtil.isFakeElement
 import org.jetbrains.kotlin.resolve.calls.model.ArgumentMatch
+import org.jetbrains.kotlin.resolve.checkers.ExplicitApiDeclarationChecker
+import org.jetbrains.kotlin.resolve.checkers.explicitApiEnabled
 import org.jetbrains.kotlin.resolve.lazy.BodyResolveMode
 import org.jetbrains.kotlin.resolve.sam.SamConversionOracle
 import org.jetbrains.kotlin.resolve.sam.SamConversionResolver
@@ -48,6 +51,7 @@ import org.jetbrains.kotlin.types.isError
 import org.jetbrains.kotlin.types.typeUtil.isTypeParameter
 import org.jetbrains.kotlin.utils.KotlinExceptionWithAttachments
 import org.jetbrains.kotlin.utils.SmartList
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 
 fun KtLambdaArgument.moveInsideParentheses(bindingContext: BindingContext): KtCallExpression {
     val ktExpression = this.getArgumentExpression()
@@ -306,8 +310,15 @@ fun KtModifierListOwner.setVisibility(visibilityModifier: KtModifierKeywordToken
         val defaultVisibilityKeyword = implicitVisibility()
 
         if (visibilityModifier == defaultVisibilityKeyword) {
-            this.visibilityModifierType()?.let { removeModifier(it) }
-            return
+            // Fake elements do not have ModuleInfo and languageVersionSettings because they can't be analysed
+            // Effectively, this leads to J2K not respecting explicit api mode, but this case seems to be rare anyway.
+            val explicitVisibilityRequired = !this.isFakeElement && this.languageVersionSettings.explicitApiEnabled
+                    && this.resolveToDescriptorIfAny()?.let { !ExplicitApiDeclarationChecker.explicitVisibilityIsNotRequired(it) } == true
+
+            if (!explicitVisibilityRequired) {
+                this.visibilityModifierType()?.let { removeModifier(it) }
+                return
+            }
         }
     }
 
@@ -358,14 +369,17 @@ fun KtModifierListOwner.canBePrivate(): Boolean {
     return true
 }
 
+fun KtModifierListOwner.canBePublic(): Boolean = !isSealedClassConstructor()
+
 fun KtModifierListOwner.canBeProtected(): Boolean {
     val parent = when (this) {
         is KtPropertyAccessor -> this.property.parent
         else -> this.parent
     }
     return when (parent) {
-        is KtClassBody -> parent.parent is KtClass
+        is KtClassBody -> parent.parent is KtClass && !this.isFinalClassConstructor()
         is KtParameterList -> parent.parent is KtPrimaryConstructor
+        is KtClass -> !this.isAnnotationClassPrimaryConstructor() && !this.isFinalClassConstructor()
         else -> false
     }
 }
@@ -375,11 +389,23 @@ fun KtModifierListOwner.canBeInternal(): Boolean {
         val objectDeclaration = getStrictParentOfType<KtObjectDeclaration>() ?: return false
         if (objectDeclaration.isCompanion() && hasJvmFieldAnnotation()) return false
     }
-    return !isAnnotationClassPrimaryConstructor()
+    return !isAnnotationClassPrimaryConstructor() && !isSealedClassConstructor()
 }
 
 private fun KtModifierListOwner.isAnnotationClassPrimaryConstructor(): Boolean =
     this is KtPrimaryConstructor && (this.parent as? KtClass)?.hasModifier(KtTokens.ANNOTATION_KEYWORD) ?: false
+
+private fun KtModifierListOwner.isFinalClassConstructor(): Boolean {
+    if (this !is KtConstructor<*>) return false
+    val ktClass = getContainingClassOrObject().safeAs<KtClass>() ?: return false
+    return ktClass.toDescriptor().safeAs<ClassDescriptor>()?.isFinalOrEnum ?: return false
+}
+
+private fun KtModifierListOwner.isSealedClassConstructor(): Boolean {
+    if (this !is KtConstructor<*>) return false
+    val ktClass = getContainingClassOrObject().safeAs<KtClass>() ?: return false
+    return ktClass.isSealed()
+}
 
 fun KtClass.isInheritable(): Boolean {
     return when (getModalityFromDescriptor()) {
@@ -489,12 +515,6 @@ fun KtParameter.dropDefaultValue() {
     val from = equalsToken ?: return
     val to = defaultValue ?: from
     deleteChildRange(from, to)
-}
-
-fun dropEnclosingParenthesesIfPossible(expression: KtExpression): KtExpression {
-    val parent = expression.parent as? KtParenthesizedExpression ?: return expression
-    if (!KtPsiUtil.areParenthesesUseless(parent)) return expression
-    return parent.replaced(expression)
 }
 
 fun KtTypeParameterListOwner.addTypeParameter(typeParameter: KtTypeParameter): KtTypeParameter? {

@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.JvmSymbols
 import org.jetbrains.kotlin.backend.jvm.codegen.isInlineOnly
 import org.jetbrains.kotlin.backend.jvm.codegen.isJvmInterface
+import org.jetbrains.kotlin.backend.jvm.codegen.representativeUpperBound
 import org.jetbrains.kotlin.backend.jvm.lower.inlineclasses.unboxInlineClass
 import org.jetbrains.kotlin.codegen.inline.coroutines.FOR_INLINE_SUFFIX
 import org.jetbrains.kotlin.config.JvmDefaultMode
@@ -21,6 +22,7 @@ import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.deserialization.PLATFORM_DEPENDENT_ANNOTATION_FQ_NAME
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.PsiIrFileEntry
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.Scope
@@ -40,10 +42,12 @@ import org.jetbrains.kotlin.ir.types.impl.IrStarProjectionImpl
 import org.jetbrains.kotlin.ir.types.impl.makeTypeProjection
 import org.jetbrains.kotlin.ir.util.*
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
+import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
 import org.jetbrains.kotlin.load.java.JavaDescriptorVisibilities
 import org.jetbrains.kotlin.load.java.JvmAbi
 import org.jetbrains.kotlin.metadata.jvm.deserialization.JvmProtoBufUtil
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.DescriptorUtils
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_FQ_NAME
 import org.jetbrains.kotlin.resolve.jvm.annotations.JVM_DEFAULT_NO_COMPATIBILITY_FQ_NAME
@@ -64,12 +68,11 @@ fun IrType.eraseTypeParameters() = when (this) {
     is IrErrorType -> this
     is IrSimpleType ->
         when (val owner = classifier.owner) {
-            is IrClass -> IrSimpleTypeImpl(
-                classifier,
-                hasQuestionMark,
-                arguments.map { it.eraseTypeParameters() },
-                annotations
-            )
+            is IrScript -> {
+                assert(arguments.isEmpty()) { "Script can't be generic: " + owner.render() }
+                IrSimpleTypeImpl(classifier, hasQuestionMark, emptyList(), annotations)
+            }
+            is IrClass -> IrSimpleTypeImpl(classifier, hasQuestionMark, arguments.map { it.eraseTypeParameters() }, annotations)
             is IrTypeParameter -> {
                 val upperBound = owner.erasedUpperBound
                 IrSimpleTypeImpl(
@@ -111,7 +114,7 @@ val IrType.erasedUpperBound: IrClass
     get() = when (val classifier = classifierOrNull) {
         is IrClassSymbol -> classifier.owner
         is IrTypeParameterSymbol -> classifier.owner.erasedUpperBound
-        else -> throw IllegalStateException()
+        else -> error(render())
     }
 
 /**
@@ -122,6 +125,11 @@ val IrType.erasedUpperBound: IrClass
  * the value is not reboxed and reunboxed by the codegen by using the unsafeCoerceIntrinsic.
  */
 fun IrType.defaultValue(startOffset: Int, endOffset: Int, context: JvmBackendContext): IrExpression {
+    val classifier = this.classifierOrNull
+    if (classifier is IrTypeParameterSymbol) {
+        return classifier.owner.representativeUpperBound.defaultValue(startOffset, endOffset, context)
+    }
+
     if (this !is IrSimpleType || hasQuestionMark || classOrNull?.owner?.isInline != true)
         return IrConstImpl.defaultValueForType(startOffset, endOffset, this)
 
@@ -211,10 +219,8 @@ fun IrDeclaration.isInCurrentModule(): Boolean =
 // "not learned through smartcasting".
 fun IrExpression.isSmartcastFromHigherThanNullable(context: JvmBackendContext): Boolean {
     return when (this) {
-        is IrTypeOperatorCall -> operator == IrTypeOperator.IMPLICIT_CAST && !argument.type.isSubtypeOf(
-            type.makeNullable(),
-            context.irBuiltIns
-        )
+        is IrTypeOperatorCall ->
+            operator == IrTypeOperator.IMPLICIT_CAST && !argument.type.isSubtypeOf(type.makeNullable(), context.typeSystem)
         is IrGetValue -> {
             // Check if the variable initializer is smartcast. In FIR, if the subject of a `when` is smartcast,
             // the IMPLICIT_CAST is in the initializer of the variable for the subject.
@@ -347,10 +353,6 @@ val IrDeclaration.isStaticInlineClassReplacement: Boolean
     get() = origin == JvmLoweredDeclarationOrigin.STATIC_INLINE_CLASS_REPLACEMENT
             || origin == JvmLoweredDeclarationOrigin.STATIC_INLINE_CLASS_CONSTRUCTOR
 
-fun IrDeclaration.isFromJava(): Boolean =
-    origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB ||
-            parent is IrDeclaration && (parent as IrDeclaration).isFromJava()
-
 val IrType.upperBound: IrType
     get() = erasedUpperBound.symbol.starProjectedType
 
@@ -384,8 +386,32 @@ fun collectVisibleTypeParameters(scopeOwner: IrTypeParametersContainer): Set<IrT
 private fun JvmBackendContext.makeRawTypeAnnotation() =
     IrConstructorCallImpl.fromSymbolOwner(
         generatorExtensions.rawTypeAnnotationConstructor!!.constructedClassType,
-        generatorExtensions.rawTypeAnnotationConstructor.symbol
+        generatorExtensions.rawTypeAnnotationConstructor!!.symbol
     )
 
 fun IrClass.rawType(context: JvmBackendContext): IrType =
     defaultType.addAnnotations(listOf(context.makeRawTypeAnnotation()))
+
+fun IrType.getSingleAbstractMethod(): IrSimpleFunction? =
+    getClass()?.getSingleAbstractMethod()
+
+fun IrClass.getSingleAbstractMethod(): IrSimpleFunction? =
+    functions.singleOrNull { it.modality == Modality.ABSTRACT }
+
+fun IrFile.getKtFile(): KtFile? =
+    (fileEntry as? PsiIrFileEntry)?.psiFile as KtFile?
+
+fun IrType.isInlineClassType(): Boolean =
+    erasedUpperBound.isInline
+
+inline fun IrElement.hasChild(crossinline block: (IrElement) -> Boolean): Boolean {
+    var result = false
+    acceptChildren(object : IrElementVisitorVoid {
+        override fun visitElement(element: IrElement) = when {
+            result -> Unit
+            block(element) -> result = true
+            else -> element.acceptChildren(this, null)
+        }
+    }, null)
+    return result
+}

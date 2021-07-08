@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.fir.expressions.FirArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirComponentCall
 import org.jetbrains.kotlin.fir.expressions.FirEmptyArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirExpression
+import org.jetbrains.kotlin.fir.expressions.FirFunctionCallOrigin
 import org.jetbrains.kotlin.fir.expressions.builder.FirCallBuilder
 import org.jetbrains.kotlin.fir.expressions.builder.FirExpressionBuilder
 import org.jetbrains.kotlin.fir.expressions.impl.FirComponentCallImpl
@@ -61,7 +62,7 @@ class FirComponentCallBuilder : FirCallBuilder, FirAnnotationContainerBuilder, F
     @Deprecated("Modification of 'typeRef' has no impact for FirComponentCallBuilder", level = DeprecationLevel.HIDDEN)
     override var typeRef: FirTypeRef
         get() = throw IllegalStateException()
-        set(value) {
+        set(_) {
             throw IllegalStateException()
         }
 }

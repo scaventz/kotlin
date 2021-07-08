@@ -5,7 +5,7 @@ enum class En { A, B, С }
 fun foo() {
     // nullable variable
     val en2: Any? = En.A
-    if (en2 is En) {
+    if (<!USELESS_IS_CHECK!>en2 is En<!>) {
         when (en2) {
             En.A -> {}
             En.B -> {}
@@ -15,7 +15,7 @@ fun foo() {
 
     // not nullable variable
     val en1: Any = En.A
-    if (en1 is En) {
+    if (<!USELESS_IS_CHECK!>en1 is En<!>) {
         when (en1) {
             En.A -> {}
             En.B -> {}
@@ -32,8 +32,8 @@ fun useEn2(x: En2) = x
 fun bar(x: Any) {
     if (x is En && x is En2) {
         when (x) {
-            En.A -> useEn(x)
-            En2.D -> useEn2(x)
+            <!INCOMPATIBLE_TYPES!>En.A<!> -> useEn(x)
+            <!INCOMPATIBLE_TYPES!>En2.D<!> -> useEn2(x)
             else -> {}
         }
     }

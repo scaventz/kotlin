@@ -17,23 +17,51 @@ dependencies {
 
     compileOnly(intellijCoreDep()) { includeJars("intellij-core") }
 
-    testCompileOnly(intellijDep())
-
-    testRuntimeOnly(intellijDep())
-
-    testApi(commonDep("junit:junit"))
     testCompileOnly(project(":kotlin-test:kotlin-test-jvm"))
     testCompileOnly(project(":kotlin-test:kotlin-test-junit"))
-    testApi(projectTests(":compiler:tests-common"))
-    testApi(projectTests(":compiler:fir:analysis-tests:legacy-fir-tests"))
-    testApi(project(":compiler:resolution.common"))
+    testApi(projectTests(":compiler:test-infrastructure"))
+    testApi(projectTests(":compiler:test-infrastructure-utils"))
+    testApi(projectTests(":compiler:tests-compiler-utils"))
+    testApi(projectTests(":compiler:tests-common-new"))
+    testApi(projectTests(":compiler:fir:analysis-tests"))
+    testApi(project(":compiler:fir:fir-serialization"))
+
+    testApiJUnit5()
 
     testCompileOnly(project(":kotlin-reflect-api"))
     testRuntimeOnly(project(":kotlin-reflect"))
     testRuntimeOnly(project(":core:descriptors.runtime"))
+    testRuntimeOnly(project(":compiler:fir:fir2ir:jvm-backend"))
 
     testCompileOnly(intellijCoreDep()) { includeJars("intellij-core") }
     testRuntimeOnly(intellijCoreDep()) { includeJars("intellij-core") }
+
+    testRuntimeOnly(intellijDep()) {
+        includeJars(
+            "jps-model",
+            "extensions",
+            "util",
+            "platform-api",
+            "platform-impl",
+            "idea",
+            "guava",
+            "trove4j",
+            "asm-all",
+            "log4j",
+            "jdom",
+            "streamex",
+            "bootstrap",
+            "jna",
+            rootProject = rootProject
+        )
+    }
+
+    Platform[202] {
+        testRuntimeOnly(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-1") }
+    }
+    Platform[203].orHigher {
+        testRuntimeOnly(intellijDep()) { includeJars("intellij-deps-fastutil-8.3.1-3") }
+    }
 }
 
 val generationRoot = projectDir.resolve("tests-gen")
@@ -53,8 +81,10 @@ if (kotlinBuildProperties.isInJpsBuildIdeaSync) {
     }
 }
 
-projectTest(parallel = true) {
+projectTest(jUnit5Enabled = true) {
+    dependsOn(":dist")
     workingDir = rootDir
+    useJUnitPlatform()
 }
 
 testsJar()

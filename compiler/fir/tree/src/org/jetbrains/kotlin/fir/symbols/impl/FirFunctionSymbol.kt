@@ -7,12 +7,12 @@ package org.jetbrains.kotlin.fir.symbols.impl
 
 import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.symbols.AccessorSymbol
-import org.jetbrains.kotlin.fir.symbols.CallableId
 import org.jetbrains.kotlin.fir.types.ConeKotlinType
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
-sealed class FirFunctionSymbol<D : FirFunction<D>>(
+sealed class FirFunctionSymbol<D : FirFunction>(
     override val callableId: CallableId
 ) : FirCallableSymbol<D>() {
     open val parameters: List<ConeKotlinType>
@@ -25,6 +25,15 @@ open class FirNamedFunctionSymbol(
     callableId: CallableId,
 ) : FirFunctionSymbol<FirSimpleFunction>(callableId)
 
+interface FirIntersectionCallableSymbol {
+    val intersections: Collection<FirCallableSymbol<*>>
+}
+
+class FirIntersectionOverrideFunctionSymbol(
+    callableId: CallableId,
+    override val intersections: Collection<FirCallableSymbol<*>>
+) : FirNamedFunctionSymbol(callableId), FirIntersectionCallableSymbol
+
 class FirConstructorSymbol(
     callableId: CallableId
 ) : FirFunctionSymbol<FirConstructor>(callableId)
@@ -36,7 +45,7 @@ open class FirAccessorSymbol(
 
 // ------------------------ unnamed ------------------------
 
-sealed class FirFunctionWithoutNameSymbol<F : FirFunction<F>>(
+sealed class FirFunctionWithoutNameSymbol<F : FirFunction>(
     stubName: Name
 ) : FirFunctionSymbol<F>(CallableId(FqName("special"), stubName)) {
     override val parameters: List<ConeKotlinType>

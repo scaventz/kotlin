@@ -30,6 +30,7 @@ import org.jetbrains.jps.ModuleChunk
 import org.jetbrains.jps.api.CanceledStatus
 import org.jetbrains.jps.builders.BuildResult
 import org.jetbrains.jps.builders.CompileScopeTestBuilder
+import org.jetbrains.jps.builders.JpsBuildTestCase
 import org.jetbrains.jps.builders.impl.BuildDataPathsImpl
 import org.jetbrains.jps.builders.impl.logging.ProjectBuilderLoggerBase
 import org.jetbrains.jps.builders.java.dependencyView.Callbacks
@@ -42,7 +43,6 @@ import org.jetbrains.jps.model.JpsModuleRootModificationUtil
 import org.jetbrains.jps.model.java.JpsJavaExtensionService
 import org.jetbrains.jps.model.library.sdk.JpsSdk
 import org.jetbrains.jps.util.JpsPathUtil
-import org.jetbrains.kotlin.cli.common.KOTLIN_COMPILER_ENVIRONMENT_KEEPALIVE_PROPERTY
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.common.arguments.K2MetadataCompilerArguments
@@ -154,7 +154,7 @@ abstract class AbstractIncrementalJpsTest(
     override fun tearDown() {
         restoreSystemProperties()
 
-        (AbstractIncrementalJpsTest::myProject).javaField!![this] = null
+        JpsBuildTestCase::class.java.getDeclaredField("myProject")[this] = null
         (AbstractIncrementalJpsTest::projectDescriptor).javaField!![this] = null
         (AbstractIncrementalJpsTest::systemPropertiesBackup).javaField!![this] = null
 
@@ -277,7 +277,7 @@ abstract class AbstractIncrementalJpsTest(
         }
 
         if (!makeOverallResult.makeFailed) {
-            if (checkDumpsCaseInsensitively && rebuildResult.mappingsDump?.toLowerCase() == makeOverallResult.mappingsDump?.toLowerCase()) {
+            if (checkDumpsCaseInsensitively && rebuildResult.mappingsDump?.lowercase() == makeOverallResult.mappingsDump?.lowercase()) {
                 // do nothing
             } else {
                 TestCase.assertEquals(rebuildResult.mappingsDump, makeOverallResult.mappingsDump)

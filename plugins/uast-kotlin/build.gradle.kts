@@ -1,8 +1,15 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     kotlin("jvm")
     id("jps-compatible")
 }
+
+val shadows by configurations.creating {
+    isTransitive = false
+}
+configurations.getByName("compileOnly").extendsFrom(shadows)
+configurations.getByName("testCompile").extendsFrom(shadows)
 
 dependencies {
     compile(kotlinStdlib())
@@ -11,15 +18,16 @@ dependencies {
     compile(project(":compiler:frontend"))
     compile(project(":compiler:frontend.java"))
     compile(project(":compiler:light-classes"))
+    if (kotlinBuildProperties.isJpsBuildEnabled) {
+        compile(project(":plugins:uast-kotlin-base"))
+    } else {
+        shadows(project(":plugins:uast-kotlin-base"))
+    }
 
-    // BEWARE: Uast should not depend on IDEA.
+    // BEWARE: UAST should not depend on IJ platform so that it can work in Android Lint CLI mode (where IDE is not available)
     compileOnly(intellijCoreDep()) { includeJars("intellij-core", "asm-all", rootProject = rootProject) }
 
     testCompileOnly(intellijDep())
-
-    if (Platform.P191.orLower()) {
-        compileOnly(intellijDep()) { includeJars("java-api", "java-impl") }
-    }
 
     compileOnly(intellijDep()) { includeJars("platform-impl") }
     compileOnly(intellijPluginDep("java")) { includeJars("java-api", "java-impl") }
@@ -32,6 +40,7 @@ dependencies {
     testCompile(project(":compiler:util"))
     testCompile(project(":compiler:cli"))
     testCompile(projectTests(":idea:idea-test-framework"))
+    testCompile(projectTests(":plugins:uast-kotlin-base"))
 
     testCompile(project(":idea:idea-native")) { isTransitive = false }
     testCompile(project(":idea:idea-gradle-native")) { isTransitive = false }
@@ -50,6 +59,7 @@ dependencies {
     testRuntime(project(":plugins:kapt3-idea"))
     testRuntime(project(":kotlinx-serialization-ide-plugin"))
     testRuntime(project(":plugins:parcelize:parcelize-ide"))
+    testRuntime(project(":plugins:lombok:lombok-ide-plugin"))
     testRuntime(intellijDep())
     testRuntime(intellijPluginDep("junit"))
     testRuntime(intellijPluginDep("gradle"))
@@ -62,8 +72,16 @@ sourceSets {
     "test" { projectDefault() }
 }
 
+noDefaultJar()
+
+runtimeJar(tasks.register<ShadowJar>("shadowJar")) {
+    from(mainSourceSet.output)
+    configurations = listOf(shadows)
+}
+
 testsJar {}
 
 projectTest(parallel = true) {
+    dependsOn(":dist")
     workingDir = rootDir
 }

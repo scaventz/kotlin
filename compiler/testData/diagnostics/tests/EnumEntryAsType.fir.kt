@@ -1,4 +1,3 @@
-// !WITH_NEW_INFERENCE
 // !DIAGNOSTICS: -UNUSED_PARAMETER
 
 enum class Color {
@@ -18,7 +17,7 @@ class MyColor(val x: <!UNRESOLVED_REFERENCE!>Color.RED<!>, y: <!UNRESOLVED_REFER
         class Local : <!UNRESOLVED_REFERENCE!>Color.RED<!>
         fun local(arg: <!UNRESOLVED_REFERENCE!>Color.RED<!>): <!UNRESOLVED_REFERENCE!>Color.RED<!> = arg
         val temp: <!UNRESOLVED_REFERENCE!>Color.RED<!> = Color.RED
-        temp as? <!UNRESOLVED_REFERENCE!>Color.RED<!>
+        temp as? <!UNRESOLVED_REFERENCE, UNRESOLVED_REFERENCE!>Color.RED<!>
         if (temp is <!UNRESOLVED_REFERENCE!>Color.RED<!>) {
         return temp as <!UNRESOLVED_REFERENCE!>Color.RED<!>
     }
@@ -30,17 +29,17 @@ class MyColor(val x: <!UNRESOLVED_REFERENCE!>Color.RED<!>, y: <!UNRESOLVED_REFER
     }
 }
 
-fun create(): <!UNRESOLVED_REFERENCE!>Array<Color.RED>?<!> = null
+fun create(): Array<<!UNRESOLVED_REFERENCE!>Color.RED<!>>? = null
 
 interface Your<T : <!UNRESOLVED_REFERENCE!>Color.RED<!>>
 
-class His : <!UNRESOLVED_REFERENCE!>Your<Color.RED><!>
+class His : Your<<!UNRESOLVED_REFERENCE!>Color.RED<!>>
 
 fun <T : <!UNRESOLVED_REFERENCE!>Color.RED<!>> otherCreate(): Array<T>? = null
 
 typealias RedAlias = <!UNRESOLVED_REFERENCE!>Color.RED<!>
 
-typealias ArrayOfEnumEntry = <!UNRESOLVED_REFERENCE!>Array<Color.RED><!>
+typealias ArrayOfEnumEntry = Array<<!UNRESOLVED_REFERENCE!>Color.RED<!>>
 
 typealias ArrayOfEnumEntryAlias = Array<RedAlias>
 
@@ -48,8 +47,8 @@ fun <T> bar(a: Any): T = a as T
 
 fun <T> foo() {
     foo<<!UNRESOLVED_REFERENCE!>Color.RED<!>>()
-    foo<RedAlias>()
-    <!INAPPLICABLE_CANDIDATE!>bar<!><<!UNRESOLVED_REFERENCE!>Color.RED<!>>(Color.RED)
+    foo<<!CANNOT_INFER_PARAMETER_TYPE!>RedAlias<!>>()
+    bar<<!UNRESOLVED_REFERENCE!>Color.RED<!>>(<!ARGUMENT_TYPE_MISMATCH!>Color.RED<!>)
 }
 
-fun <!UNRESOLVED_REFERENCE!>Array<Color.RED><!>.foo(entries: <!UNRESOLVED_REFERENCE!>Array<Color.RED><!>): <!UNRESOLVED_REFERENCE!>Array<Color.RED><!> = null!!
+fun Array<<!UNRESOLVED_REFERENCE!>Color.RED<!>>.foo(entries: Array<<!UNRESOLVED_REFERENCE!>Color.RED<!>>): Array<<!UNRESOLVED_REFERENCE!>Color.RED<!>> = null!!

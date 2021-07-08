@@ -33,7 +33,6 @@ import org.jetbrains.uast.generate.UastCodeGenerationPlugin
 import org.jetbrains.uast.generate.UastElementFactory
 import org.jetbrains.uast.kotlin.*
 import org.jetbrains.uast.kotlin.internal.KotlinFakeUElement
-import org.jetbrains.uast.kotlin.internal.toSourcePsiFakeAware
 
 class KotlinUastCodeGenerationPlugin : UastCodeGenerationPlugin {
     override val language: Language
@@ -91,6 +90,7 @@ class KotlinUastElementFactory(project: Project) : UastElementFactory {
         return createQualifiedReference(qualifiedName, context?.sourcePsi)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     /*override*/ fun createQualifiedReference(qualifiedName: String, context: PsiElement?): UQualifiedReferenceExpression? {
         return psiFactory.createExpression(qualifiedName).let {
             when (it) {
@@ -153,6 +153,7 @@ class KotlinUastElementFactory(project: Project) : UastElementFactory {
         return psiFactory.createExpression("null").toUElementOfType<ULiteralExpression>()!!
     }
 
+    @Suppress("UNUSED_PARAMETER")
     /*override*/ fun createIntLiteral(value: Int, context: PsiElement?): ULiteralExpression {
         return psiFactory.createExpression(value.toString()).toUElementOfType<ULiteralExpression>()!!
     }

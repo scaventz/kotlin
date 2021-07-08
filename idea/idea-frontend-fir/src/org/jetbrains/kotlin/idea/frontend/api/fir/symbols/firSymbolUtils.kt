@@ -6,54 +6,46 @@
 package org.jetbrains.kotlin.idea.frontend.api.fir.symbols
 
 import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.descriptors.Visibility
-import org.jetbrains.kotlin.descriptors.java.JavaVisibilities
-import org.jetbrains.kotlin.fir.FirSession
-import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.FirRenderer
+import org.jetbrains.kotlin.fir.declarations.FirCallableDeclaration
+import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
-import org.jetbrains.kotlin.fir.declarations.modality
-import org.jetbrains.kotlin.fir.declarations.visibility
-import org.jetbrains.kotlin.fir.resolve.fullyExpandedType
-import org.jetbrains.kotlin.fir.resolve.toSymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirTypeAliasSymbol
-import org.jetbrains.kotlin.fir.types.ConeClassLikeType
-import org.jetbrains.kotlin.fir.types.coneType
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtCommonSymbolModality
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolModality
-import org.jetbrains.kotlin.idea.frontend.api.symbols.markers.KtSymbolVisibility
+import org.jetbrains.kotlin.fir.declarations.FirMemberDeclaration
+import org.jetbrains.kotlin.fir.declarations.utils.modality
+import org.jetbrains.kotlin.fir.declarations.utils.visibility
+import org.jetbrains.kotlin.fir.psi
+import org.jetbrains.kotlin.fir.renderWithType
+import org.jetbrains.kotlin.idea.fir.low.level.api.util.getElementTextInContext
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.psi.KtDeclaration
 
-internal inline fun <reified M : KtSymbolModality> Modality?.getSymbolModality(): M = when (this) {
-    Modality.FINAL -> KtCommonSymbolModality.FINAL
-    Modality.OPEN -> KtCommonSymbolModality.OPEN
-    Modality.ABSTRACT -> KtCommonSymbolModality.ABSTRACT
-    Modality.SEALED -> KtSymbolModality.SEALED
-    null -> error("Symbol modality should not be null, looks like the fir symbol was not properly resolved")
-} as? M ?: error("Sealed modality can only be applied to class")
-
-internal inline fun <F : FirMemberDeclaration, reified M : KtSymbolModality> KtFirSymbol<F>.getModality() =
-    firRef.withFir(FirResolvePhase.STATUS) { it.modality.getSymbolModality<M>() }
-
-
-internal fun Visibility?.getSymbolVisibility(): KtSymbolVisibility = when (this) {
-    Visibilities.Public -> KtSymbolVisibility.PUBLIC
-    Visibilities.Protected -> KtSymbolVisibility.PROTECTED
-    Visibilities.Private -> KtSymbolVisibility.PRIVATE
-    Visibilities.Internal -> KtSymbolVisibility.INTERNAL
-    Visibilities.Local -> KtSymbolVisibility.LOCAL
-    Visibilities.Unknown -> KtSymbolVisibility.UNKNOWN
-    JavaVisibilities.PackageVisibility -> KtSymbolVisibility.UNKNOWN //TODO: Add Java visibilities
-    null -> error("Symbol visibility should not be null, looks like the fir symbol was not properly resolved")
-    else -> throw NotImplementedError("Unknown visibility $name")
+internal fun <F> KtFirSymbol<F>.getModality(
+    phase: FirResolvePhase = FirResolvePhase.STATUS,
+    defaultModality: Modality? = null
+): Modality where F : FirDeclaration, F : FirMemberDeclaration {
+    return firRef.withFir(phase) { fir ->
+        fir.modality
+            ?: defaultModality
+            ?: fir.invalidModalityError()
+    }
 }
 
-internal fun <F : FirMemberDeclaration> KtFirSymbol<F>.getVisibility(): KtSymbolVisibility =
-    firRef.withFir(FirResolvePhase.STATUS) { it.visibility.getSymbolVisibility() }
-
-
-internal fun ConeClassLikeType.expandTypeAliasIfNeeded(session: FirSession): ConeClassLikeType {
-    val firTypeAlias = lookupTag.toSymbol(session) as? FirTypeAliasSymbol ?: return this
-    val expandedType = firTypeAlias.fir.expandedTypeRef.coneType
-    return expandedType.fullyExpandedType(session) as? ConeClassLikeType
-        ?: return this
+private fun FirDeclaration.invalidModalityError(): Nothing {
+    error(
+        """|Symbol modality should not be null, looks like the FIR symbol was not properly resolved
+                   |
+                   |${renderWithType(FirRenderer.RenderMode.WithResolvePhases)}
+                   |
+                   |${(psi as? KtDeclaration)?.getElementTextInContext()}""".trimMargin()
+    )
 }
+
+
+internal fun <F> KtFirSymbol<F>.getVisibility(
+    phase: FirResolvePhase = FirResolvePhase.STATUS
+): Visibility where F : FirMemberDeclaration, F : FirDeclaration =
+    firRef.withFir(phase) { fir -> fir.visibility }
+
+internal fun KtFirSymbol<FirCallableDeclaration>.getCallableIdIfNonLocal(): CallableId? =
+    firRef.withFir { fir -> fir.symbol.callableId.takeUnless { it.isLocal } }

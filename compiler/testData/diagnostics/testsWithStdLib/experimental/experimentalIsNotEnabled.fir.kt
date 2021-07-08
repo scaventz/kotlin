@@ -1,6 +1,7 @@
 // FILE: api.kt
 
-@RequiresOptIn
+@<!EXPERIMENTAL_IS_NOT_ENABLED!>RequiresOptIn<!>
+@Retention(AnnotationRetention.BINARY)
 annotation class Marker
 
 @Marker
@@ -17,7 +18,7 @@ fun use2() {
     f()
 }
 
-@OptIn(Marker::class)
+@<!EXPERIMENTAL_IS_NOT_ENABLED!>OptIn<!>(Marker::class)
 fun use3() {
     f()
 }

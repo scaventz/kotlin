@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
 import org.jetbrains.kotlin.fir.expressions.FirArgumentList
 import org.jetbrains.kotlin.fir.expressions.FirExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
+import org.jetbrains.kotlin.fir.expressions.FirFunctionCallOrigin
 import org.jetbrains.kotlin.fir.references.FirNamedReference
 import org.jetbrains.kotlin.fir.references.FirReference
 import org.jetbrains.kotlin.fir.types.FirTypeProjection
@@ -23,7 +24,7 @@ import org.jetbrains.kotlin.fir.visitors.*
  */
 
 open class FirFunctionCallImpl @FirImplementationDetail constructor(
-    override val source: FirSourceElement?,
+    override var source: FirSourceElement?,
     override var typeRef: FirTypeRef,
     override val annotations: MutableList<FirAnnotationCall>,
     override val typeArguments: MutableList<FirTypeProjection>,
@@ -32,6 +33,7 @@ open class FirFunctionCallImpl @FirImplementationDetail constructor(
     override var extensionReceiver: FirExpression,
     override var argumentList: FirArgumentList,
     override var calleeReference: FirNamedReference,
+    override val origin: FirFunctionCallOrigin,
 ) : FirFunctionCall() {
     override fun <R, D> acceptChildren(visitor: FirVisitor<R, D>, data: D) {
         typeRef.accept(visitor, data)
@@ -49,17 +51,17 @@ open class FirFunctionCallImpl @FirImplementationDetail constructor(
     }
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirFunctionCallImpl {
-        typeRef = typeRef.transformSingle(transformer, data)
+        typeRef = typeRef.transform(transformer, data)
         transformAnnotations(transformer, data)
         transformTypeArguments(transformer, data)
-        explicitReceiver = explicitReceiver?.transformSingle(transformer, data)
+        explicitReceiver = explicitReceiver?.transform(transformer, data)
         if (dispatchReceiver !== explicitReceiver) {
-            dispatchReceiver = dispatchReceiver.transformSingle(transformer, data)
+            dispatchReceiver = dispatchReceiver.transform(transformer, data)
         }
         if (extensionReceiver !== explicitReceiver && extensionReceiver !== dispatchReceiver) {
-            extensionReceiver = extensionReceiver.transformSingle(transformer, data)
+            extensionReceiver = extensionReceiver.transform(transformer, data)
         }
-        argumentList = argumentList.transformSingle(transformer, data)
+        argumentList = argumentList.transform(transformer, data)
         transformCalleeReference(transformer, data)
         return this
     }
@@ -75,23 +77,28 @@ open class FirFunctionCallImpl @FirImplementationDetail constructor(
     }
 
     override fun <D> transformExplicitReceiver(transformer: FirTransformer<D>, data: D): FirFunctionCallImpl {
-        explicitReceiver = explicitReceiver?.transformSingle(transformer, data)
+        explicitReceiver = explicitReceiver?.transform(transformer, data)
         return this
     }
 
     override fun <D> transformDispatchReceiver(transformer: FirTransformer<D>, data: D): FirFunctionCallImpl {
-        dispatchReceiver = dispatchReceiver.transformSingle(transformer, data)
+        dispatchReceiver = dispatchReceiver.transform(transformer, data)
         return this
     }
 
     override fun <D> transformExtensionReceiver(transformer: FirTransformer<D>, data: D): FirFunctionCallImpl {
-        extensionReceiver = extensionReceiver.transformSingle(transformer, data)
+        extensionReceiver = extensionReceiver.transform(transformer, data)
         return this
     }
 
     override fun <D> transformCalleeReference(transformer: FirTransformer<D>, data: D): FirFunctionCallImpl {
-        calleeReference = calleeReference.transformSingle(transformer, data)
+        calleeReference = calleeReference.transform(transformer, data)
         return this
+    }
+
+    @FirImplementationDetail
+    override fun replaceSource(newSource: FirSourceElement?) {
+        source = newSource
     }
 
     override fun replaceTypeRef(newTypeRef: FirTypeRef) {

@@ -37,8 +37,13 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
   <xi:include href="jps.xml" xpointer="xpointer(/idea-plugin/*)"/>
   <xi:include href="idea.xml" xpointer="xpointer(/idea-plugin/*)"/>
   <xi:include href="caches.xml" xpointer="xpointer(/idea-plugin/*)"/>
+  <xi:include href="firInspections.xml" xpointer="xpointer(/idea-plugin/*)"/>
+  <xi:include href="firIntentions.xml" xpointer="xpointer(/idea-plugin/*)"/>
+  <xi:include href="fe10Binding.xml" xpointer="xpointer(/idea-plugin/*)"/>
 
   <xi:include href="extensions/ide-frontend-independent.xml" xpointer="xpointer(/idea-plugin/*)"/>
+
+  <xi:include href="extensions.xml" xpointer="xpointer(/idea-plugin/*)"/>
 
 
   <!-- CIDR-PLUGIN-EXCLUDE-START -->
@@ -69,6 +74,10 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
 
   <extensions defaultExtensionNs="org.jetbrains.kotlin">
     <beforeResolveHighlightingVisitor implementation="org.jetbrains.kotlin.idea.fir.highlighter.visitors.DeclarationHighlightingExtension"/>
+    <binaryExtension implementation="org.jetbrains.kotlin.idea.util.JavaClassBinary"/>
+    <binaryExtension implementation="org.jetbrains.kotlin.idea.util.KotlinBuiltInBinary"/>
+    <binaryExtension implementation="org.jetbrains.kotlin.idea.util.KotlinModuleBinary"/>
+    <binaryExtension implementation="org.jetbrains.kotlin.idea.util.KotlinJsMetaBinary"/>
   </extensions>
 
   <actions>
@@ -106,6 +115,20 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
 
   <extensions defaultExtensionNs="com.intellij">
     <!-- fir-specific -->
+    <statusBarWidgetFactory implementation="org.jetbrains.kotlin.idea.fir.FirStatusBarWidgetFactory"/>
+    <postStartupActivity implementation="org.jetbrains.kotlin.idea.fir.AndroidPluginIncompatibilityCheckerStartupActivity"/>
+
+
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.fir.low.level.api.KtDeclarationProviderFactory"
+                    serviceImplementation="org.jetbrains.kotlin.idea.fir.low.level.api.ide.KtDeclarationProviderFactoryIdeImpl"/>
+
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.fir.low.level.api.KtPackageProviderFactory"
+                    serviceImplementation="org.jetbrains.kotlin.idea.fir.low.level.api.ide.KtPackageProviderFactoryIdeImpl"/>
+
+
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.fir.low.level.api.api.FirModuleResolveStateConfigurator"
+                    serviceImplementation="org.jetbrains.kotlin.idea.fir.low.level.api.ide.FirModuleResolveStateConfiguratorIdeImpl"/>
+
     <projectService serviceInterface="org.jetbrains.kotlin.idea.frontend.api.KtAnalysisSessionProvider"
                         serviceImplementation="org.jetbrains.kotlin.idea.frontend.api.fir.KtFirAnalysisSessionProvider"/>
     <applicationService serviceInterface="org.jetbrains.kotlin.idea.references.KotlinReferenceProviderContributor"
@@ -116,11 +139,13 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
     <projectService serviceImplementation="org.jetbrains.kotlin.idea.fir.low.level.api.FirIdeResolveStateService"/>
     <projectService serviceImplementation="org.jetbrains.kotlin.resolve.jvm.KotlinJavaPsiFacade"/>
 
-    <projectService serviceInterface="org.jetbrains.kotlin.idea.asJava.LightClassProvider"
-                    serviceImplementation="org.jetbrains.kotlin.idea.asJava.LightClassProviderFirImpl"/>
-
     <projectService serviceInterface="org.jetbrains.kotlin.psi.KtFileClassProvider"
                     serviceImplementation="org.jetbrains.kotlin.idea.caches.resolve.KtFileClassProviderImpl"/>
+
+    <projectService serviceInterface="org.jetbrains.uast.kotlin.BaseKotlinUastResolveProviderService"
+                    serviceImplementation="org.jetbrains.uast.kotlin.internal.FirIdeaKotlinUastResolveProviderService"/>
+    <projectService serviceInterface="org.jetbrains.uast.kotlin.FirKotlinUastResolveProviderService"
+                    serviceImplementation="org.jetbrains.uast.kotlin.internal.FirIdeaKotlinUastResolveProviderService"/>
 
     <completion.contributor language="kotlin"
                             id="KotlinCompletionContributor"
@@ -131,9 +156,13 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
     <highlightingPassFactory implementation="org.jetbrains.kotlin.idea.fir.highlighter.KotlinDiagnosticHighlightingPassFactory"/>
 
     <projectService serviceImplementation="org.jetbrains.kotlin.idea.fir.low.level.api.trackers.KotlinFirModificationTrackerService"/>
-    <projectService serviceInterface="org.jetbrains.kotlin.trackers.KotlinOutOfBlockModificationTrackerFactory"
+    <projectService serviceInterface="org.jetbrains.kotlin.idea.fir.low.level.api.api.KotlinOutOfBlockModificationTrackerFactory"
                     serviceImplementation="org.jetbrains.kotlin.idea.fir.low.level.api.trackers.KotlinFirOutOfBlockModificationTrackerFactory"/>
     <psi.treeChangePreprocessor implementation="org.jetbrains.kotlin.idea.fir.low.level.api.trackers.KotlinOutOfBlockPsiTreeChangePreprocessor"/>
+    <projectService serviceImplementation="org.jetbrains.kotlin.idea.fir.api.impl.ResolveAllowanceServiceFirImpl"
+                    serviceInterface="org.jetbrains.kotlin.idea.api.ResolveAllowanceService"/>
+    <codeInsight.implementMethod language="kotlin" implementationClass="org.jetbrains.kotlin.idea.core.overrideImplement.KtImplementMembersHandler"/>
+    <codeInsight.overrideMethod language="kotlin" implementationClass="org.jetbrains.kotlin.idea.core.overrideImplement.KtOverrideMembersHandler"/>
   </extensions>
 
   <!--  scripts  -->
@@ -203,6 +232,8 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
 
 
   <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceImplementation="org.jetbrains.kotlin.idea.completion.FirCompletionDummyIdentifierProviderService"
+                        serviceInterface="org.jetbrains.kotlin.idea.completion.CompletionDummyIdentifierProviderService"/>
 
     <postStartupActivity implementation="org.jetbrains.kotlin.idea.PluginStartupActivity"/>
     <projectService serviceImplementation="org.jetbrains.kotlin.idea.PluginStartupService"/>
@@ -232,7 +263,7 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
     <java.elementFinder implementation="org.jetbrains.kotlin.asJava.finder.JavaElementFinder"/>
 
     <projectService serviceInterface="org.jetbrains.kotlin.asJava.KotlinAsJavaSupport"
-                    serviceImplementation="org.jetbrains.kotlin.idea.caches.resolve.IDEKotlinAsJavaFirSupport"/>
+                    serviceImplementation="org.jetbrains.kotlin.idea.asJava.IDEKotlinAsJavaFirSupport"/>
 
     <projectService serviceInterface="org.jetbrains.kotlin.asJava.LightClassGenerationSupport"
                     serviceImplementation="org.jetbrains.kotlin.idea.asJava.FirLightClassGenerationSupport"/>
@@ -261,7 +292,7 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
     <definitionsScopedSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinDefinitionsSearcher"/>
     <methodReferencesSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinOverridingMethodReferenceSearcher"/>
     <methodReferencesSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinPropertyAccessorsReferenceSearcher"/>
-    <!--    <directClassInheritorsSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinDirectInheritorsSearcher"/>-->
+    <directClassInheritorsSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinDirectInheritorsSearcher"/>
 <!--    <overridingMethodsSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinOverridingMethodsWithGenericsSearcher"/>-->
 <!--    <annotatedElementsSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinAnnotatedElementsSearcher"/>-->
 <!--    <classesWithAnnotatedMembersSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinClassesWithAnnotatedMembersSearcher"/>-->
@@ -270,7 +301,7 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
     <projectService serviceInterface="org.jetbrains.kotlin.idea.util.FirPluginOracleService"
                     serviceImplementation="org.jetbrains.kotlin.idea.util.FirPluginOracleServiceFirImpl"/>
 
-
+    <applicationService serviceImplementation="org.jetbrains.kotlin.idea.fir.api.fixes.KtQuickFixService"/>
 
     <readWriteAccessDetector implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinReadWriteAccessDetector" id="kotlin"/>
 
@@ -290,10 +321,6 @@ The Kotlin FIR plugin provides language support in IntelliJ IDEA and Android Stu
               fieldName="INSTANCE"
               extensions="kotlin_module"/>
 
-   <!-- <intentionAction>
-      <className>org.jetbrains.kotlin.idea.fir.inspections.AddFunctionReturnTypeIntention</className>
-      <category>Kotlin</category>
-    </intentionAction>-->
-
+    <java.shortNamesCache implementation="org.jetbrains.kotlin.idea.caches.KotlinShortNamesCache"/>
   </extensions>
 </idea-plugin>

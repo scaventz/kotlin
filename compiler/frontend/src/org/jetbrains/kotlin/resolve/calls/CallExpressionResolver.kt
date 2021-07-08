@@ -67,6 +67,7 @@ import org.jetbrains.kotlin.types.expressions.ExpressionTypingServices
 import org.jetbrains.kotlin.types.expressions.KotlinTypeInfo
 import org.jetbrains.kotlin.types.expressions.typeInfoFactory.createTypeInfo
 import org.jetbrains.kotlin.types.expressions.typeInfoFactory.noTypeInfo
+import org.jetbrains.kotlin.types.isError
 import org.jetbrains.kotlin.types.refinement.TypeRefinement
 import javax.inject.Inject
 
@@ -358,8 +359,10 @@ class CallExpressionResolver(
             KotlinTypeInfo {
         var initialDataFlowInfoForArguments = context.dataFlowInfo
         val receiverDataFlowValue = (receiver as? ReceiverValue)?.let { dataFlowValueFactory.createDataFlowValue(it, context) }
-        val receiverCanBeNull = receiverDataFlowValue != null &&
-                initialDataFlowInfoForArguments.getStableNullability(receiverDataFlowValue).canBeNull()
+
+        val receiverCanBeNull = receiverDataFlowValue != null && initialDataFlowInfoForArguments.getStableNullability(receiverDataFlowValue).canBeNull()
+        val shouldNullifySafeCallType =
+            receiverCanBeNull || context.languageVersionSettings.supportsFeature(LanguageFeature.SafeCallsAreAlwaysNullable)
 
         val callOperationNode = AstLoadingFilter.forceAllowTreeLoading(element.qualified.containingFile, ThrowableComputable {
             element.node
@@ -367,11 +370,12 @@ class CallExpressionResolver(
 
         if (receiverDataFlowValue != null && element.safe) {
             // Additional "receiver != null" information should be applied if we consider a safe call
-            if (receiverCanBeNull) {
+            if (shouldNullifySafeCallType) {
                 initialDataFlowInfoForArguments = initialDataFlowInfoForArguments.disequate(
                     receiverDataFlowValue, DataFlowValue.nullValue(builtIns), languageVersionSettings
                 )
-            } else {
+            }
+            if (!receiverCanBeNull) {
                 reportUnnecessarySafeCall(context.trace, receiver.type, callOperationNode, receiver)
             }
         }
@@ -392,7 +396,7 @@ class CallExpressionResolver(
 
         val selectorType = selectorTypeInfo.type
         if (selectorType != null) {
-            if (element.safe && receiverCanBeNull) {
+            if (element.safe && shouldNullifySafeCallType) {
                 selectorTypeInfo = selectorTypeInfo.replaceType(TypeUtils.makeNullable(selectorType))
             }
             // TODO : this is suspicious: remove this code?
@@ -534,15 +538,17 @@ class CallExpressionResolver(
             } ?: false
 
         fun reportUnnecessarySafeCall(
-            trace: BindingTrace, type: KotlinType,
-            callOperationNode: ASTNode, explicitReceiver: Receiver?
-        ) = trace.report(
+            trace: BindingTrace,
+            type: KotlinType,
+            callOperationNode: ASTNode,
+            explicitReceiver: Receiver?
+        ) {
             if (explicitReceiver is ExpressionReceiver && explicitReceiver.expression is KtSuperExpression) {
-                UNEXPECTED_SAFE_CALL.on(callOperationNode.psi)
-            } else {
-                UNNECESSARY_SAFE_CALL.on(callOperationNode.psi, type)
+                trace.report(UNEXPECTED_SAFE_CALL.on(callOperationNode.psi))
+            } else if (!type.isError) {
+                trace.report(UNNECESSARY_SAFE_CALL.on(callOperationNode.psi, type))
             }
-        )
+        }
 
         private fun checkNestedClassAccess(
             expression: KtQualifiedExpression,
