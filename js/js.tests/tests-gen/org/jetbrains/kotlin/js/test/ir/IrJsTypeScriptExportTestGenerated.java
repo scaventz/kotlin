@@ -234,6 +234,22 @@ public class IrJsTypeScriptExportTestGenerated extends AbstractIrJsTypeScriptExp
     }
 
     @Nested
+    @TestMetadata("js/js.translator/testData/typescript-export/implicit-export-in-exported-file")
+    @TestDataPath("$PROJECT_ROOT")
+    public class Implicit_export_in_exported_file {
+        @Test
+        public void testAllFilesPresentInImplicit_export_in_exported_file() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/typescript-export/implicit-export-in-exported-file"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
+        }
+
+        @Test
+        @TestMetadata("implicit-export.kt")
+        public void testImplicit_export() throws Exception {
+            runTest("js/js.translator/testData/typescript-export/implicit-export-in-exported-file/implicit-export.kt");
+        }
+    }
+
+    @Nested
     @TestMetadata("js/js.translator/testData/typescript-export/inheritance")
     @TestDataPath("$PROJECT_ROOT")
     public class Inheritance {
@@ -246,6 +262,22 @@ public class IrJsTypeScriptExportTestGenerated extends AbstractIrJsTypeScriptExp
         @TestMetadata("inheritance.kt")
         public void testInheritance() throws Exception {
             runTest("js/js.translator/testData/typescript-export/inheritance/inheritance.kt");
+        }
+    }
+
+    @Nested
+    @TestMetadata("js/js.translator/testData/typescript-export/inheritance-in-exported-file")
+    @TestDataPath("$PROJECT_ROOT")
+    public class Inheritance_in_exported_file {
+        @Test
+        public void testAllFilesPresentInInheritance_in_exported_file() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/typescript-export/inheritance-in-exported-file"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
+        }
+
+        @Test
+        @TestMetadata("inheritance.kt")
+        public void testInheritance() throws Exception {
+            runTest("js/js.translator/testData/typescript-export/inheritance-in-exported-file/inheritance.kt");
         }
     }
 
@@ -674,6 +706,22 @@ public class IrJsTypeScriptExportTestGenerated extends AbstractIrJsTypeScriptExp
     }
 
     @Nested
+    @TestMetadata("js/js.translator/testData/typescript-export/selective-export-in-exported-file")
+    @TestDataPath("$PROJECT_ROOT")
+    public class Selective_export_in_exported_file {
+        @Test
+        public void testAllFilesPresentInSelective_export_in_exported_file() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/typescript-export/selective-export-in-exported-file"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
+        }
+
+        @Test
+        @TestMetadata("selective-export.kt")
+        public void testSelective_export() throws Exception {
+            runTest("js/js.translator/testData/typescript-export/selective-export-in-exported-file/selective-export.kt");
+        }
+    }
+
+    @Nested
     @TestMetadata("js/js.translator/testData/typescript-export/strict-implicit-export")
     @TestDataPath("$PROJECT_ROOT")
     public class Strict_implicit_export {
@@ -686,6 +734,22 @@ public class IrJsTypeScriptExportTestGenerated extends AbstractIrJsTypeScriptExp
         @TestMetadata("strict-implicit-export.kt")
         public void testStrict_implicit_export() throws Exception {
             runTest("js/js.translator/testData/typescript-export/strict-implicit-export/strict-implicit-export.kt");
+        }
+    }
+
+    @Nested
+    @TestMetadata("js/js.translator/testData/typescript-export/strict-implicit-export-in-exported-file")
+    @TestDataPath("$PROJECT_ROOT")
+    public class Strict_implicit_export_in_exported_file {
+        @Test
+        public void testAllFilesPresentInStrict_implicit_export_in_exported_file() throws Exception {
+            KtTestUtil.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("js/js.translator/testData/typescript-export/strict-implicit-export-in-exported-file"), Pattern.compile("^([^_](.+))\\.kt$"), null, TargetBackend.JS_IR, true);
+        }
+
+        @Test
+        @TestMetadata("strict-implicit-export.kt")
+        public void testStrict_implicit_export() throws Exception {
+            runTest("js/js.translator/testData/typescript-export/strict-implicit-export-in-exported-file/strict-implicit-export.kt");
         }
     }
 
