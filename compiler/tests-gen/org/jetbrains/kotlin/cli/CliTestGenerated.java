@@ -572,6 +572,11 @@ public class CliTestGenerated extends AbstractCliTest {
             runTest("compiler/testData/cli/jvm/javacKotlinJavaInterdependency.args");
         }
 
+        @TestMetadata("jdkIncubator.args")
+        public void testJdkIncubator() throws Exception {
+            runTest("compiler/testData/cli/jvm/jdkIncubator.args");
+        }
+
         @TestMetadata("jdkPathDoesNotExist.args")
         public void testJdkPathDoesNotExist() throws Exception {
             runTest("compiler/testData/cli/jvm/jdkPathDoesNotExist.args");
