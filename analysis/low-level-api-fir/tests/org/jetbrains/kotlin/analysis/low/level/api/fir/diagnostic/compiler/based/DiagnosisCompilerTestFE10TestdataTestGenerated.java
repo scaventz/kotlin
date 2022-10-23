@@ -6477,6 +6477,12 @@ public class DiagnosisCompilerTestFE10TestdataTestGenerated extends AbstractDiag
             }
 
             @Test
+            @TestMetadata("kt53987.kt")
+            public void testKt53987() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/controlStructures/kt53987.kt");
+            }
+
+            @Test
             @TestMetadata("kt657.kt")
             public void testKt657() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/controlStructures/kt657.kt");
