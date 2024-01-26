@@ -16,10 +16,7 @@ import org.jetbrains.kotlin.ir.builders.declarations.addValueParameter
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.expressions.impl.*
-import org.jetbrains.kotlin.ir.symbols.IrConstructorSymbol
-import org.jetbrains.kotlin.ir.symbols.IrFunctionSymbol
-import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
-import org.jetbrains.kotlin.ir.symbols.IrValueSymbol
+import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.types.isNullable
@@ -57,8 +54,11 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
         val builder = context.createIrBuilder(newIrFunction.symbol)
         log { "$originalDeclaration -> $newIrFunction" }
 
+        val startOffset = originalDeclaration.valueParameters.first().startOffset
+        val endOffset = originalDeclaration.valueParameters.last().endOffset
+
         return context.irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET) {
-            statements += builder.irBlockBody(newIrFunction) {
+            statements += builder.irBlockBody(startOffset, endOffset) {
                 val params = mutableListOf<IrValueDeclaration>()
                 val variables = mutableMapOf<IrValueSymbol, IrValueSymbol>()
 
@@ -122,12 +122,34 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
                         dispatchReceiver = newIrFunction.dispatchReceiverParameter?.let { irGet(it) }
                         params.forEachIndexed { i, variable -> putValueArgument(i, irGet(variable)) }
                     }
-                    is IrSimpleFunction -> +irReturn(dispatchToImplementation(originalDeclaration, newIrFunction, params))
+                    is IrSimpleFunction -> {
+                        val startOffsetOfOriginalBody =
+                            with(originalDeclaration.body!!) { statements.firstOrNull()?.startOffset ?: startOffset }
+                        val endOffsetOfOriginalBody = originalDeclaration.body!!.endOffset
+                        +irReturn(
+                            dispatchToImplementation(
+                                startOffsetOfOriginalBody,
+                                endOffsetOfOriginalBody,
+                                originalDeclaration,
+                                newIrFunction,
+                                params
+                            )
+                        )
+                    }
                     else -> error("Unknown function declaration")
                 }
             }.statements
         }
     }
+
+    private fun IrBuilderWithScope.irReturn(startOffset: Int, endOffset: Int, value: IrExpression) =
+        IrReturnImpl(
+            startOffset, endOffset,
+            context.irBuiltIns.nothingType,
+            scope.scopeOwnerSymbol as? IrReturnTargetSymbol
+                ?: throw AssertionError("Function scope expected: ${scope.scopeOwnerSymbol.owner.render()}"),
+            value
+        )
 
     private fun lower(irFunction: IrFunction): List<IrFunction>? {
         val newIrFunction =
@@ -197,12 +219,28 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
 
     protected open fun getOriginForCallToImplementation(): IrStatementOrigin? = null
 
+    private fun irCall(
+        startOffset: Int,
+        endOffset: Int,
+        callee: IrFunction,
+        origin: IrStatementOrigin? = null,
+        superQualifierSymbol: IrClassSymbol? = null,
+    ): IrCall =
+        IrCallImpl(
+            startOffset, endOffset, callee.returnType,
+            callee.symbol as IrSimpleFunctionSymbol,
+            callee.typeParameters.size, callee.valueParameters.size,
+            origin, superQualifierSymbol
+        )
+
     private fun IrBlockBodyBuilder.dispatchToImplementation(
+        startOffset: Int,
+        endOffset: Int,
         irFunction: IrSimpleFunction,
         newIrFunction: IrFunction,
         params: MutableList<IrValueDeclaration>
     ): IrExpression {
-        val dispatchCall = irCall(irFunction, origin = getOriginForCallToImplementation()).apply {
+        val dispatchCall = irCall(startOffset, endOffset, irFunction, origin = getOriginForCallToImplementation()).apply {
             passTypeArgumentsFrom(newIrFunction)
             dispatchReceiver = newIrFunction.dispatchReceiverParameter?.let { irGet(it) }
             extensionReceiver = newIrFunction.extensionReceiverParameter?.let { irGet(it) }
