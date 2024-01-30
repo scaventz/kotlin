@@ -62,26 +62,37 @@ fun expandMaskConditionsAndUpdateVariableNodes(
         true
     }
 
+    fun AbstractInsnNode.nextNotLabel(): AbstractInsnNode? {
+        var candidate = next
+        while (true) {
+            if (candidate is LabelNode || candidate is LineNumberNode) {
+                candidate = candidate.next
+                continue
+            }
+            return candidate
+        }
+    }
+
     val conditions = maskProcessingHeader.filterIsInstance<VarInsnNode>().mapNotNull {
         if (isMaskIndex(it.`var`) &&
-            it.next?.next?.opcode == Opcodes.IAND &&
-            it.next.next.next?.opcode == Opcodes.IFEQ
+            it.nextNotLabel()?.nextNotLabel()?.opcode == Opcodes.IAND &&
+            it.nextNotLabel()?.nextNotLabel()?.nextNotLabel()?.opcode == Opcodes.IFEQ
         ) {
-            val jumpInstruction = it.next?.next?.next as JumpInsnNode
+            val jumpInstruction = it.nextNotLabel()?.nextNotLabel()?.nextNotLabel() as JumpInsnNode
             Condition(
                 masks[it.`var` - maskStartIndex],
-                getConstant(it.next),
+                getConstant(it.nextNotLabel()!!),
                 it,
                 jumpInstruction,
                 jumpInstruction.label.previous as VarInsnNode
             )
         } else if (methodHandlerIndex == it.`var` &&
-            it.next?.opcode == Opcodes.IFNULL &&
-            it.next.next?.opcode == Opcodes.NEW
+            it.nextNotLabel()?.opcode == Opcodes.IFNULL &&
+            it.nextNotLabel()?.nextNotLabel()?.opcode == Opcodes.NEW
         ) {
             //Always delete method handle for now
             //This logic should be updated when method handles would be supported
-            Condition(0, 0, it, it.next as JumpInsnNode, null)
+            Condition(0, 0, it, it.nextNotLabel() as JumpInsnNode, null)
         } else null
     }.toList()
 
@@ -94,8 +105,9 @@ fun expandMaskConditionsAndUpdateVariableNodes(
     val indexToVarNode = node.localVariables?.filter { it.index < maskStartIndex }?.associateBy { it.index } ?: emptyMap()
     conditions.forEach {
         val jumpInstruction = it.jumpInstruction
-        InsnSequence(it.maskInstruction, (if (it.expandNotDelete) jumpInstruction.next else jumpInstruction.label)).forEach {
-            toDelete.add(it)
+        InsnSequence(it.maskInstruction, (if (it.expandNotDelete) jumpInstruction.nextNotLabel() else jumpInstruction.label)).forEach {
+            if(it !is LabelNode && it !is LineNumberNode)
+                toDelete.add(it)
         }
         if (it.expandNotDelete) {
             indexToVarNode[it.varIndex]?.let { varNode ->

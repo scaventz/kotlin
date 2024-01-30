@@ -911,7 +911,10 @@ class ExpressionCodegen(
         // a very specific bytecode pattern for default arguments and does not tolerate a
         // line number on the store. Therefore, if we are storing to a parameter, we do not
         // output a line number for the store.
-        if (expression.symbol !is IrValueParameterSymbol) {
+//        if (expression.symbol !is IrValueParameterSymbol) {
+//            expression.markLineNumber(startOffset = true)
+//        }
+        if (expression.value is IrCall) {
             expression.markLineNumber(startOffset = true)
         }
         mv.store(findLocalIndex(expression.symbol), expression.symbol.owner.asmType)

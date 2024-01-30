@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.codegen.optimization.common
 
+import org.jetbrains.kotlin.codegen.inline.dumpBody
 import org.jetbrains.kotlin.codegen.inline.insnText
 import org.jetbrains.kotlin.utils.SmartList
 import org.jetbrains.org.objectweb.asm.Opcodes
@@ -73,6 +74,7 @@ abstract class FastAnalyzer<V : Value, F : Frame<V>>(
             try {
                 analyzeInstruction(insnNode, insn, f, current, handler)
             } catch (e: AnalyzerException) {
+                (e.node as MethodNode).dumpBody()
                 throw AnalyzerException(
                     e.node,
                     "Error at instruction #$insn ${insnNode.insnText(method.instructions)}: ${e.message}\ncurrent: ${current.dump()}",

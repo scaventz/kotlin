@@ -51,18 +51,18 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
     }
 
     protected open fun IrFunction.resolveAnnotations(): List<IrConstructorCall> = copyAnnotations()
-
     protected open fun IrFunction.generateDefaultStubBody(originalDeclaration: IrFunction): IrBody {
         val newIrFunction = this
         val builder = context.createIrBuilder(newIrFunction.symbol)
         log { "$originalDeclaration -> $newIrFunction" }
 
-        val startOffset = originalDeclaration.valueParameters.first().startOffset
-        val endOffset = originalDeclaration.valueParameters.last().endOffset
-
         return context.irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET) {
-            statements += builder.irBlockBody(startOffset, endOffset) {
-                val params = mutableListOf<IrValueDeclaration>()
+            val paramsStartOffset = originalDeclaration.valueParameters.first().startOffset
+            val paramsEndOffset = originalDeclaration.valueParameters.last().endOffset
+
+            val params = mutableListOf<IrValueDeclaration>()
+            statements += builder.irBlockBody(paramsStartOffset, paramsEndOffset) {
+
                 val variables = mutableMapOf<IrValueSymbol, IrValueSymbol>()
 
                 originalDeclaration.dispatchReceiverParameter?.let {
@@ -114,7 +114,11 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
                     params.add(remapped)
                     variables[valueParameter.symbol] = remapped.symbol
                 }
+            }.statements
 
+//            val startOffset = with(originalDeclaration.body) { this?.statements?.firstOrNull()?.startOffset ?: UNDEFINED_OFFSET }
+//            val endOffset = originalDeclaration.body!!.endOffset
+            statements += builder.irBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET) {
                 when (originalDeclaration) {
                     is IrConstructor -> +irDelegatingConstructorCall(originalDeclaration).apply {
                         passTypeArgumentsFrom(newIrFunction.parentAsClass)
@@ -172,7 +176,6 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
         return patchDeclarationParents(function)
     }
 
-
     protected open fun IrBlockBodyBuilder.selectArgumentOrDefault(
         defaultFlag: IrExpression,
         parameter: IrValueParameter,
@@ -194,7 +197,10 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
         //
         // This control flow limits us to an if-then (without an else), and this together with the
         // restriction on loading the parameter in the default case means we cannot create any temporaries.
-        +irIfThen(irNotEquals(defaultFlag, irInt(0)), irSet(parameter.symbol, default))
+
+        irBlockBody(parameter.startOffset, parameter.endOffset) {
+            +irIfThen(irNotEquals(defaultFlag, irInt(0)), irSet(parameter.symbol, default))
+        }.statements.forEach { +it }
         return parameter
     }
 
