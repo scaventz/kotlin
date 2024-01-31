@@ -475,21 +475,21 @@ class ExpressionCodegen(
 
             lineNumberMapper.buildSmapFor(inlinedBlock, inlinedBlock.buildOrGetClassSMAP(info), info)
 
-            if (inlineCall.usesDefaultArguments()) {
-                // $default function has first LN pointing to original callee
-                callee?.markLineNumber(startOffset = true)
-                mv.nop()
-            }
+//            if (inlineCall.usesDefaultArguments()) {
+//                // $default function has first LN pointing to original callee
+//                callee?.markLineNumber(startOffset = true)
+//                mv.nop()
+//            }
 
             // 2. Evaluate DEFAULT arguments from inline function call
             inlinedBlock.getDefaultAdditionalStatementsFromInlinedBlock().forEach { exp ->
                 exp.accept(this, info).discard()
             }
 
-            if (inlineCall.usesDefaultArguments()) {
-                // we must reset LN because at this point in original inliner we will inline non default call
-                lineNumberMapper.resetLineNumber()
-            }
+//            if (inlineCall.usesDefaultArguments()) {
+//                // we must reset LN because at this point in original inliner we will inline non default call
+//                lineNumberMapper.resetLineNumber()
+//            }
 
             // 3. Evaluate statements from inline function body
             val result = inlinedBlock.getOriginalStatementsFromInlinedBlock().fold(unitValue) { prev, exp ->

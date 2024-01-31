@@ -1,7 +1,15 @@
 // IGNORE_BACKEND_K2: WASM
 // FILE: test.kt
-inline fun foo(stringMaker: () -> String = { "OK" }): String {
-    return stringMaker()
+
+inline fun hello() = "world"
+inline fun foo
+            (stringMaker: () -> String = { "OK" },
+            msg:String= "wow",
+                    hello:String=hello()
+): String
+
+{
+    return stringMaker()+msg+hello
 }
 
 inline fun foo2(stringMaker: () -> String = {
