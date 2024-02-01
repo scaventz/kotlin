@@ -808,7 +808,7 @@ class FunctionInlining(
                  * For simplicity and to produce simpler IR we don't create temporaries for every immutable variable,
                  * not only for those referring to inlinable lambdas.
                  */
-                if (argument.isInlinableLambdaArgument || argument.isInlinablePropertyReference) {
+                if (!argument.isDefaultArg && (argument.isInlinableLambdaArgument || argument.isInlinablePropertyReference)) {
                     substituteMap[parameter] = argument.argumentExpression
                     val arg = argument.argumentExpression
                     when {
