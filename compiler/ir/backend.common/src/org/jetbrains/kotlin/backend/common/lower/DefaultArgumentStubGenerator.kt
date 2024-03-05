@@ -58,7 +58,7 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
         log { "$originalDeclaration -> $newIrFunction" }
 
         return context.irFactory.createBlockBody(UNDEFINED_OFFSET, UNDEFINED_OFFSET) {
-            statements += builder.irBlockBody(newIrFunction) {
+            statements += builder.irBlockBody(UNDEFINED_OFFSET) {
                 val params = mutableListOf<IrValueDeclaration>()
                 val variables = mutableMapOf<IrValueSymbol, IrValueSymbol>()
 
@@ -191,7 +191,11 @@ open class DefaultArgumentStubGenerator<TContext : CommonBackendContext>(
         //
         // This control flow limits us to an if-then (without an else), and this together with the
         // restriction on loading the parameter in the default case means we cannot create any temporaries.
-        +irIfThen(irNotEquals(defaultFlag, irInt(0)), irSet(parameter.symbol, default))
+        val irSet = irBlockBody(parameter.startOffset, parameter.endOffset) {
+            +irSet(parameter.symbol, default)
+        }.statements[0] as IrExpression
+
+        +irIfThen(irNotEquals(defaultFlag, irInt(0)), irSet)
         return parameter
     }
 
