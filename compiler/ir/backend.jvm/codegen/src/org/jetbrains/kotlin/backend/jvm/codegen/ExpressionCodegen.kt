@@ -483,12 +483,6 @@ class ExpressionCodegen(
 
             lineNumberMapper.buildSmapFor(inlinedBlock, inlinedBlock.buildOrGetClassSMAP(info), info)
 
-            if (inlineCall.usesDefaultArguments()) {
-                // $default function has first LN pointing to original callee
-                callee?.markLineNumber(startOffset = true)
-                mv.nop()
-            }
-
             // 2. Evaluate DEFAULT arguments from inline function call
             inlinedBlock.getDefaultAdditionalStatementsFromInlinedBlock().forEach { exp ->
                 exp.accept(this, info).discard()
