@@ -25,6 +25,12 @@ public class FirSteppingWithBytecodeInlinerTestWithInlineScopesGenerated extends
   }
 
   @Test
+  @TestMetadata("annotationOnDefaultArgumentsFunction.kt")
+  public void testAnnotationOnDefaultArgumentsFunction() {
+    runTest("compiler/testData/debug/stepping/annotationOnDefaultArgumentsFunction.kt");
+  }
+
+  @Test
   @TestMetadata("anonymousFunction.kt")
   public void testAnonymousFunction() {
     runTest("compiler/testData/debug/stepping/anonymousFunction.kt");
