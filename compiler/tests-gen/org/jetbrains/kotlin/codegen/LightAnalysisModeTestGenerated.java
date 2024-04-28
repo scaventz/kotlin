@@ -2707,6 +2707,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
       runTest("compiler/testData/codegen/box/bridges/kt46389_jvmDefault.kt");
     }
 
+    @TestMetadata("kt64458.kt")
+    public void testKt64458() {
+      runTest("compiler/testData/codegen/box/bridges/kt64458.kt");
+    }
+
     @TestMetadata("longChainOneBridge.kt")
     public void testLongChainOneBridge() {
       runTest("compiler/testData/codegen/box/bridges/longChainOneBridge.kt");

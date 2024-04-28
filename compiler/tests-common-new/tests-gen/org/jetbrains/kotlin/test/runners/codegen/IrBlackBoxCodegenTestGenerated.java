@@ -3104,6 +3104,12 @@ public class IrBlackBoxCodegenTestGenerated extends AbstractIrBlackBoxCodegenTes
     }
 
     @Test
+    @TestMetadata("kt64458.kt")
+    public void testKt64458() {
+      runTest("compiler/testData/codegen/box/bridges/kt64458.kt");
+    }
+
+    @Test
     @TestMetadata("longChainOneBridge.kt")
     public void testLongChainOneBridge() {
       runTest("compiler/testData/codegen/box/bridges/longChainOneBridge.kt");
