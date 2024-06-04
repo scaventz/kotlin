@@ -4664,6 +4664,12 @@ public class FirPsiDiagnosticTestGenerated extends AbstractFirPsiDiagnosticTest 
       }
 
       @Test
+      @TestMetadata("kt68725.kt")
+      public void testKt68725() {
+        runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/kt68725.kt");
+      }
+
+      @Test
       @TestMetadata("literalInWhenSubject.kt")
       public void testLiteralInWhenSubject() {
         runTest("compiler/fir/analysis-tests/testData/resolve/smartcasts/literalInWhenSubject.kt");

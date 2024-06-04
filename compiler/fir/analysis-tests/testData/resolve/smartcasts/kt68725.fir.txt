@@ -1,0 +1,4 @@
+FILE: kt68725.kt
+    public final fun test(): R|kotlin/Unit| {
+        (String() is R|kotlin/Int|)
+    }
