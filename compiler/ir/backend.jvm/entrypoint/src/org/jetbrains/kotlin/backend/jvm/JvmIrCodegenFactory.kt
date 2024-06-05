@@ -21,13 +21,16 @@ import org.jetbrains.kotlin.backend.jvm.ir.getIoFile
 import org.jetbrains.kotlin.backend.jvm.ir.getKtFile
 import org.jetbrains.kotlin.backend.jvm.serialization.DisabledIdSignatureDescriptor
 import org.jetbrains.kotlin.backend.jvm.serialization.JvmIdSignatureDescriptor
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.codegen.CodegenFactory
 import org.jetbrains.kotlin.codegen.addCompiledPartsAndSort
 import org.jetbrains.kotlin.codegen.loadCompiledModule
 import org.jetbrains.kotlin.codegen.state.GenerationState
+import org.jetbrains.kotlin.config.CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.JVMConfigurationKeys
 import org.jetbrains.kotlin.config.JvmSerializeIrMode
+import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.diagnostics.impl.BaseDiagnosticsCollector
 import org.jetbrains.kotlin.idea.MainFunctionDetector
@@ -157,7 +160,6 @@ open class JvmIrCodegenFactory(
                 }
                 mangler to symbolTable
             }
-        val messageLogger = input.configuration.irMessageLogger
         val psi2ir = Psi2IrTranslator(
             input.languageVersionSettings,
             Psi2IrConfiguration(
@@ -165,7 +167,7 @@ open class JvmIrCodegenFactory(
                 partialLinkageEnabled = false,
                 input.skipBodies
             ),
-            messageLogger::checkNoUnboundSymbols
+            input.configuration.messageCollector::checkNoUnboundSymbols
         )
         val psi2irContext = psi2ir.createGeneratorContext(
             input.module,
@@ -201,7 +203,7 @@ open class JvmIrCodegenFactory(
         }
         val irLinker = JvmIrLinker(
             psi2irContext.moduleDescriptor,
-            messageLogger,
+            input.configuration.messageCollector,
             JvmIrTypeSystemContext(psi2irContext.irBuiltIns),
             symbolTable,
             frontEndContext,
@@ -222,7 +224,7 @@ open class JvmIrCodegenFactory(
             psi2irContext.typeTranslator,
             psi2irContext.irBuiltIns,
             irLinker,
-            messageLogger
+            input.configuration.messageCollector
         ).takeIf { !ideCodegenSettings.doNotLoadDependencyModuleHeaders }
         if (pluginExtensions.isNotEmpty() && pluginContext != null) {
             for (extension in pluginExtensions) {

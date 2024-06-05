@@ -33,10 +33,10 @@ import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
+import org.jetbrains.kotlin.config.CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.Services
 import org.jetbrains.kotlin.config.messageCollector
-import org.jetbrains.kotlin.ir.util.IrMessageLogger
 import org.jetbrains.kotlin.metadata.deserialization.BinaryVersion
 import org.jetbrains.kotlin.progress.CompilationCanceledException
 import org.jetbrains.kotlin.progress.CompilationCanceledStatus
@@ -85,7 +85,7 @@ abstract class CLICompiler<A : CommonCompilerArguments> : CLITool<A>() {
             configuration.messageCollector = it
         }
 
-        configuration.put(IrMessageLogger.IR_MESSAGE_LOGGER, IrMessageCollector(collector))
+        configuration.put(MESSAGE_COLLECTOR_KEY, collector)
 
         configuration.put(CLIConfigurationKeys.PERF_MANAGER, performanceManager)
         try {

@@ -6,6 +6,9 @@
 package org.jetbrains.kotlin.backend.common.extensions
 
 import org.jetbrains.kotlin.backend.common.ir.BuiltinSymbolsBase
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
@@ -20,7 +23,6 @@ import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.linkage.IrDeserializer
 import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.util.IdSignature
-import org.jetbrains.kotlin.ir.util.IrMessageLogger
 import org.jetbrains.kotlin.ir.util.ReferenceSymbolTable
 import org.jetbrains.kotlin.ir.util.TypeTranslator
 import org.jetbrains.kotlin.name.CallableId
@@ -41,7 +43,6 @@ open class IrPluginContextImpl constructor(
     override val typeTranslator: TypeTranslator,
     override val irBuiltIns: IrBuiltIns,
     val linker: IrDeserializer,
-    private val diagnosticReporter: IrMessageLogger,
     override val symbols: BuiltinSymbolsBase = BuiltinSymbolsBase(irBuiltIns, st)
 ) : IrPluginContext {
 
@@ -82,14 +83,22 @@ open class IrPluginContextImpl constructor(
         return symbol
     }
 
-    override fun createDiagnosticReporter(pluginId: String): IrMessageLogger {
-        return object : IrMessageLogger {
+    override fun createDiagnosticReporter(pluginId: String): MessageCollector {
+        return object : MessageCollector {
+            override fun clear() {
+                TODO("Not yet implemented")
+            }
+
             override fun report(
-                severity: IrMessageLogger.Severity,
+                severity: CompilerMessageSeverity,
                 message: String,
-                location: IrMessageLogger.Location?
+                location: CompilerMessageSourceLocation?
             ) {
-                diagnosticReporter.report(severity, "[Plugin $pluginId] $message", location)
+                report(severity, "[Plugin $pluginId] $message", location)
+            }
+
+            override fun hasErrors(): Boolean {
+                TODO("Not yet implemented")
             }
         }
     }
