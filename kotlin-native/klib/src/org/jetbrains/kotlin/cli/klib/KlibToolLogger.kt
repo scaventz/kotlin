@@ -5,10 +5,12 @@
 
 package org.jetbrains.kotlin.cli.klib
 
-import org.jetbrains.kotlin.ir.util.IrMessageLogger
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.util.Logger
 
-internal class KlibToolLogger(private val output: KlibToolOutput) : Logger, IrMessageLogger {
+internal class KlibToolLogger(private val output: KlibToolOutput) : Logger, MessageCollector {
     override fun log(message: String) {
         output.logInfo(message)
     }
@@ -24,12 +26,23 @@ internal class KlibToolLogger(private val output: KlibToolOutput) : Logger, IrMe
     @Deprecated(Logger.FATAL_DEPRECATION_MESSAGE, ReplaceWith(Logger.FATAL_REPLACEMENT))
     override fun fatal(message: String) = throw IllegalStateException("error: $message")
 
-    override fun report(severity: IrMessageLogger.Severity, message: String, location: IrMessageLogger.Location?) {
+    override fun report(severity: CompilerMessageSeverity, message: String, location: CompilerMessageSourceLocation?) {
         when (severity) {
-            IrMessageLogger.Severity.INFO -> log(message)
-            IrMessageLogger.Severity.WARNING -> warning(message)
-            IrMessageLogger.Severity.STRONG_WARNING -> strongWarning(message)
-            IrMessageLogger.Severity.ERROR -> error(message)
+            CompilerMessageSeverity.INFO -> log(message)
+            CompilerMessageSeverity.WARNING -> warning(message)
+            CompilerMessageSeverity.STRONG_WARNING -> strongWarning(message)
+            CompilerMessageSeverity.ERROR -> error(message)
+            CompilerMessageSeverity.EXCEPTION -> TODO()
+            CompilerMessageSeverity.LOGGING -> TODO()
+            CompilerMessageSeverity.OUTPUT -> TODO()
         }
+    }
+
+    override fun clear() {
+        TODO("Not yet implemented")
+    }
+
+    override fun hasErrors(): Boolean {
+        TODO("Not yet implemented")
     }
 }

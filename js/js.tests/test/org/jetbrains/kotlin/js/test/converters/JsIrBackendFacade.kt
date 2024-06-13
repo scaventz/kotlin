@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureDe
 import org.jetbrains.kotlin.cli.common.isWindows
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.ir.backend.js.*
 import org.jetbrains.kotlin.ir.backend.js.ic.JsExecutableProducer
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.JsManglerDesc
@@ -23,7 +24,6 @@ import org.jetbrains.kotlin.ir.linkage.partial.PartialLinkageLogLevel
 import org.jetbrains.kotlin.ir.linkage.partial.PartialLinkageMode
 import org.jetbrains.kotlin.ir.linkage.partial.setupPartialLinkageConfig
 import org.jetbrains.kotlin.ir.util.SymbolTable
-import org.jetbrains.kotlin.ir.util.irMessageLogger
 import org.jetbrains.kotlin.js.backend.ast.ESM_EXTENSION
 import org.jetbrains.kotlin.js.backend.ast.REGULAR_EXTENSION
 import org.jetbrains.kotlin.js.config.JSConfigurationKeys
@@ -216,7 +216,7 @@ class JsIrBackendFacade(
     private fun loadIrFromKlib(module: TestModule, configuration: CompilerConfiguration): IrModuleInfo {
         val filesToLoad = module.files.takeIf { !firstTimeCompilation }?.map { "/${it.relativePath}" }?.toSet()
 
-        val messageLogger = configuration.irMessageLogger
+        val messageCollector = configuration.messageCollector
         val symbolTable = SymbolTable(IdSignatureDescriptor(JsManglerDesc), IrFactoryImplForJsIC(WholeWorldStageController()))
 
         val moduleDescriptor = testServices.moduleDescriptorProvider.getModuleDescriptor(module)
@@ -232,7 +232,7 @@ class JsIrBackendFacade(
             filesToLoad,
             configuration,
             symbolTable,
-            messageLogger,
+            messageCollector,
             loadFunctionInterfacesIntoStdlib = true,
         ) { if (it == mainModuleLib) moduleDescriptor else testServices.libraryProvider.getDescriptorByCompiledLibrary(it) }
     }
