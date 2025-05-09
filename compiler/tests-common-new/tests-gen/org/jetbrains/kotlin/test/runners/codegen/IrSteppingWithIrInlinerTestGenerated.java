@@ -403,6 +403,12 @@ public class IrSteppingWithIrInlinerTestGenerated extends AbstractIrSteppingWith
   }
 
   @Test
+  @TestMetadata("kt76824.kt")
+  public void testKt76824() {
+    runTest("compiler/testData/debug/stepping/kt76824.kt");
+  }
+
+  @Test
   @TestMetadata("lambdaStepInline.kt")
   public void testLambdaStepInline() {
     runTest("compiler/testData/debug/stepping/lambdaStepInline.kt");
