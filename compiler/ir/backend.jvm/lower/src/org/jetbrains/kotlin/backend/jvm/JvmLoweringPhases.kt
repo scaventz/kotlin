@@ -53,6 +53,7 @@ private val jvmFilePhases = createFilePhases<JvmBackendContext>(
     ::JvmTailrecLowering,
 
     ::MappedEnumWhenLowering,
+    ::WhenConditionOptimiserLowering,
 
     ::AssertionLowering,
     ::JvmReturnableBlockLowering,
