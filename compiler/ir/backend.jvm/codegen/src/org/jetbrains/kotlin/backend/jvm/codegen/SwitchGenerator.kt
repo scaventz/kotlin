@@ -9,6 +9,7 @@ import org.jetbrains.kotlin.backend.common.IrWhenUtils
 import org.jetbrains.kotlin.codegen.`when`.SwitchCodegen.Companion.preferLookupOverSwitch
 import org.jetbrains.kotlin.ir.expressions.*
 import org.jetbrains.kotlin.ir.types.*
+import org.jetbrains.kotlin.ir.util.fqNameWhenAvailable
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.load.java.JvmAnnotationNames
 import org.jetbrains.org.objectweb.asm.Label
@@ -66,11 +67,18 @@ class SwitchGenerator(private val expression: IrWhen, private val data: BlockInf
         return when {
             subject is IrCall && subject.isCoerceFromUIntToInt() ->
                 generateUIntSwitch(subject.arguments[0]!! as? IrGetValue, calls, callToLabels, expressionToLabels, elseExpression)
-            subject is IrGetValue || subject is IrConst && subject.type.isString() -> // also generate tableswitch for literal string subject
+            subject is IrGetValue
+                    || subject is IrConst && subject.type.isString() // also generate tableswitch for literal string subject
+                    || subject is IrCall && subject.isToInt() ->
                 generatePrimitiveSwitch(subject, calls, callToLabels, expressionToLabels, elseExpression)
             else ->
                 null
         }?.genOptimizedIfEnoughCases()
+    }
+
+    fun IrCall.isToInt(): Boolean {
+        val fqName = symbol.owner.fqNameWhenAvailable?.asString()
+        return fqName == "kotlin.Byte.toInt" || fqName == "kotlin.Short.toInt"
     }
 
     fun IrCall.isCoerceFromUIntToInt(): Boolean =
@@ -131,6 +139,17 @@ class SwitchGenerator(private val expression: IrWhen, private val data: BlockInf
                     cases
                 )
             }
+
+            subject is IrCall -> {
+                val cases = extractSwitchCasesAndFilterUnreachableLabels(callToLabels, expressionToLabels)
+                IntSwitch(
+                    subject,
+                    elseExpression,
+                    expressionToLabels,
+                    cases
+                )
+            }
+
             areConstStringComparisons(conditions) -> {
                 val cases = extractSwitchCasesAndFilterUnreachableLabels(callToLabels, expressionToLabels)
                 StringSwitch(
@@ -178,8 +197,17 @@ class SwitchGenerator(private val expression: IrWhen, private val data: BlockInf
             return lhs.all { it != null && it.value == lhs[0]!!.value }
         }
 
+        fun isValidCallToIntLHS(): Boolean {
+            val lhs = conditions.map {
+                val call = it.takeIf { it.symbol == context.irBuiltIns.eqeqSymbol }?.arguments[0] as? IrCall ?: return false
+                if (!call.isToInt()) return false
+                call.arguments[0] as? IrGetValue
+            }
+            return lhs.all { it != null && it.symbol.owner == lhs[0]!!.symbol.owner }
+        }
+
         // All conditions are equality checks && all LHS refer to the same tmp variable.
-        if (!isValidIrGetValueTypeLHS() && !isValidIrConstTypeLHS())
+        if (!isValidCallToIntLHS() && !isValidIrGetValueTypeLHS() && !isValidIrConstTypeLHS())
             return false
 
         // All RHS are constants
@@ -301,7 +329,7 @@ class SwitchGenerator(private val expression: IrWhen, private val data: BlockInf
     }
 
     inner class IntSwitch(
-        subject: IrGetValue,
+        subject: IrExpression,
         elseExpression: IrExpression?,
         expressionToLabels: ArrayList<ExpressionToLabel>,
         private val cases: List<ValueToLabel>

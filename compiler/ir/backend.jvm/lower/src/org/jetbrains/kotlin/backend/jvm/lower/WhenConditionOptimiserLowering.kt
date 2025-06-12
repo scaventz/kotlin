@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.*
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.statements
@@ -38,57 +39,50 @@ private fun IrWhen.transformInPlace(context: JvmBackendContext) {
         val condition = branch.condition as? IrCall ?: continue
         if (condition.symbol != context.irBuiltIns.eqeqSymbol) continue
 
-        // replace call of toInt to the IrGetValue receiver
-//        val arg0 = condition.arguments[0]
-//        if (arg0 is IrCall) {
-//            val fqName = arg0.symbol.owner.kotlinFqName.asString()
-//            if (fqName == "kotlin.Byte.toInt" || fqName == "kotlin.Short.toInt") {
-//                if (arg0.arguments[0] is IrGetValue) {
-//                    condition.arguments[0] = arg0.arguments[0]
-//                }
-//            }
-//        }
-
         val arg1 = condition.arguments[1]
         val const = if (arg1 is IrCall) {
             arg1.constDispatchReceiver() ?: continue
         } else (arg1 as? IrGetValue)?.constInitializer() ?: continue
 
-        condition.arguments[1] = when (const.value) {
-            is Byte -> IrConstImpl.byte(
-                const.startOffset, const.endOffset, const.type,
-                (const.value as Byte)
-            )
-            is Short -> IrConstImpl.short(
-                const.startOffset, const.endOffset, const.type,
-                (const.value as Short)
-            )
+        val value = when (const.value) {
+            is Byte -> (const.value as Byte).toInt()
+            is Short -> (const.value as Short).toInt()
+            is Char -> (const.value as Char).code
             else -> continue
         }
+
+        condition.arguments[1] = IrConstImpl.int(
+            const.startOffset,
+            const.endOffset,
+            context.irBuiltIns.intType,
+            value
+        )
     }
 }
 
 private fun IrCall.constDispatchReceiver(): IrConst? {
-    if (origin == IrStatementOrigin.GET_PROPERTY) {
-        return constInitializer()
-    }
+//    if (origin == IrStatementOrigin.GET_PROPERTY) {
+//        return constInitializer()
+//    }
 
     val fqName = symbol.owner.kotlinFqName.asString()
     if (fqName != "kotlin.Byte.toInt" && fqName != "kotlin.Short.toInt") return null
-    return when (dispatchReceiver) {
-        is IrCall -> {
-            val receiver = dispatchReceiver as IrCall
-            if (receiver.origin == IrStatementOrigin.GET_PROPERTY) {
-                receiver.constInitializer()
-            } else {
-                null
-            }
-        }
-        is IrGetValue -> {
-            ((((dispatchReceiver as? IrGetValue)?.symbol?.owner) as? IrVariable)?.initializer as? IrConst)
-        }
-        else -> null
-    }
+    val arg = arguments[0]
+    return (arg as? IrCall)?.constInitializer() ?: (arg as? IrGetValue)?.constInitializer()
+//    return when (dispatchReceiver) {
+//        is IrCall -> {
+//            val receiver = dispatchReceiver as IrCall
+//            if (receiver.origin == IrStatementOrigin.GET_PROPERTY) {
+//                receiver.constInitializer()
+//            } else {
+//                null
+//            }
+//        }
+//        is IrGetValue -> {
+//            ((((dispatchReceiver as? IrGetValue)?.symbol?.owner) as? IrVariable)?.initializer as? IrConst)
+//        }
+//        else -> null
+//    }
 }
 
 private fun IrCall.constInitializer(): IrConst? {
