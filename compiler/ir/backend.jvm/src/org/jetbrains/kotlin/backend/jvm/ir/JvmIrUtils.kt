@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.config.LanguageVersionSettings
 import org.jetbrains.kotlin.config.isKotlinValhallaValueClass
 import org.jetbrains.kotlin.descriptors.*
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities.PUBLIC
 import org.jetbrains.kotlin.descriptors.annotations.KotlinRetention
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.IrElement
@@ -369,8 +370,9 @@ fun IrField.constantValue(): IrConst? {
     //   1. allows the field to be inlined into other modules;
     //   2. implicitly generates an initialization of that field in <clinit>
     // It is only allowed on final fields of primitive/string types. Java applies it whenever possible; Kotlin only applies it to
-    // `const val`s to avoid making values part of the library's ABI unless explicitly requested by the author.
+    // non-public val's or `const val`s to avoid making values part of the library's ABI unless explicitly requested by the author.
     val implicitConst = isFinal && isStatic && origin == IrDeclarationOrigin.IR_EXTERNAL_JAVA_DECLARATION_STUB
+            || (isFinal && correspondingPropertySymbol?.owner?.modality== FINAL && correspondingPropertySymbol?.owner?.visibility != PUBLIC && correspondingPropertySymbol?.owner?.isVar == false)
     return if (implicitConst || correspondingPropertySymbol?.owner?.isConst == true) value else null
 }
 

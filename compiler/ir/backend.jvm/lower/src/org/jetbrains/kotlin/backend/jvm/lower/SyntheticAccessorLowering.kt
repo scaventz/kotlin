@@ -15,6 +15,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin.JVM_STATIC_W
 import org.jetbrains.kotlin.backend.jvm.JvmSyntheticAccessorGenerator
 import org.jetbrains.kotlin.backend.jvm.isExposedByMakingPublic
 import org.jetbrains.kotlin.backend.jvm.ir.IrInlineScopeResolver
+import org.jetbrains.kotlin.backend.jvm.ir.constantValue
 import org.jetbrains.kotlin.backend.jvm.ir.findInlineCallSites
 import org.jetbrains.kotlin.backend.jvm.ir.isAssertionsDisabledField
 import org.jetbrains.kotlin.backend.jvm.lower.IndyLambdaMetafactoryLowering.Companion.getLambdaMetafactoryIndyImplFunctionRefOrNull
@@ -102,6 +103,7 @@ internal class SyntheticAccessorLowering(val context: JvmBackendContext) : FileL
                 ownerClass.origin == JvmLoweredDeclarationOrigin.INTERFACE_PRIVATE_FIELDS_CLASS
                     -> scopeClassOrPackage == ownerClass.parentAsClass || scopeClassOrPackage == ownerClass
                 jvmVisibility == Opcodes.ACC_PRIVATE -> ownerClass == scopeClassOrPackage
+                        || (scopeClassOrPackage as? IrClass)?.parentClassOrNull==ownerClass
                 !withSuper && samePackage && jvmVisibility == 0 /* package only */ -> true
                 !withSuper && samePackage && !fromOtherClassLoader -> true
                 // Super calls and cross-package protected accesses are both only possible from a subclass of the declaration
@@ -225,7 +227,9 @@ private class SyntheticAccessorTransformer(
         val dispatchReceiverType = expression.receiver?.type
         val dispatchReceiverClassSymbol = dispatchReceiverType?.classifierOrNull as? IrClassSymbol
         if (expression.symbol.isAccessible(withSuper = false, dispatchReceiverClassSymbol)) {
-            return super.visitExpression(expression)
+            val correspondingProperty = expression.symbol.owner.correspondingPropertySymbol?.owner
+            val backingField = correspondingProperty?.resolveFakeOverrideOrFail()?.backingField
+            return backingField?.constantValue()?:super.visitExpression(expression)
         }
 
         if (shouldGenerateSpecialAccessWithoutSyntheticAccessor(expression.symbol)) {
@@ -254,8 +258,9 @@ private class SyntheticAccessorTransformer(
 
         val dispatchReceiverType = expression.receiver?.type
         val dispatchReceiverClassSymbol = dispatchReceiverType?.classifierOrNull as? IrClassSymbol
-        if (expression.symbol.isAccessible(false, dispatchReceiverClassSymbol)) {
-            return super.visitExpression(expression)
+        if (expression.symbol.isAccessible(false, dispatchReceiverClassSymbol) ) {
+            val backingField = correspondingProperty?.resolveFakeOverrideOrFail()?.backingField
+            return backingField?.constantValue()?:super.visitExpression(expression)
         }
 
         return super.visitExpression(

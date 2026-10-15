@@ -6,7 +6,6 @@ class My {
         private val my: String = "OK"
 
         fun test(): String {
-            // accessor is required because field is move to Foo
             return my
         }
     }
@@ -14,7 +13,7 @@ class My {
     fun getMyValue() = test()
 }
 
-// 1 GETSTATIC My.my
+// 0 GETSTATIC My.my
 // 0 INVOKESTATIC My\$Companion.access\$getMy\$p
-// 1 INVOKESTATIC My.access\$getMy\$cp
+// 0 INVOKESTATIC My.access\$getMy\$cp
 // 0 INVOKESPECIAL My\$Companion.getMy

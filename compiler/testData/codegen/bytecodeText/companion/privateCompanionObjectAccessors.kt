@@ -8,4 +8,4 @@ class Host {
     fun test() = { foo() }
 }
 
-// 1 synthetic access\$
+// 0 synthetic access\$

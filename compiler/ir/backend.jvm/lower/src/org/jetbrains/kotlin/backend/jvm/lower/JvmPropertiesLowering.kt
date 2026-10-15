@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.backend.jvm.JvmLoweredDeclarationOrigin
 import org.jetbrains.kotlin.backend.jvm.getRequiresMangling
 import org.jetbrains.kotlin.backend.jvm.hasMangledReturnType
 import org.jetbrains.kotlin.backend.jvm.ir.accessorShouldBeUsed
+import org.jetbrains.kotlin.backend.jvm.ir.constantValue
 import org.jetbrains.kotlin.backend.jvm.ir.shouldKeepAccessor
 import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.ClassKind
@@ -96,13 +97,12 @@ internal class JvmPropertiesLowering(
 
     private fun IrBuilderWithScope.substituteSetter(irProperty: IrProperty, expression: IrCall): IrExpression {
         val backingField = irProperty.resolveFakeOverrideOrFail().backingField!!
-        return patchReceiver(
-            irSetField(
-                patchFieldAccessReceiver(expression, irProperty),
-                backingField,
-                expression.arguments.last()!!,
-            )
-        )
+        return backingField.constantValue() ?: (
+                irSetField(
+                    patchFieldAccessReceiver(expression, irProperty),
+                    backingField,
+                    expression.arguments.last()!!
+                ))
     }
 
     private fun IrBuilderWithScope.substituteGetter(irProperty: IrProperty, expression: IrCall): IrExpression {
@@ -120,7 +120,7 @@ internal class JvmPropertiesLowering(
                 )
             }
         } else {
-            IrGetFieldImpl(startOffset, endOffset, backingField.symbol, expression.type, patchedReceiver)
+            backingField.constantValue() ?: IrGetFieldImpl(startOffset, endOffset, backingField.symbol, expression.type, patchedReceiver)
         }
     }
 
